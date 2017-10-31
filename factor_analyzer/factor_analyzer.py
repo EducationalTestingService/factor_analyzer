@@ -70,6 +70,7 @@ class FactorAnalyzer:
         self.bounds = bounds
 
         # default matrices to None
+        self.corr = None
         self.loadings = None
         self.rotation_matrix = None
 
@@ -511,6 +512,7 @@ class FactorAnalyzer:
             elif rotation == 'promax':
                 loadings, rotation_mtx = self.promax(loadings)
 
+        self.corr = df.corr()
         self.loadings = loadings
         self.rotation_matrix = rotation_mtx
 
@@ -687,6 +689,60 @@ class FactorAnalyzer:
                                 index=column_names)
 
         return loadings, rotation_mtx
+
+    def get_eigenvalues(self):
+        """
+        Calculate the eigenvalues, given the
+        factor correlation matrix.
+
+        Return
+        ------
+        eigenvalues : pd.DataFrame
+            A dataframe with eigenvalues information.
+        """
+        if self.corr is not None:
+
+            values, _ = sp.linalg.eig(self.corr)
+            values = np.real(values)
+
+            values = sorted(values, reverse=True)
+            return pd.DataFrame(values,
+                                columns=['Eigenvalues'])
+
+    def get_communalities(self):
+        """
+        Calculate the communalities, given the
+        factor loading matrix.
+
+        Return
+        ------
+        communalities : pd.DataFrame
+            A dataframe with communalities information.
+        """
+        if self.loadings is not None:
+
+            communalities = (self.loadings ** 2).sum(axis=1)
+            communalities = pd.DataFrame(communalities,
+                                         columns=['Communalities'])
+
+            return communalities
+
+    def get_uniqueness(self):
+        """
+        Calculate the communalities, given the
+        factor loading matrix.
+
+        Return
+        ------
+        communalities : pd.DataFrame
+            A dataframe with communalities information.
+        """
+        if self.loadings is not None:
+
+            communalities = self.get_communalities()
+            uniqueness = (1 - communalities)
+            uniqueness.columns = ['Uniqueness']
+            return uniqueness
 
     def get_factor_variance(self):
         """
