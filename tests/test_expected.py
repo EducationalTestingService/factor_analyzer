@@ -143,26 +143,26 @@ class TestFactorAnalyzerVsR:
 
         if check_communalities:
             try:
-                assert_frame_equal(communalities_p, communalities_r, check_less_precise=1)
+                assert_frame_equal(communalities_p, communalities_r, check_less_precise=2)
             except AssertionError as error:
                 print('Problem with communalities.')
                 raise error
 
         if check_uniqueness:
             try:
-                assert_frame_equal(uniqueness_p, uniqueness_r, check_less_precise=1)
+                assert_frame_equal(uniqueness_p, uniqueness_r, check_less_precise=2)
             except AssertionError as error:
                 print('Problem with uniquness.')
                 raise error
 
         if check_eigenvalues:
             try:
-                assert_frame_equal(eigenvals_p, eigenvals_r, check_less_precise=1)
+                assert_frame_equal(eigenvals_p, eigenvals_r, check_less_precise=2)
             except AssertionError as error:
                 print('Problem with eigenvalues.')
                 raise error
 
-    def test_01_none_minres_2_factors_unique(self):
+    def test_01_none_minres_3_factors(self):
 
         filename = 'test01.csv'
         factors = 3
@@ -186,17 +186,17 @@ class TestFactorAnalyzerVsR:
 
         self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
 
-    def test_01_none_minres_3_factors(self):
+    def test_01_promax_ml_3_factors(self):
 
         filename = 'test01.csv'
         factors = 3
-        method = 'minres'
-        rotation = 'none'
+        method = 'ml'
+        rotation = 'promax'
 
         results = self.do_analysis(filename, factors, method, rotation)
         expected = self.get_expected(filename, factors, method, rotation)
 
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        self.check_results(results, expected)
 
     def test_01_none_ml_3_factors(self):
 
@@ -222,18 +222,6 @@ class TestFactorAnalyzerVsR:
 
         self.check_results(results, expected)
 
-    def test_01_promax_ml_3_factors(self):
-
-        filename = 'test01.csv'
-        factors = 3
-        method = 'ml'
-        rotation = 'promax'
-
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
-
     def test_02_none_minres_3_factors(self):
 
         filename = 'test02.csv'
@@ -245,6 +233,18 @@ class TestFactorAnalyzerVsR:
         expected = self.get_expected(filename, factors, method, rotation)
 
         self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+
+    def test_02_varimax_minres_2_factors(self):
+
+        filename = 'test02.csv'
+        factors = 2
+        method = 'minres'
+        rotation = 'varimax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
 
     def test_03_none_minres_3_factors(self):
 
@@ -270,11 +270,35 @@ class TestFactorAnalyzerVsR:
 
         self.check_results(results, expected)
 
+    def test_03_none_ml_2_factors(self):
+
+        filename = 'test03.csv'
+        factors = 2
+        method = 'ml'
+        rotation = 'none'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+
     def test_04_varimax_ml_2_factors(self):
 
         filename = 'test04.csv'
         factors = 2
         method = 'ml'
+        rotation = 'varimax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_04_varimax_minres_3_factors(self):
+
+        filename = 'test04.csv'
+        factors = 3
+        method = 'minres'
         rotation = 'varimax'
 
         results = self.do_analysis(filename, factors, method, rotation)
@@ -293,6 +317,18 @@ class TestFactorAnalyzerVsR:
         expected = self.get_expected(filename, factors, method, rotation)
 
         self.check_results(results, expected)
+
+    def test_05_none_ml_2_factors(self):
+
+        filename = 'test05.csv'
+        factors = 2
+        method = 'ml'
+        rotation = 'none'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
 
     def test_06_promax_ml_3_factors(self):
 
@@ -318,9 +354,117 @@ class TestFactorAnalyzerVsR:
 
         self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
 
+    def test_07_varimax_minres_3_factors(self):
+
+        filename = 'test07.csv'
+        factors = 3
+        method = 'minres'
+        rotation = 'varimax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
     def test_07_varimax_ml_3_factors(self):
 
         filename = 'test07.csv'
+        factors = 3
+        method = 'ml'
+        rotation = 'varimax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_08_promax_ml_3_factors(self):
+
+        filename = 'test08.csv'
+        factors = 3
+        method = 'ml'
+        rotation = 'promax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_08_none_ml_2_factors(self):
+
+        filename = 'test08.csv'
+        factors = 2
+        method = 'ml'
+        rotation = 'none'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+
+    def test_09_promax_ml_3_factors(self):
+
+        filename = 'test09.csv'
+        factors = 3
+        method = 'ml'
+        rotation = 'promax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_09_promax_minres_2_factors(self):
+
+        filename = 'test09.csv'
+        factors = 2
+        method = 'minres'
+        rotation = 'promax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_09_none_minres_3_factors(self):
+
+        filename = 'test09.csv'
+        factors = 3
+        method = 'minres'
+        rotation = 'none'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+
+    def test_10_none_minres_3_factors(self):
+
+        filename = 'test10.csv'
+        factors = 3
+        method = 'minres'
+        rotation = 'none'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+
+    def test_10_varimax_ml_3_factors(self):
+
+        filename = 'test10.csv'
+        factors = 3
+        method = 'ml'
+        rotation = 'varimax'
+
+        results = self.do_analysis(filename, factors, method, rotation)
+        expected = self.get_expected(filename, factors, method, rotation)
+
+        self.check_results(results, expected)
+
+    def test_10_varimax_minres_3_factors(self):
+
+        filename = 'test10.csv'
         factors = 3
         method = 'minres'
         rotation = 'varimax'
