@@ -584,11 +584,11 @@ class FactorAnalyzer:
 
             # perform SVD on
             # the transformed matrix
-            U, sigma, V = np.linalg.svd(transformed)
+            U, S, V = np.linalg.svd(transformed)
 
-            # take inner product of U and V, and sum of sigma
+            # take inner product of U and V, and sum of S
             rotation_mtx = np.dot(U, V)
-            d = np.sum(sigma)
+            d = np.sum(S)
 
             # check convergence
             if old_d != 0 and d / old_d < 1 + tolerance:

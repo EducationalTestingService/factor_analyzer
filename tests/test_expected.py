@@ -82,7 +82,7 @@ class TestFactorAnalyzerVsR:
 
                 data = data.set_index(data.columns.values[0])
 
-            data.index.rename('new_index', inplace=True)
+            data.index.rename('', inplace=True)
 
             data = data[data.abs().sum().sort_values(ascending=False).index.values]
 
@@ -97,7 +97,7 @@ class TestFactorAnalyzerVsR:
 
                 data = data.set_index(data.columns.values[0])
 
-            data.index.rename('new_index', inplace=True)
+            data.index.rename('', inplace=True)
 
             if filetype == 'communalities':
                 data.columns = ['Communalities']
