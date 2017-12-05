@@ -79,7 +79,7 @@ Cumulative Var  0.351019  0.479390  0.553129
 
 ## Contributing
 
-Contributions to FactorAnalyzer are very welcome. Please contact jbiggs@ets.org.
+Contributions to FactorAnalyzer are very welcome. Please file an issue on GitHub, or contact jbiggs@ets.org if you would like to contribute.
 
 ## Installation
 
