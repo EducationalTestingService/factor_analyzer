@@ -8,6 +8,7 @@ with optional rotation using Varimax or Promax.
 :organization: ETS
 """
 
+import os
 import argparse
 import logging
 
@@ -15,11 +16,128 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
-from os.path import join
-
 from scipy.optimize import minimize
 from sklearn.preprocessing import scale
 from sklearn.linear_model import LinearRegression
+
+
+def read_file(file_path):
+    """
+    A helper function to read file in
+    CSV, TSV, or XLXS format into a data_frame.
+
+    Parameters
+    ----------
+    file_path : str
+        The path to a CSV, TSV, or XLSX file.
+
+
+    Returns
+    -------
+    data : pd.DataFrame
+        The data file read into a pandas data_frame.
+
+    Raises
+    ------
+    ValueError
+        If the file is not CSV, TSV, or XLSX.
+    """
+    # read file in format CSV, TSV, or XLSX
+    if file_path.lower().endswith('.csv'):
+        data = pd.read_csv(file_path)
+    elif file_path.lower().endswith('.tsv'):
+        data = pd.read_csv(file_path, sep='\t')
+    elif file_path.lower().endswith('.xlsx'):
+        data = pd.read_excel(file_path)
+    else:
+        raise ValueError('The file must be either CSV, TSV, or XLSX format. '
+                         'You have specified the following : {}'.format(file_path))
+    return data
+
+
+def calculate_bartlett_sphericity(data):
+    """
+    Test the hypothesis that the correlation matrix
+    is equal to the identity matrix.identity
+
+    H0: The matrix of population correlations is equal to I.
+    H1: The matrix of population correlations is not equal to I.
+
+    The formula for Bartlett's Sphericity test is:
+
+    X^2 = -1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))
+
+    Where R det(R) is the determinant of the correlation matrix,
+    and p is the number of variables.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data to analyze.
+
+    Returns
+    -------
+    chi_square : float
+        The chi-square value
+    p_value : float
+        The p-value for the test.
+    """
+    n, p = data.shape
+
+    corr = data.corr()
+
+    chi_square = -(n - 1 - (2 * p + 5) / 6) * np.log(np.linalg.det(corr))
+    degrees_of_freedom = p * (p - 1) / 2
+    p_value = sp.stats.chi2.pdf(chi_square, degrees_of_freedom)
+    return chi_square, p_value
+
+
+def calculate_kaiser_meyer_olkin(data):
+    """
+    Calculate the Kaiser-Meter_Olkin measure of sampling adequacy.
+    The KMO checks if we can efficiently factorize
+    the original variables. KMO returns values between 0 and 1, which
+    can generally be interpreted as follows:
+
+    - Values close to zero indicate high partial correlations,
+      meaning EFA may be a problem.
+    - Values greater than zero and less than 0.5 indicate the sampling
+      is not adequate.
+    - Values greater than 0.5 and less than 0.8 indicate sampling
+      may be adequate.
+    - Values between 0.8 and 1 indicate that sampling is adequate.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data to analyze using KMO.
+
+    Returns
+    -------
+    kmo_value : float
+        The KMO value.
+    """
+
+    # get correlation and inverse correlation matrices
+    corr = data.corr()
+    corr_inv = np.linalg.inv(corr)
+
+    # get number of rows and number of columns
+    n, p = corr.shape
+
+    # 1. calculate partial correlation matrix
+    A = np.ones((n, p))
+    for i in range(n):
+        for j in range(i, p):
+
+            A[i, j] = -corr_inv[i, j] / np.sqrt(corr_inv[i, i] * corr_inv[j, j])
+            A[j, i] = A[i, j]
+
+    # 2. calculate global KMO value
+    kmo_number = np.sum(np.square(corr)) - np.sum(np.square(np.diagonal(corr)))
+    kmo_denominator = kmo_number + np.sum(np.square(A)) - np.sum(np.square(np.diagonal(A)))
+    kmo_value = kmo_number / kmo_denominator
+    return kmo_value
 
 
 class FactorAnalyzer:
@@ -44,38 +162,26 @@ class FactorAnalyzer:
     """
 
     def __init__(self,
-                 n_factors=3,
-                 use_smc=True,
-                 bounds=(0.005, 1)):
+                 log_warnings=False):
         """
         Initialize object.
 
         Parameters
         ----------
-        n_factors : int
-            The number of factors to select.
-            Defaults to 3.
-        use_smc : bool
-            Whether to use squared multiple correlation
-            as starting guesses for factor analysis.
-            Defaults to True.
-        bounds : tuple
-            The lower and upper bounds on the variables
-            for "L-BFGS-B" optimization.
-            Defaults to (0.005, 1).
+        log_warnings : bool
+            Whether to log warnings, such as failure to
+            converge.
+            Defaults to False.
         """
 
-        self.n_factors = n_factors
-        self.use_smc = use_smc
-        self.bounds = bounds
+        self.log_warnings = log_warnings
 
         # default matrices to None
         self.corr = None
         self.loadings = None
         self.rotation_matrix = None
 
-    @staticmethod
-    def remove_non_numeric(data):
+    def remove_non_numeric(self, data):
         """
         Remove non-numeric columns from data,
         as these columns cannot be used in
@@ -97,9 +203,9 @@ class FactorAnalyzer:
 
         # report any non-numeric columns removed
         non_numeric_columns = set(old_column_names) - set(data.columns)
-        if non_numeric_columns:
-            logging.warn('The following non-numeric columns '
-                         'were removed: {}.'.format(', '.join(non_numeric_columns)))
+        if non_numeric_columns and self.log_warnings:
+            logging.warning('The following non-numeric columns '
+                            'were removed: {}.'.format(', '.join(non_numeric_columns)))
         return data
 
     @staticmethod
@@ -336,10 +442,10 @@ class FactorAnalyzer:
             to having zero standard deviation.
         """
 
-        if method not in ['ml', 'minres']:
-            logging.warn("You have selected a method other than 'minres' or 'ml'. "
-                         "MINRES will be used by default, as {} is not a valid "
-                         "option.".format(method))
+        if method not in ['ml', 'minres'] and self.log_warnings:
+            logging.warning("You have selected a method other than 'minres' or 'ml'. "
+                            "MINRES will be used by default, as {} is not a valid "
+                            "option.".format(method))
 
         corr = data.corr()
 
@@ -381,11 +487,11 @@ class FactorAnalyzer:
                        start,
                        method='L-BFGS-B',
                        bounds=bounds,
-                       options={'maxiter': 100},
+                       options={'maxiter': 1000},
                        args=(corr, n_factors))
 
-        if not res.success:
-            logging.warn('Failed to converge: {}'.format(res.message))
+        if not res.success and self.log_warnings:
+            logging.warning('Failed to converge: {}'.format(res.message))
 
         # get factor column names
         columns = ['Factor{}'.format(i) for i in range(1, n_factors + 1)]
@@ -404,10 +510,13 @@ class FactorAnalyzer:
 
     def analyze(self,
                 data,
-                normalize=True,
+                n_factors=3,
                 rotation='promax',
-                impute='median',
-                method='minres'):
+                method='minres',
+                use_smc=True,
+                bounds=(0.005, 1),
+                normalize=True,
+                impute='median'):
         """
         Perform factor analysis.
 
@@ -415,26 +524,37 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The data to analyze.
-        normalize : bool
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to True.
+        n_factors : int
+            The number of factors to select.
+            Defaults to 3.
         rotation : {'varimax', 'promax'} or None
             The type of rotation to perform after
             fitting the factor analysis model.
             If set to None, no rotation will be performed,
             nor will any associated Kaiser normalization.
             Defaults to 'promax'.
+        method : {'minres', 'ml'}
+            The fitting method to use, either MINRES or
+            Maximum Likelihood.
+            Defaults to 'minres'.
+        use_smc : bool
+            Whether to use squared multiple correlation
+            as starting guesses for factor analysis.
+            Defaults to True.
+        bounds : tuple
+            The lower and upper bounds on the variables
+            for "L-BFGS-B" optimization.
+            Defaults to (0.005, 1).
+        normalize : bool
+            Whether to perform Kaiser normalization
+            and de-normalization prior to and following
+            rotation.
+            Defaults to True.
         impute : {'drop', 'mean', 'median'}
             If missing values are present in the data, either use
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
             Defaults to 'median'.
-        method : {'minres', 'ml'}
-            The fitting method to use, either MINRES or
-            Maximum Likelihood.
-            Defaults to 'minres'.
 
         Raises
         ------
@@ -496,9 +616,9 @@ class FactorAnalyzer:
 
         # fit factor analysis model
         loadings = self.fit_factor_analysis(X,
-                                            self.n_factors,
-                                            self.use_smc,
-                                            self.bounds,
+                                            n_factors,
+                                            use_smc,
+                                            bounds,
                                             method)
 
         # default rotation matrix to None
@@ -508,9 +628,9 @@ class FactorAnalyzer:
         if rotation is not None:
 
             if rotation == 'varimax':
-                loadings, rotation_mtx = self.varimax(loadings)
+                loadings, rotation_mtx = self.varimax(loadings, normalize=normalize)
             elif rotation == 'promax':
-                loadings, rotation_mtx = self.promax(loadings)
+                loadings, rotation_mtx = self.promax(loadings, normalize=normalize)
 
         self.corr = df.corr()
         self.loadings = loadings
@@ -602,6 +722,9 @@ class FactorAnalyzer:
         if normalize:
             X = X.T * normalized_mtx
 
+        else:
+            X = X.T
+
         # convert loadings matrix to dataframe
         loadings = pd.DataFrame(X,
                                 columns=column_names,
@@ -609,7 +732,7 @@ class FactorAnalyzer:
 
         return loadings, rotation_mtx
 
-    def promax(self, data, normalize=True, power=4):
+    def promax(self, data, normalize=False, power=4):
         """
         Promax (oblique) rotation.
 
@@ -621,7 +744,7 @@ class FactorAnalyzer:
             Whether to perform Kaiser normalization
             and de-normalization prior to and following
             rotation.
-            Defaults to True.
+            Defaults to False.
         power : int
             The power to which to raise the varimax loadings
             (minus 1). Numbers should generally range form 2 to 4.
@@ -646,17 +769,21 @@ class FactorAnalyzer:
         if n_cols < 2:
             return df
 
-        # pre-normalization is done in R's
-        # `kaiser()` function when rotate='Promax'.
-        array = df.as_matrix()
-        h2 = sp.diag(np.dot(array, array.T))
-        h2 = np.reshape(h2, (h2.shape[0], 1))
-        weights = array / sp.sqrt(h2)
+        if normalize:
 
-        # convert back to DataFrame for `varimax`
-        weights = pd.DataFrame(weights,
-                               columns=index_names,
-                               index=column_names)
+            # pre-normalization is done in R's
+            # `kaiser()` function when rotate='Promax'.
+            array = df.as_matrix()
+            h2 = sp.diag(np.dot(array, array.T))
+            h2 = np.reshape(h2, (h2.shape[0], 1))
+            weights = array / sp.sqrt(h2)
+
+            # convert back to DataFrame for `varimax`
+            weights = pd.DataFrame(weights,
+                                   columns=index_names,
+                                   index=column_names)
+        else:
+            weights = df.copy()
 
         # first get varimax rotation
         X, rotation_mtx = self.varimax(weights, normalize=normalize)
@@ -671,15 +798,20 @@ class FactorAnalyzer:
         coef = coef.T
 
         # calculate diagonal of inverse square
-        diag_inv = sp.diag(sp.linalg.inv(sp.dot(coef.T, coef)))
+        try:
+            diag_inv = sp.diag(sp.linalg.inv(sp.dot(coef.T, coef)))
+        except np.linalg.LinAlgError:
+            diag_inv = sp.diag(sp.linalg.pinv(sp.dot(coef.T, coef)))
 
         # transform and calculate inner products
         coef = sp.dot(coef, sp.diag(sp.sqrt(diag_inv)))
         z = sp.dot(X, coef)
 
-        # post-normalization is done in R's
-        # `kaiser()` function when rotate='Promax'
-        z = z * sp.sqrt(h2)
+        if normalize:
+
+            # post-normalization is done in R's
+            # `kaiser()` function when rotate='Promax'
+            z = z * sp.sqrt(h2)
 
         rotation_mtx = sp.dot(rotation_mtx, coef)
 
@@ -700,14 +832,24 @@ class FactorAnalyzer:
         eigenvalues : pd.DataFrame
             A dataframe with eigenvalues information.
         """
-        if self.corr is not None:
+        if (self.corr is not None and self.loadings is not None):
 
-            values, _ = sp.linalg.eig(self.corr)
+            corr = self.corr.as_matrix()
+
+            e_values, _ = sp.linalg.eig(corr)
+            e_values = np.real(e_values)
+            e_values = pd.DataFrame(sorted(e_values, reverse=True),
+                                    columns=['Original_Eigenvalues'])
+
+            communalities = self.get_communalities()
+            np.fill_diagonal(corr, communalities)
+
+            values, _ = sp.linalg.eig(corr)
             values = np.real(values)
+            values = pd.DataFrame(sorted(values, reverse=True),
+                                  columns=['Common_Factor_Eigenvalues'])
 
-            values = sorted(values, reverse=True)
-            return pd.DataFrame(values,
-                                columns=['Eigenvalues'])
+            return e_values, values
 
     def get_communalities(self):
         """
@@ -783,8 +925,7 @@ class FactorAnalyzer:
 
 
 def main():
-    """
-    run the script
+    """ Run the script.
     """
 
     # set up an argument parser
@@ -793,47 +934,59 @@ def main():
                         help="Input file containing the pre-processed features "
                              "for the training data")
     parser.add_argument(dest='output_dir', help="Output directory to save "
-                                                "the output files")
+                                                "the output files", )
     parser.add_argument('-f', '--factors', dest="num_factors", type=int,
                         default=3, help="Number of factors to use (Default 3)",
+                        required=False)
+
+    parser.add_argument('-r', '--rotation', dest="rotation", type=str,
+                        default='none', help="The rotation to perform (Default 'none')",
+                        required=False)
+
+    parser.add_argument('-m', '--method', dest="method", type=str,
+                        default='minres', help="The method to use (Default 'minres')",
                         required=False)
 
     # parse given command line arguments
     args = parser.parse_args()
 
+    method = args.method
+    factors = args.num_factors
+    rotation = None if args.rotation == 'none' else args.rotation
+
+    file_path = args.feature_file
+
+    data = read_file(file_path)
+
     # get the logger
     logger = logging.getLogger(__name__)
+    logging.setLevel(logging.INFO)
 
     # log some useful messages so that the user knows
-    logger.info("Starting exploratory factor analysis on {} "
-                "with {} factors".format(args.feature_file,
-                                         args.num_factors))
+    logger.info("Starting exploratory factor analysis on: {}.".format(file_path))
 
-    # Read in feature file
-    data = pd.read_csv(args.feature_file)
+    # run the analysis
+    analyzer = FactorAnalyzer()
+    analyzer.analyze(data, factors, rotation, method)
 
-    # Fit factor model, and perform rotation
-    factor_analyzer = FactorAnalyzer(args.num_factors)
-    factor_analyzer.analyze(data)
+    # create paths to loadings loadings, eigenvalues, communalities, variance
+    path_loadings = os.path.join(args.output_dir, 'loadings.csv')
+    path_eigen = os.path.join(args.output_dir, 'eigenvalues.csv')
+    path_communalities = os.path.join(args.output_dir, 'communalities.csv')
+    path_variance = os.path.join(args.output_dir, 'variance.csv')
 
-    # Get loadings, variance, and correlations
-    loadings = factor_analyzer.loadings
-    variance = factor_analyzer.get_factor_correlations()
+    # retrieve loadings, eigenvalues, communalities, variance
+    loadings = analyzer.loadings
+    eigen, _ = analyzer.get_eigenvalues()
+    communalities = analyzer.get_communalities()
+    variance = analyzer.get_factor_variance()
 
-    out_dir = args.output_dir
-
-    # Get paths to output files
-    loadings_out_path = join(out_dir, 'efa{}_factor_loadings.csv'.format(args.num_factors))
-    variance_out_path = join(out_dir, 'efa{}_factor_variance.csv'.format(args.num_factors))
-
-    # Save output files
-    loadings.to_csv(loadings_out_path)
-    variance.to_csv(variance_out_path)
-
-    # Log details
-    logger.info("Analysis finished. Three output files produced under {}: ".format(out_dir))
-    logger.info("  (a) efa{}_factor_loadings.csv".format(args.num_factors))
-    logger.info("  (b) efa{}_factor_variance.csv".format(args.num_factors))
+    # save the files
+    logger.info("Saving files...")
+    loadings.to_csv(path_loadings)
+    eigen.to_csv(path_eigen)
+    communalities.to_csv(path_communalities)
+    variance.to_csv(path_variance)
 
 
 if __name__ == '__main__':
