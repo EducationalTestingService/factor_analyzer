@@ -1,3 +1,0 @@
-[console_scripts]
-factor_analyzer = factor_analyzer.factor_analyzer:main
-
