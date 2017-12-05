@@ -1,2 +1,10 @@
 *.pyc
+*.pyo
+*.egg
+
 .DS_Store
+.coverage
+
+dist/
+build/
+__pycache__
