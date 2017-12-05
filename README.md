@@ -81,6 +81,12 @@ Cumulative Var  0.351019  0.479390  0.553129
 
 Contributions to FactorAnalyzer are very welcome. Please contact jbiggs@ets.org.
 
+## Installation
+
+You can install this package via `pip`:
+
+`$ pip install factor_analyzer`
+
 ## License
 
 GNU General Public License (>= 2)
