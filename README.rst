@@ -1,6 +1,13 @@
 FactorAnalyzer
 --------------
 
+.. image:: https://circleci.com/gh/EducationalTestingService/factor_analyzer/tree/master.svg?style=shield
+   :alt: Build status
+   :target: https://circleci.com/gh/EducationalTestingService/factor_analyzer
+
+.. image:: https://coveralls.io/repos/github/EducationalTestingService/factor_analyzer/badge.svg?branch=master
+    :target: https://coveralls.io/github/EducationalTestingService/factor_analyzer?branch=master
+
 This is Python module to perform exploratory factor analysis, with
 optional varimax and promax rotations. Estimation can be performed using
 a minimum residual (minres) solution, or maximum likelihood estimation
