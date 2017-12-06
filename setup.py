@@ -9,7 +9,7 @@ def readme():
 
 
 setup(name='factor_analyzer',
-      version=1.0,
+      version=0.1,
       description='A Factor Analysis class',
       long_description=readme(),
       keywords='factor analysis',
