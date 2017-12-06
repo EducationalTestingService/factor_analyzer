@@ -22,13 +22,12 @@ from sklearn.linear_model import LinearRegression
 def read_file(file_path):
     """
     A helper function to read file in
-    CSV, TSV, or XLSX format into a data_frame.
+    CSV or TSV format into a data_frame.
 
     Parameters
     ----------
     file_path : str
-        The path to a CSV, TSV, or XLSX file.
-
+        The path to a CSV or TSV file.
 
     Returns
     -------
@@ -38,15 +37,15 @@ def read_file(file_path):
     Raises
     ------
     ValueError
-        If the file is not CSV, TSV, or XLSX.
+        If the file is not CSV, TSV.
     """
-    # read file in format CSV, TSV, or XLSX
+    # read file in format CSV, TSV
     if file_path.lower().endswith('.csv'):
         data = pd.read_csv(file_path)
     elif file_path.lower().endswith('.tsv'):
         data = pd.read_csv(file_path, sep='\t')
     else:
-        raise ValueError('The file must be either CSV, TSV, or XLSX format. '
+        raise ValueError('The file must be either CSV or TSV format. '
                          'You have specified the following : {}'.format(file_path))
     return data
 
