@@ -1,7 +1,7 @@
 # set up the machine
-machine:
- environment:
-  COVERALLS_REPO_TOKEN: o6sflHnDaK1Tst2m1lUAMAipun7xcggcA
+# machine:
+# environment:
+#  COVERALLS_REPO_TOKEN
 
 # install dependencies
 dependencies:
