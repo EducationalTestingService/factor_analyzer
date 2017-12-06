@@ -8,10 +8,11 @@ Tests for FactorAnalyzer class
 """
 
 import os
+import math
+import numpy as np
 import pandas as pd
 
-from pandas.util.testing import assert_frame_equal
-from factor_analyzer.factor_analyzer import FactorAnalyzer
+from factor_analyzer import FactorAnalyzer
 
 
 class TestFactorAnalyzerVsR:
@@ -19,457 +20,467 @@ class TestFactorAnalyzerVsR:
     def __init__(self):
 
         self.data_dir = 'tests/data'
-        self.expected_dir = 'tests/expected'
+        self.exp_dir = 'tests/expected'
+        self.threshold = 0.9
 
-    def do_analysis(self, filename, factors, method, rotation):
+    @staticmethod
+    def do_analysis(top_dir, test_name, factors, method, rotation):
         """
         Use the `FactorAnalyzer()` class to perform the factor analysis
-        and return a dictionary with relevant results.
+        and return a dictionary with relevant results for given scenario.
         """
-
-        filename = os.path.join(self.data_dir, filename)
+        filename = os.path.join(top_dir, test_name + '.csv')
         data = pd.read_csv(filename)
 
         rotation = None if rotation == 'none' else rotation
+        method = {'uls': 'minres'}.get(method, method)
 
-        fa = FactorAnalyzer(factors)
-        fa.analyze(data, method=method, rotation=rotation)
+        fa = FactorAnalyzer()
+        fa.analyze(data, factors, method=method, rotation=rotation)
 
-        return {'loadings': fa.loadings,
-                'eigenvals': fa.get_eigenvalues(),
-                'uniqueness': fa.get_uniqueness(),
+        evalues, values = fa.get_eigenvalues()
+
+        return {'value': values,
+                'evalues': evalues,
+                'loading': fa.loadings,
+                'uniquenesses': fa.get_uniqueness(),
                 'communalities': fa.get_communalities()}
 
-    def get_data_by_type(self, filename, factors, method, rotation, filetype='loadings'):
+    @staticmethod
+    def get_r_output(top_dir, test_name, factors, method, rotation):
         """
-        Get the R output data by file type (e.g. 'loadings' or 'commonalities').
+        Get the R output for the given scenario.
+        """
+        output = {}
+        for output_type in ['value',
+                            'evalues',
+                            'loading',
+                            'uniquenesses',
+                            'communalities']:
+
+            filename = '{}_{}_{}_{}_{}.csv'.format(output_type,
+                                                   method,
+                                                   rotation,
+                                                   factors,
+                                                   test_name)
+
+            filename = os.path.join(top_dir, test_name, filename)
+
+            data = pd.read_csv(filename)
+            output[output_type] = data
+
+        return output
+
+    @staticmethod
+    def normalize(data):
+        """
+        Normalize the data.
+        """
+        # check for possible index column
+        possible_index = [col for col in data.columns if 'Unnamed' in col]
+
+        # get numeric columns
+        numeric_cols = [col for col in data.dtypes[data.dtypes != 'object'].index.values
+                        if col not in possible_index]
+
+        # take absolute value
+        data[numeric_cols] = data[numeric_cols].abs()
+
+        # set index
+        if len(possible_index) == 1:
+            data.set_index(possible_index[0], inplace=True)
+
+        # sort the values
+        data = data[data.abs().sum().sort_values(ascending=False).index.values]
+
+        # update index name and column names
+        data.index.name = ''
+        data.columns = ['col{}'.format(i) for i in range(1, data.shape[1] + 1)]
+
+        return data.reset_index(drop=True)
+
+    def check_close(self, data1, data2):
+        """
+        Check to make sure all values are close.
+        """
+        data1 = self.normalize(data1)
+        data2 = self.normalize(data2)
+
+        assert data1.shape == data2.shape
+
+        arr = np.empty(shape=data1.shape, dtype=bool)
+        for i in range(data1.shape[0]):
+            for j in range(data2.shape[1]):
+                check = math.isclose(data1.iloc[i, j],
+                                     data2.iloc[i, j],
+                                     rel_tol=0,
+                                     abs_tol=0.1)
+                arr[i, j] = check
+
+        check = arr.sum(None) / arr.size
+        print(check)
+        return check
+
+    def check_all(self,
+                  test_name,
+                  factors,
+                  method,
+                  rotation,
+                  ignore_value=False,
+                  ignore_communalities=False):
+        """
+        Check all results for given scenario.
         """
 
-        subdir, _ = os.path.splitext(filename)
+        output_types = ['loading', 'evalues']
 
-        new_file_name = '_'.join([filetype, method, rotation, str(factors), subdir + '.csv'])
-        new_file_name = os.path.join(self.expected_dir, subdir, new_file_name)
+        if not ignore_value:
+            output_types.extend(['value'])
 
-        data = pd.read_csv(new_file_name)
-        return data
+        if not ignore_communalities:
+            output_types.extend(['uniquenesses',
+                                 'communalities'])
 
-    def get_expected(self, filename, factors, method, rotation):
-        """
-        Get the expected output from the R `fa()` function
-        and return dictionary with relevant results.
-        """
+        results1 = self.get_r_output(self.exp_dir, test_name, factors, method, rotation)
+        results2 = self.do_analysis(self.data_dir, test_name, factors, method, rotation)
 
-        loadings = self.get_data_by_type(filename, factors, method, rotation, 'loadings')
-        eigenvals = self.get_data_by_type(filename, factors, method, rotation, 'eigenvals')
-        communal = self.get_data_by_type(filename, factors, method, rotation, 'communalities')
-        unique = self.get_data_by_type(filename, factors, method, rotation, 'uniquenesses')
+        for output_type in output_types:
 
-        return {'loadings': loadings,
-                'eigenvals': eigenvals,
-                'communalities': communal,
-                'uniqueness': unique}
+            data1 = results1[output_type]
+            data2 = results2[output_type]
 
-    def normalize(self, data, filetype='loadings'):
-        """
-        Normalize the DataFrame to make sure R output and Python
-        output match. In particular, ignore signs, round data, sort columns,
-        and make sure that column and index names are correct.
-        """
-        if filetype == 'loadings':
-
-            if ('MR1' in data.columns.values or
-                'ML1' in data.columns.values):
-
-                data = data.set_index(data.columns.values[0])
-
-            data.index.rename('', inplace=True)
-
-            data = data[data.abs().sum().sort_values(ascending=False).index.values]
-
-            data = data.abs().round(5)
-
-            data.columns = ['col{}'.format(num)for num in range(1, data.shape[1] + 1)]
-            return data
-
-        else:
-
-            if ('x' in data.columns.values):
-
-                data = data.set_index(data.columns.values[0])
-
-            data.index.rename('', inplace=True)
-
-            if filetype == 'communalities':
-                data.columns = ['Communalities']
-            elif filetype == 'uniqueness':
-                data.columns = ['Uniqueness']
-            elif filetype == 'eigenvals':
-                data.reset_index(inplace=True, drop=True)
-                data.columns = ['Eigenvalues']
-
-            return data
-
-    def check_results(self,
-                      results,
-                      expected,
-                      check_loadings=True,
-                      check_communalities=False,
-                      check_uniqueness=False,
-                      check_eigenvalues=True):
-        """
-        Check results of R vs Python.
-
-        By default, do not check communalities and uniqueness, since
-        we will have slightly different results with Promax and Varimax rotations.
-        """
-        loadings_p = self.normalize(results['loadings'], 'loadings')
-        loadings_r = self.normalize(expected['loadings'], 'loadings')
-
-        communalities_p = self.normalize(results['communalities'], 'communalities')
-        communalities_r = self.normalize(expected['communalities'], 'communalities')
-
-        uniqueness_p = self.normalize(results['uniqueness'], 'uniqueness')
-        uniqueness_r = self.normalize(expected['uniqueness'], 'uniqueness')
-
-        eigenvals_p = self.normalize(results['eigenvals'], 'eigenvals')
-        eigenvals_r = self.normalize(expected['eigenvals'], 'eigenvals')
-
-        if check_loadings:
-            try:
-                assert_frame_equal(loadings_p, loadings_r, check_less_precise=2)
-            except AssertionError as error:
-                print('Problem with loadings.')
-                raise error
-
-        if check_communalities:
-            try:
-                assert_frame_equal(communalities_p, communalities_r, check_less_precise=2)
-            except AssertionError as error:
-                print('Problem with communalities.')
-                raise error
-
-        if check_uniqueness:
-            try:
-                assert_frame_equal(uniqueness_p, uniqueness_r, check_less_precise=2)
-            except AssertionError as error:
-                print('Problem with uniquness.')
-                raise error
-
-        if check_eigenvalues:
-            try:
-                assert_frame_equal(eigenvals_p, eigenvals_r, check_less_precise=2)
-            except AssertionError as error:
-                print('Problem with eigenvalues.')
-                raise error
+            print(output_type)
+            yield self.check_close(data1, data2)
 
     def test_01_none_minres_3_factors(self):
 
-        filename = 'test01.csv'
+        test_name = 'test01'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name, factors, method, rotation):
+            assert check > self.threshold
 
     def test_01_none_minres_2_factors(self):
 
-        filename = 'test01.csv'
+        test_name = 'test01'
         factors = 2
-        method = 'minres'
+        method = 'uls'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
-
-    def test_01_promax_ml_3_factors(self):
-
-        filename = 'test01.csv'
-        factors = 3
-        method = 'ml'
-        rotation = 'promax'
-
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
-
-    def test_01_none_ml_3_factors(self):
-
-        filename = 'test01.csv'
-        factors = 3
-        method = 'ml'
-        rotation = 'none'
-
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name, factors, method, rotation):
+            assert check > self.threshold
 
     def test_01_varimax_ml_3_factors(self):
 
-        filename = 'test01.csv'
+        test_name = 'test01'
         factors = 3
         method = 'ml'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
+        for check in self.check_all(test_name, factors, method, rotation):
+            assert check > self.threshold
 
-        self.check_results(results, expected)
+    def test_01_promax_ml_3_factors(self):
+
+        test_name = 'test01'
+        factors = 3
+        method = 'ml'
+        rotation = 'promax'
+
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
+
+    def test_01_promax_uls_3_factors(self):
+
+        test_name = 'test01'
+        factors = 3
+        method = 'uls'
+        rotation = 'promax'
+
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_02_none_minres_3_factors(self):
 
-        filename = 'test02.csv'
+        test_name = 'test02'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_02_varimax_minres_2_factors(self):
 
-        filename = 'test02.csv'
+        test_name = 'test02'
         factors = 2
-        method = 'minres'
+        method = 'uls'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_03_none_minres_3_factors(self):
 
-        filename = 'test03.csv'
+        test_name = 'test03'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_03_promax_minres_3_factors(self):
 
-        filename = 'test03.csv'
+        test_name = 'test03'
         factors = 3
-        method = 'minres'
-        rotation = 'none'
+        method = 'uls'
+        rotation = 'promax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_03_none_ml_2_factors(self):
 
-        filename = 'test03.csv'
+        test_name = 'test03'
         factors = 2
         method = 'ml'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_04_varimax_ml_2_factors(self):
 
-        filename = 'test04.csv'
+        test_name = 'test04'
         factors = 2
         method = 'ml'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_04_varimax_minres_3_factors(self):
 
-        filename = 'test04.csv'
+        test_name = 'test04'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_05_varimax_minres_3_factors(self):
 
-        filename = 'test05.csv'
+        test_name = 'test05'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_05_none_ml_2_factors(self):
 
-        filename = 'test05.csv'
+        test_name = 'test05'
         factors = 2
         method = 'ml'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_06_promax_ml_3_factors(self):
 
-        filename = 'test06.csv'
+        test_name = 'test06'
         factors = 3
         method = 'ml'
         rotation = 'promax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_06_none_minres_2_factors(self):
 
-        filename = 'test06.csv'
+        test_name = 'test06'
         factors = 2
-        method = 'minres'
+        method = 'uls'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_07_varimax_minres_3_factors(self):
 
-        filename = 'test07.csv'
+        test_name = 'test07'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_07_varimax_ml_3_factors(self):
 
-        filename = 'test07.csv'
+        test_name = 'test07'
         factors = 3
         method = 'ml'
         rotation = 'varimax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_08_promax_ml_3_factors(self):
 
-        filename = 'test08.csv'
+        test_name = 'test08'
         factors = 3
         method = 'ml'
         rotation = 'promax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_08_none_ml_2_factors(self):
 
-        filename = 'test08.csv'
+        test_name = 'test08'
         factors = 2
         method = 'ml'
         rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation):
+            assert check > self.threshold
 
     def test_09_promax_ml_3_factors(self):
 
-        filename = 'test09.csv'
+        test_name = 'test09'
         factors = 3
         method = 'ml'
         rotation = 'promax'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_09_promax_minres_2_factors(self):
 
-        filename = 'test09.csv'
+        test_name = 'test09'
         factors = 2
-        method = 'minres'
+        method = 'uls'
         rotation = 'promax'
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
+    def test_10_none_ml_3_factors(self):
 
-        self.check_results(results, expected)
-
-    def test_09_none_minres_3_factors(self):
-
-        filename = 'test09.csv'
-        factors = 3
-        method = 'minres'
-        rotation = 'none'
-
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
-
-    def test_10_none_minres_3_factors(self):
-
-        filename = 'test10.csv'
-        factors = 3
-        method = 'minres'
-        rotation = 'none'
-
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected, check_communalities=True, check_uniqueness=True)
-
-    def test_10_varimax_ml_3_factors(self):
-
-        filename = 'test10.csv'
+        test_name = 'test10'
         factors = 3
         method = 'ml'
-        rotation = 'varimax'
+        rotation = 'none'
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
-
-        self.check_results(results, expected)
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
     def test_10_varimax_minres_3_factors(self):
 
-        filename = 'test10.csv'
+        test_name = 'test10'
         factors = 3
-        method = 'minres'
+        method = 'uls'
         rotation = 'varimax'
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold
 
-        results = self.do_analysis(filename, factors, method, rotation)
-        expected = self.get_expected(filename, factors, method, rotation)
+    def test_10_promax_minres_3_factors(self):
 
-        self.check_results(results, expected)
+        test_name = 'test10'
+        factors = 3
+        method = 'uls'
+        rotation = 'promax'
+        for check in self.check_all(test_name,
+                                    factors,
+                                    method,
+                                    rotation,
+                                    ignore_value=True,
+                                    ignore_communalities=True):
+            assert check > self.threshold

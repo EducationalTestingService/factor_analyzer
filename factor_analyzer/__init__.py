@@ -4,4 +4,5 @@
 :organization: ETS
 """
 
-from .factor_analyzer import FactorAnalyzer
+from .factor_analyzer import (FactorAnalyzer,
+                              calculate_bartlett_sphericity)

@@ -8,8 +8,6 @@ with optional rotation using Varimax or Promax.
 :organization: ETS
 """
 
-import os
-import argparse
 import logging
 
 import numpy as np
@@ -24,7 +22,7 @@ from sklearn.linear_model import LinearRegression
 def read_file(file_path):
     """
     A helper function to read file in
-    CSV, TSV, or XLXS format into a data_frame.
+    CSV, TSV, or XLSX format into a data_frame.
 
     Parameters
     ----------
@@ -86,58 +84,11 @@ def calculate_bartlett_sphericity(data):
 
     corr = data.corr()
 
-    chi_square = -(n - 1 - (2 * p + 5) / 6) * np.log(np.linalg.det(corr))
+    corr_det = np.linalg.det(corr)
+    statistic = -np.log(corr_det) * (n - 1 - (2 * p + 5) / 6)
     degrees_of_freedom = p * (p - 1) / 2
-    p_value = sp.stats.chi2.pdf(chi_square, degrees_of_freedom)
-    return chi_square, p_value
-
-
-def calculate_kaiser_meyer_olkin(data):
-    """
-    Calculate the Kaiser-Meter_Olkin measure of sampling adequacy.
-    The KMO checks if we can efficiently factorize
-    the original variables. KMO returns values between 0 and 1, which
-    can generally be interpreted as follows:
-
-    - Values close to zero indicate high partial correlations,
-      meaning EFA may be a problem.
-    - Values greater than zero and less than 0.5 indicate the sampling
-      is not adequate.
-    - Values greater than 0.5 and less than 0.8 indicate sampling
-      may be adequate.
-    - Values between 0.8 and 1 indicate that sampling is adequate.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        The data to analyze using KMO.
-
-    Returns
-    -------
-    kmo_value : float
-        The KMO value.
-    """
-
-    # get correlation and inverse correlation matrices
-    corr = data.corr()
-    corr_inv = np.linalg.inv(corr)
-
-    # get number of rows and number of columns
-    n, p = corr.shape
-
-    # 1. calculate partial correlation matrix
-    A = np.ones((n, p))
-    for i in range(n):
-        for j in range(i, p):
-
-            A[i, j] = -corr_inv[i, j] / np.sqrt(corr_inv[i, i] * corr_inv[j, j])
-            A[j, i] = A[i, j]
-
-    # 2. calculate global KMO value
-    kmo_number = np.sum(np.square(corr)) - np.sum(np.square(np.diagonal(corr)))
-    kmo_denominator = kmo_number + np.sum(np.square(A)) - np.sum(np.square(np.diagonal(A)))
-    kmo_value = kmo_number / kmo_denominator
-    return kmo_value
+    p_value = sp.stats.chi2.pdf(statistic, degrees_of_freedom)
+    return statistic, p_value
 
 
 class FactorAnalyzer:
@@ -922,73 +873,3 @@ class FactorAnalyzer:
                                                 'Cumulative Var'])
 
             return variance_info
-
-
-def main():
-    """ Run the script.
-    """
-
-    # set up an argument parser
-    parser = argparse.ArgumentParser(prog='factor_analyzer.py')
-    parser.add_argument(dest='feature_file',
-                        help="Input file containing the pre-processed features "
-                             "for the training data")
-    parser.add_argument(dest='output_dir', help="Output directory to save "
-                                                "the output files", )
-    parser.add_argument('-f', '--factors', dest="num_factors", type=int,
-                        default=3, help="Number of factors to use (Default 3)",
-                        required=False)
-
-    parser.add_argument('-r', '--rotation', dest="rotation", type=str,
-                        default='none', help="The rotation to perform (Default 'none')",
-                        required=False)
-
-    parser.add_argument('-m', '--method', dest="method", type=str,
-                        default='minres', help="The method to use (Default 'minres')",
-                        required=False)
-
-    # parse given command line arguments
-    args = parser.parse_args()
-
-    method = args.method
-    factors = args.num_factors
-    rotation = None if args.rotation == 'none' else args.rotation
-
-    file_path = args.feature_file
-
-    data = read_file(file_path)
-
-    # get the logger
-    logger = logging.getLogger(__name__)
-    logging.setLevel(logging.INFO)
-
-    # log some useful messages so that the user knows
-    logger.info("Starting exploratory factor analysis on: {}.".format(file_path))
-
-    # run the analysis
-    analyzer = FactorAnalyzer()
-    analyzer.analyze(data, factors, rotation, method)
-
-    # create paths to loadings loadings, eigenvalues, communalities, variance
-    path_loadings = os.path.join(args.output_dir, 'loadings.csv')
-    path_eigen = os.path.join(args.output_dir, 'eigenvalues.csv')
-    path_communalities = os.path.join(args.output_dir, 'communalities.csv')
-    path_variance = os.path.join(args.output_dir, 'variance.csv')
-
-    # retrieve loadings, eigenvalues, communalities, variance
-    loadings = analyzer.loadings
-    eigen, _ = analyzer.get_eigenvalues()
-    communalities = analyzer.get_communalities()
-    variance = analyzer.get_factor_variance()
-
-    # save the files
-    logger.info("Saving files...")
-    loadings.to_csv(path_loadings)
-    eigen.to_csv(path_eigen)
-    communalities.to_csv(path_communalities)
-    variance.to_csv(path_variance)
-
-
-if __name__ == '__main__':
-
-    main()
