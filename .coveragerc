@@ -1,0 +1,4 @@
+[run]
+source = factor_analyzer
+omit =
+    *factor_analyzer/analyze.py
