@@ -8,14 +8,14 @@ dependencies:
  cache_directories:
   - "~/miniconda3/pkgs"
 
-# overrides
-override:
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b -f
-  - ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
-  - ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
-  - ${HOME}/miniconda3/bin/pip install -e .
+  # overrides
+  override:
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    - chmod +x miniconda.sh
+    - ./miniconda.sh -b -f
+    - ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
+    - ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
+    - ${HOME}/miniconda3/bin/pip install -e .
 
 # perform tests
 test:
