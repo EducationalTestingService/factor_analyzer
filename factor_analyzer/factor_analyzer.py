@@ -45,8 +45,6 @@ def read_file(file_path):
         data = pd.read_csv(file_path)
     elif file_path.lower().endswith('.tsv'):
         data = pd.read_csv(file_path, sep='\t')
-    elif file_path.lower().endswith('.xlsx'):
-        data = pd.read_excel(file_path)
     else:
         raise ValueError('The file must be either CSV, TSV, or XLSX format. '
                          'You have specified the following : {}'.format(file_path))

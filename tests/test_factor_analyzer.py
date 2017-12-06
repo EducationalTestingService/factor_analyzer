@@ -50,17 +50,6 @@ def test_read_file_tsv():
     assert_frame_equal(data, expected)
 
 
-def test_read_file_xlsx():
-
-    expected = pd.DataFrame({'a': [1],
-                             'b': [2],
-                             'c': [3]})
-
-    path = 'tests/files/test.xlsx'
-    data = read_file(path)
-    assert_frame_equal(data, expected)
-
-
 @raises(ValueError)
 def test_read_file_wrong_extension():
 
