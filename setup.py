@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 
 def readme():
-    with open('README.md') as f:
+    with open('README.rst') as f:
         return f.read()
 
 
@@ -16,7 +16,7 @@ setup(name='factor_analyzer',
       packages=find_packages(),
       include_package_data=True,
       entry_points={'console_scripts':
-                    ['factor_analyzer = factor_analyzer.factor_analyzer:main']},
+                    ['factor_analyzer = factor_analyzer.analyze:main']},
       classifiers=['Intended Audience :: Science/Research',
                    'Intended Audience :: Developers',
                    'Programming Language :: Python',
