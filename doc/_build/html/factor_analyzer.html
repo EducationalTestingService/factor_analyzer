@@ -200,7 +200,7 @@ with optional rotation using Varimax or Promax.</p>
 <dl class="class">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer">
 <em class="property">class </em><code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">FactorAnalyzer</code><span class="sig-paren">(</span><em>log_warnings=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <dl class="docutils">
 <dt>A FactorAnalyzer class, which -</dt>
 <dd><ol class="first last arabic simple">
@@ -219,7 +219,7 @@ either -<ol class="loweralpha">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>log_warnings</strong> (<em>bool</em>) – Whether to log warnings, such as failure to
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>log_warnings</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to log warnings, such as failure to
 converge.
 Defaults to False.</td>
 </tr>
@@ -278,7 +278,7 @@ as starting guesses and perform Kaiser normalization.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>data</strong> (<em>pd.DataFrame</em>) – The data to analyze.</li>
-<li><strong>n_factors</strong> (<em>int</em>) – The number of factors to select.
+<li><strong>n_factors</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – The number of factors to select.
 Defaults to 3.</li>
 <li><strong>rotation</strong> (<em>{'varimax'</em><em>, </em><em>'promax'</em><em>, </em><em>None}</em>) – The type of rotation to perform after
 fitting the factor analysis model.
@@ -288,13 +288,13 @@ Defaults to ‘promax’.</li>
 <li><strong>method</strong> (<em>{'minres'</em><em>, </em><em>'ml'}</em>) – The fitting method to use, either MINRES or
 Maximum Likelihood.
 Defaults to ‘minres’.</li>
-<li><strong>use_smc</strong> (<em>bool</em>) – Whether to use squared multiple correlation
+<li><strong>use_smc</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to use squared multiple correlation
 as starting guesses for factor analysis.
 Defaults to True.</li>
-<li><strong>bounds</strong> (<em>tuple</em>) – The lower and upper bounds on the variables
+<li><strong>bounds</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a>) – The lower and upper bounds on the variables
 for “L-BFGS-B” optimization.
 Defaults to (0.005, 1).</li>
-<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+<li><strong>normalize</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to perform Kaiser normalization
 and de-normalization prior to and following
 rotation.
 Defaults to True.</li>
@@ -335,11 +335,11 @@ minres or ml solutions.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>data</strong> (<em>pd.DataFrame</em>) – The data to fit.</li>
-<li><strong>n_factors</strong> (<em>int</em>) – The number of factors to select.</li>
-<li><strong>use_smc</strong> (<em>bool</em>) – Whether to use squared multiple correlation
+<li><strong>n_factors</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – The number of factors to select.</li>
+<li><strong>use_smc</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to use squared multiple correlation
 as starting guesses for factor analysis.
 Defaults to True.</li>
-<li><strong>bounds</strong> (<em>tuple</em>) – The lower and upper bounds on the variables
+<li><strong>bounds</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a>) – The lower and upper bounds on the variables
 for “L-BFGS-B” optimization.
 Defaults to (0.005, 1).</li>
 <li><strong>method</strong> (<em>{'minres'</em><em>, </em><em>'ml'}</em>) – The fitting method to use, either MINRES or
@@ -530,11 +530,11 @@ Kaiser normalization.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>data</strong> (<em>pd.DataFrame</em>) – The loadings matrix to rotate.</li>
-<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+<li><strong>normalize</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to perform Kaiser normalization
 and de-normalization prior to and following
 rotation.
 Defaults to False.</li>
-<li><strong>power</strong> (<em>int</em>) – The power to which to raise the varimax loadings
+<li><strong>power</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – The power to which to raise the varimax loadings
 (minus 1). Numbers should generally range form 2 to 4.
 Defaults to 4.</li>
 </ul>
@@ -586,7 +586,7 @@ on all others and calculating the r-squared values.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>data</strong> (<em>pd.DataFrame</em>) – The dataframe used to calculate SMC.</li>
-<li><strong>sort</strong> (<em>bool</em>) – Whether to sort the values for SMC
+<li><strong>sort</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to sort the values for SMC
 before returning.
 Defaults to False.</li>
 </ul>
@@ -631,13 +631,13 @@ Kaiser normalization.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>data</strong> (<em>pd.DataFrame</em>) – The loadings matrix to rotate.</li>
-<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+<li><strong>normalize</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Whether to perform Kaiser normalization
 and de-normalization prior to and following
 rotation.
 Defaults to True.</li>
-<li><strong>max_iter</strong> (<em>int</em>) – Maximum number of iterations.
+<li><strong>max_iter</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Maximum number of iterations.
 Defaults to 500.</li>
-<li><strong>tolerance</strong> (<em>float</em>) – The tolerance for convergence.
+<li><strong>tolerance</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – The tolerance for convergence.
 Defaults to 1e-5.</li>
 </ul>
 </td>
@@ -666,8 +666,8 @@ is equal to the identity matrix.identity</p>
 H1: The matrix of population correlations is not equal to I.</p>
 <p>The formula for Bartlett’s Sphericity test is:</p>
 <div class="math">
-<p><span class="math">-1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))</span></p>
-</div><p>Where R det(R) is the determinant of the correlation matrix,
+\[-1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))\]</div>
+<p>Where R det(R) is the determinant of the correlation matrix,
 and p is the number of variables.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -694,7 +694,7 @@ CSV or TSV format into a data_frame.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_path</strong> (<em>str</em>) – The path to a CSV or TSV file.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – The path to a CSV or TSV file.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>data</strong> – The data file read into a pandas data_frame.</td>
 </tr>
@@ -774,6 +774,7 @@ CSV or TSV format into a data_frame.</p>
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 
