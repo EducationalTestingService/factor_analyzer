@@ -36,7 +36,8 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="factor_analyzer 0.1 documentation" href="index.html"/>
-        <link rel="prev" title="Welcome to the FactorAnalyzer documentation!" href="index.html"/> 
+        <link rel="up" title="factor_analyzer" href="modules.html"/>
+        <link rel="prev" title="factor_analyzer" href="modules.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -91,11 +92,14 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">factor_analyzer package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer.analyze">factor_analyzer.analyze module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer.factor_analyzer">factor_analyzer.factor_analyzer module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer">Module contents</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">factor_analyzer</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">factor_analyzer package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-factor_analyzer.analyze">factor_analyzer.analyze module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-factor_analyzer.factor_analyzer">factor_analyzer.factor_analyzer module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-factor_analyzer">Module contents</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -142,6 +146,8 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
+          <li><a href="modules.html">factor_analyzer</a> &raquo;</li>
+        
       <li>factor_analyzer package</li>
     
     
@@ -170,7 +176,7 @@
 <span id="factor-analyzer-analyze-module"></span><h2>factor_analyzer.analyze module<a class="headerlink" href="#module-factor_analyzer.analyze" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="factor_analyzer.analyze.main">
-<code class="descclassname">factor_analyzer.analyze.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.analyze.main" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">factor_analyzer.analyze.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/analyze.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.analyze.main" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the script.</p>
 </dd></dl>
 
@@ -193,7 +199,7 @@ with optional rotation using Varimax or Promax.</p>
 </table>
 <dl class="class">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer">
-<em class="property">class </em><code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">FactorAnalyzer</code><span class="sig-paren">(</span><em>log_warnings=False</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">FactorAnalyzer</code><span class="sig-paren">(</span><em>log_warnings=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <dl class="docutils">
 <dt>A FactorAnalyzer class, which -</dt>
@@ -262,7 +268,7 @@ been called.</p>
 </div>
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.analyze">
-<code class="descname">analyze</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors=3</em>, <em>rotation='promax'</em>, <em>method='minres'</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>normalize=True</em>, <em>impute='median'</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.analyze" title="Permalink to this definition">¶</a></dt>
+<code class="descname">analyze</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors=3</em>, <em>rotation='promax'</em>, <em>method='minres'</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>normalize=True</em>, <em>impute='median'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.analyze"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.analyze" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the factor analysis model using either
 minres or ml solutions. By default, use SMC
 as starting guesses and perform Kaiser normalization.</p>
@@ -320,7 +326,7 @@ rotations, see here:</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.fit_factor_analysis">
-<code class="descname">fit_factor_analysis</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>method='minres'</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.fit_factor_analysis" title="Permalink to this definition">¶</a></dt>
+<code class="descname">fit_factor_analysis</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>method='minres'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.fit_factor_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.fit_factor_analysis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the factor analysis model using either
 minres or ml solutions.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -358,7 +364,7 @@ to having zero standard deviation.</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_communalities">
-<code class="descname">get_communalities</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_communalities" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_communalities</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.get_communalities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_communalities" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the communalities, given the
 factor loading matrix.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -395,7 +401,7 @@ factor loading matrix.</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_eigenvalues">
-<code class="descname">get_eigenvalues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_eigenvalues" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_eigenvalues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.get_eigenvalues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_eigenvalues" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the eigenvalues, given the
 factor correlation matrix.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -447,7 +453,7 @@ factor correlation matrix.</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_factor_variance">
-<code class="descname">get_factor_variance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_factor_variance" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_factor_variance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.get_factor_variance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_factor_variance" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the factor variance information,
 including variance, proportional variance
 and cumulative variance.</p>
@@ -478,7 +484,7 @@ and cumulative variance.</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_uniqueness">
-<code class="descname">get_uniqueness</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_uniqueness" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_uniqueness</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.get_uniqueness"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_uniqueness" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the uniquenesses, given the
 factor loading matrix.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -515,7 +521,7 @@ factor loading matrix.</p>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.promax">
-<code class="descname">promax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=False</em>, <em>power=4</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.promax" title="Permalink to this definition">¶</a></dt>
+<code class="descname">promax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=False</em>, <em>power=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.promax"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.promax" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform promax (oblique) rotation, with optional
 Kaiser normalization.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -549,7 +555,7 @@ Defaults to 4.</li>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.remove_non_numeric">
-<code class="descname">remove_non_numeric</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.remove_non_numeric" title="Permalink to this definition">¶</a></dt>
+<code class="descname">remove_non_numeric</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.remove_non_numeric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.remove_non_numeric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove non-numeric columns from data,
 as these columns cannot be used in
 factor analysis.</p>
@@ -570,7 +576,7 @@ non-numeric columns.</td>
 
 <dl class="staticmethod">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.smc">
-<em class="property">static </em><code class="descname">smc</code><span class="sig-paren">(</span><em>data</em>, <em>sort=False</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.smc" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">smc</code><span class="sig-paren">(</span><em>data</em>, <em>sort=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.smc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.smc" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the squared multiple correlations.
 This is equivalent to regressing each variable
 on all others and calculating the r-squared values.</p>
@@ -616,7 +622,7 @@ Defaults to False.</li>
 
 <dl class="method">
 <dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.varimax">
-<code class="descname">varimax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=True</em>, <em>max_iter=500</em>, <em>tolerance=1e-05</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.varimax" title="Permalink to this definition">¶</a></dt>
+<code class="descname">varimax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=True</em>, <em>max_iter=500</em>, <em>tolerance=1e-05</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#FactorAnalyzer.varimax"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.varimax" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform varimax (orthogonal) rotation, with optional
 Kaiser normalization.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -653,7 +659,7 @@ Defaults to 1e-5.</li>
 
 <dl class="function">
 <dt id="factor_analyzer.factor_analyzer.calculate_bartlett_sphericity">
-<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">calculate_bartlett_sphericity</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.calculate_bartlett_sphericity" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">calculate_bartlett_sphericity</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#calculate_bartlett_sphericity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.calculate_bartlett_sphericity" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test the hypothesis that the correlation matrix
 is equal to the identity matrix.identity</p>
 <p>H0: The matrix of population correlations is equal to I.
@@ -681,7 +687,7 @@ and p is the number of variables.</p>
 
 <dl class="function">
 <dt id="factor_analyzer.factor_analyzer.read_file">
-<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">read_file</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.read_file" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">read_file</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/factor_analyzer/factor_analyzer.html#read_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#factor_analyzer.factor_analyzer.read_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>A helper function to read file in
 CSV or TSV format into a data_frame.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -727,7 +733,7 @@ CSV or TSV format into a data_frame.</p>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
       
-        <a href="index.html" class="btn btn-neutral" title="Welcome to the FactorAnalyzer documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="modules.html" class="btn btn-neutral" title="factor_analyzer" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

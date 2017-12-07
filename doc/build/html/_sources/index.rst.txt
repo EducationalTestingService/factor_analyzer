@@ -44,7 +44,7 @@ You can install this package via pip:
    :maxdepth: 2
    :caption: Contents:
 
-   factor_analyzer
+   modules
 
 
 Indices and tables
