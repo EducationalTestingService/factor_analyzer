@@ -15,6 +15,9 @@ a minimum residual (minres) solution, or maximum likelihood estimation
 
 Portions of this code are ported from the excellent R library ``psych``.
 
+Please see the the `official documentation <http://factor-analyzer.readthedocs.io/en/latest/index.html>`__ for additional details.
+
+
 Description
 -----------
 
