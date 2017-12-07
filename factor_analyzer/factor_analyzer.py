@@ -1,5 +1,5 @@
 """
-Factor analysis using MINRES -OR- ML,
+Factor analysis using MINRES or ML,
 with optional rotation using Varimax or Promax.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
@@ -60,7 +60,7 @@ def calculate_bartlett_sphericity(data):
 
     The formula for Bartlett's Sphericity test is:
 
-    X^2 = -1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))
+    .. math:: -1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))
 
     Where R det(R) is the determinant of the correlation matrix,
     and p is the number of variables.
@@ -90,37 +90,65 @@ def calculate_bartlett_sphericity(data):
 
 class FactorAnalyzer:
     """
-    FactorAnalyzer class, which -
-
-        (1) Fits a factor analysis model using MINRES -OR- Maximum Likelihood,
+    A FactorAnalyzer class, which -
+        (1) Fits a factor analysis model using minres or maximum likelihood,
             and returns the loading matrix
-
         (2) Optionally performs a rotation on the loading matrix using
             either -
 
-            (a) Varimax (orthogonal rotation) -OR-
-            (b) Promax (oblique rotation)
+            (a) varimax (orthogonal rotation)
+            (b) promax (oblique rotation)
 
-    Adapted from:
+    Parameters
+    ----------
+    log_warnings : bool
+        Whether to log warnings, such as failure to
+        converge.
+        Defaults to False.
 
-    - https://github.com/cran/psych/blob/master/R/fa.R
+    Attributes
+    ----------
+    loadings : pd.DataFrame
+        The factor loadings matrix.
+        Default to None, if `analyze()` has not
+        been called.
+    corr : pd.DataFrame
+        The original correlation matrix.
+        Default to None, if `analyze()` has not
+        been called.
 
-    - https://github.com/SurajGupta/r-source/blob/master/
-      src/library/stats/R/factanal.R
+    Notes
+    -----
+    This code was partly derived from the excellent R package
+    `psych`.
+
+    References
+    ----------
+    [1] https://github.com/cran/psych/blob/master/R/fa.R
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from factor_analyzer import FactorAnalyzer
+    >>> df_features = pd.read_csv('test02.csv')
+    >>> fa = FactorAnalyzer()
+    >>> fa.analyze(df_features, 3, rotation=None)
+    >>> fa.loadings
+               Factor1   Factor2   Factor3
+    sex      -0.129912 -0.163982  0.738235
+    zygosity  0.038996 -0.046584  0.011503
+    moed      0.348741 -0.614523 -0.072557
+    faed      0.453180 -0.719267 -0.075465
+    faminc    0.366888 -0.443773 -0.017371
+    english   0.741414  0.150082  0.299775
+    math      0.741675  0.161230 -0.207445
+    socsci    0.829102  0.205194  0.049308
+    natsci    0.760418  0.237687 -0.120686
+    vocab     0.815334  0.124947  0.176397
     """
 
     def __init__(self,
                  log_warnings=False):
-        """
-        Initialize object.
-
-        Parameters
-        ----------
-        log_warnings : bool
-            Whether to log warnings, such as failure to
-            converge.
-            Defaults to False.
-        """
 
         self.log_warnings = log_warnings
 
@@ -128,67 +156,6 @@ class FactorAnalyzer:
         self.corr = None
         self.loadings = None
         self.rotation_matrix = None
-
-    def remove_non_numeric(self, data):
-        """
-        Remove non-numeric columns from data,
-        as these columns cannot be used in
-        factor analysis.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            The dataframe from which to remove
-            non-numeric columns.
-
-        Returns
-        -------
-        data : pd.DataFrame
-            The dataframe with non-numeric columns removed.
-        """
-        old_column_names = data.columns.values
-        data = data.loc[:, data.applymap(sp.isreal).all() == True].copy()
-
-        # report any non-numeric columns removed
-        non_numeric_columns = set(old_column_names) - set(data.columns)
-        if non_numeric_columns and self.log_warnings:
-            logging.warning('The following non-numeric columns '
-                            'were removed: {}.'.format(', '.join(non_numeric_columns)))
-        return data
-
-    @staticmethod
-    def smc(data, sort=False):
-        """
-        Calculate the squared multiple correlations.
-        This is equivalent to regressing each variable
-        on all others and calculating the r-squared values.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            The dataframe used to calculate SMC.
-        sort : bool
-            Whether to sort the values for SMC
-            before returning.
-            Defaults to False.
-
-        Returns
-        -------
-        smc : pd.DataFrame
-            The squared multiple correlations matrix.
-        """
-        corr = data.corr()
-        columns = data.columns
-
-        corr_inv = sp.linalg.inv(corr)
-        smc = 1 - 1 / sp.diag(corr_inv)
-
-        smc = pd.DataFrame(smc,
-                           index=columns,
-                           columns=['SMC'])
-        if sort:
-            smc = smc.sort_values('SMC')
-        return smc
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -350,6 +317,85 @@ class FactorAnalyzer:
 
         return np.dot(np.diag(np.sqrt(solution)), loadings)
 
+    @staticmethod
+    def smc(data, sort=False):
+        """
+        Calculate the squared multiple correlations.
+        This is equivalent to regressing each variable
+        on all others and calculating the r-squared values.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The dataframe used to calculate SMC.
+        sort : bool
+            Whether to sort the values for SMC
+            before returning.
+            Defaults to False.
+
+        Returns
+        -------
+        smc : pd.DataFrame
+            The squared multiple correlations matrix.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> FactorAnalyzer.smc(df_features)
+                       SMC
+        sex       0.212047
+        zygosity  0.010857
+        moed      0.385399
+        faed      0.453161
+        faminc    0.273753
+        english   0.566065
+        math      0.547790
+        socsci    0.677035
+        natsci    0.576016
+        vocab     0.660264
+        """
+        corr = data.corr()
+        columns = data.columns
+
+        corr_inv = sp.linalg.inv(corr)
+        smc = 1 - 1 / sp.diag(corr_inv)
+
+        smc = pd.DataFrame(smc,
+                           index=columns,
+                           columns=['SMC'])
+        if sort:
+            smc = smc.sort_values('SMC')
+        return smc
+
+    def remove_non_numeric(self, data):
+        """
+        Remove non-numeric columns from data,
+        as these columns cannot be used in
+        factor analysis.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The dataframe from which to remove
+            non-numeric columns.
+
+        Returns
+        -------
+        data : pd.DataFrame
+            The dataframe with non-numeric columns removed.
+        """
+        old_column_names = data.columns.values
+        data = data.loc[:, data.applymap(sp.isreal).all() == True].copy()
+
+        # report any non-numeric columns removed
+        non_numeric_columns = set(old_column_names) - set(data.columns)
+        if non_numeric_columns and self.log_warnings:
+            logging.warning('The following non-numeric columns '
+                            'were removed: {}.'.format(', '.join(non_numeric_columns)))
+        return data
+
     def fit_factor_analysis(self,
                             data,
                             n_factors,
@@ -357,7 +403,8 @@ class FactorAnalyzer:
                             bounds=(0.005, 1),
                             method='minres'):
         """
-        Fit the factor analysis model.
+        Fit the factor analysis model using either
+        minres or ml solutions.
 
         Parameters
         ----------
@@ -381,7 +428,7 @@ class FactorAnalyzer:
         Returns
         -------
         loadings : pd.DataFrame
-            The factor loadings matrix
+            The factor loadings matrix.
 
         Raises
         ------
@@ -389,7 +436,6 @@ class FactorAnalyzer:
             If any of the correlations are null, most likely due
             to having zero standard deviation.
         """
-
         if method not in ['ml', 'minres'] and self.log_warnings:
             logging.warning("You have selected a method other than 'minres' or 'ml'. "
                             "MINRES will be used by default, as {} is not a valid "
@@ -400,7 +446,6 @@ class FactorAnalyzer:
         # if any variables have zero standard deviation, then
         # the correlation will be NaN, as you cannot divide by zero:
         # corr(i,j ) = cov(i, j) / (stdev(i) * stdev(j))
-
         if corr.isnull().any().any():
             raise ValueError('The correlation matrix cannot have '
                              'features that are null or infinite. '
@@ -466,7 +511,9 @@ class FactorAnalyzer:
                 normalize=True,
                 impute='median'):
         """
-        Perform factor analysis.
+        Fit the factor analysis model using either
+        minres or ml solutions. By default, use SMC
+        as starting guesses and perform Kaiser normalization.
 
         Parameters
         ----------
@@ -475,7 +522,7 @@ class FactorAnalyzer:
         n_factors : int
             The number of factors to select.
             Defaults to 3.
-        rotation : {'varimax', 'promax'} or None
+        rotation : {'varimax', 'promax', None}
             The type of rotation to perform after
             fitting the factor analysis model.
             If set to None, no rotation will be performed,
@@ -521,8 +568,9 @@ class FactorAnalyzer:
         is an oblique rotation. For more details on promax
         rotations, see here:
 
-        https://www.rdocumentation.org/packages/psych/
-        versions/1.7.8/topics/Promax
+        References
+        ----------
+        [1] https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax
         """
 
         if rotation not in {'varimax', 'promax', None}:
@@ -586,7 +634,8 @@ class FactorAnalyzer:
 
     def varimax(self, data, normalize=True, max_iter=500, tolerance=1e-5):
         """
-        Varimax (orthogonal) rotation.
+        Perform varimax (orthogonal) rotation, with optional
+        Kaiser normalization.
 
         Parameters
         ----------
@@ -608,10 +657,10 @@ class FactorAnalyzer:
         ------
         loadings : pd.DataFrame
             The loadings matrix
-            (n_cols X n_factors)
+            (n_cols, n_factors)
         rotation_mtx : np.array
             The rotation matrix
-            (n_factors X n_factors)
+            (n_factors, n_factors)
         """
         df = data.copy()
 
@@ -682,7 +731,8 @@ class FactorAnalyzer:
 
     def promax(self, data, normalize=False, power=4):
         """
-        Promax (oblique) rotation.
+        Perform promax (oblique) rotation, with optional
+        Kaiser normalization.
 
         Parameters
         ----------
@@ -702,10 +752,10 @@ class FactorAnalyzer:
         ------
         loadings : pd.DataFrame
             The loadings matrix
-            (n_cols X n_factors)
+            (n_cols, n_factors)
         rotation_mtx : np.array
             The rotation matrix
-            (n_factors X n_factors)
+            (n_factors, n_factors)
         """
         df = data.copy()
 
@@ -777,8 +827,43 @@ class FactorAnalyzer:
 
         Return
         ------
-        eigenvalues : pd.DataFrame
-            A dataframe with eigenvalues information.
+        e_values : pd.DataFrame
+            A dataframe with original eigenvalues.
+        values : pd.DataFrame
+            A dataframe with common-factor eigenvalues.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation=None)
+        >>> ev, v = fa.get_eigenvalues()
+        >>> ev
+           Original_Eigenvalues
+        0              3.510189
+        1              1.283710
+        2              0.737395
+        3              0.133471
+        4              0.034456
+        5              0.010292
+        6             -0.007400
+        7             -0.036948
+        8             -0.059591
+        9             -0.074281
+        >>> v
+           Common_Factor_Eigenvalues
+        0                   3.510189
+        1                   1.283710
+        2                   0.737395
+        3                   0.133471
+        4                   0.034456
+        5                   0.010292
+        6                  -0.007400
+        7                  -0.036948
+        8                  -0.059591
+        9                  -0.074281
         """
         if (self.corr is not None and self.loadings is not None):
 
@@ -808,6 +893,26 @@ class FactorAnalyzer:
         ------
         communalities : pd.DataFrame
             A dataframe with communalities information.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation=None)
+        >>> fa.get_communalities()
+                  Communalities
+        sex            0.588758
+        zygosity       0.003823
+        moed           0.504524
+        faed           0.728412
+        faminc         0.331843
+        english        0.662084
+        math           0.619110
+        socsci         0.731946
+        natsci         0.649296
+        vocab          0.711497
         """
         if self.loadings is not None:
 
@@ -819,13 +924,32 @@ class FactorAnalyzer:
 
     def get_uniqueness(self):
         """
-        Calculate the communalities, given the
+        Calculate the uniquenesses, given the
         factor loading matrix.
 
         Return
         ------
-        communalities : pd.DataFrame
-            A dataframe with communalities information.
+        uniqueness : pd.DataFrame
+            A dataframe with uniqueness information.
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation=None)
+        >>> fa.get_uniqueness()
+                  Uniqueness
+        sex         0.411242
+        zygosity    0.996177
+        moed        0.495476
+        faed        0.271588
+        faminc      0.668157
+        english     0.337916
+        math        0.380890
+        socsci      0.268054
+        natsci      0.350704
+        vocab       0.288503
         """
         if self.loadings is not None:
 
@@ -844,6 +968,19 @@ class FactorAnalyzer:
         ------
         variance_info : pd.DataFrame
             A dataframe with variance information.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation=None)
+        >>> fa.get_factor_variance()
+                         Factor1   Factor2   Factor3
+        SS Loadings     3.510189  1.283710  0.737395
+        Proportion Var  0.351019  0.128371  0.073739
+        Cumulative Var  0.351019  0.479390  0.553129
         """
         if self.loadings is not None:
 

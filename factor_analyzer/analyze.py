@@ -3,7 +3,7 @@ import os
 import argparse
 import logging
 
-from factor_analyzer import FactorAnalyzer, read_file
+from factor_analyzer.factor_analyzer import FactorAnalyzer, read_file
 
 
 def main():
