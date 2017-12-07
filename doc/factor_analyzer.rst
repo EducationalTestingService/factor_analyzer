@@ -1,9 +1,6 @@
 factor\_analyzer package
 ========================
 
-Submodules
-----------
-
 factor\_analyzer\.analyze module
 --------------------------------
 
@@ -20,11 +17,3 @@ factor\_analyzer\.factor\_analyzer module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: factor_analyzer
-    :members:
-    :undoc-members:
-    :show-inheritance:
