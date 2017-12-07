@@ -8,12 +8,20 @@ def readme():
         return f.read()
 
 
+def requirements():
+    req_path = 'requirements.txt'
+    with open(req_path) as f:
+        reqs = f.read().splitlines()
+    return reqs
+
+
 setup(name='factor_analyzer',
-      version=0.1,
+      version='0.1.1',
       description='A Factor Analysis class',
       long_description=readme(),
       keywords='factor analysis',
       packages=find_packages(),
+      install_requires=requirements(),
       include_package_data=True,
       entry_points={'console_scripts':
                     ['factor_analyzer = factor_analyzer.analyze:main']},
