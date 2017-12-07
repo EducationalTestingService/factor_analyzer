@@ -25,7 +25,15 @@ Exploratory factor analysis (EFA) is a statistical technique used to
 identify latent relationships among sets of observed variables in a
 dataset. In particular, EFA seeks to model a large set of observed
 variables as linear combinations of some smaller set of unobserved,
-latent factors.
+latent factors, such that
+
+.. math::
+  \begin{eqnarray*}
+    X_1 = w_{10} + w_{11} F_1 + ... w_{1k} F_K + \epsilon \\
+    X_2 = w_{20} + w_{21} F_1 + ... w_{2k} F_K + \epsilon \\
+      \vdots\\
+    X_N = w_{N0} + w_{N1} F_1 + ... w_{Nk} F_K + \epsilon
+  \end{eqnarray*}
 
 The matrix of weights, or factor loadings, generated from an EFA model
 describes the underlying relationships between each variable and the
