@@ -1,0 +1,789 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>factor_analyzer package &mdash; factor_analyzer 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="factor_analyzer 0.1 documentation" href="index.html"/>
+        <link rel="prev" title="Welcome to the FactorAnalyzer documentation!" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> factor_analyzer
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">factor_analyzer package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer.analyze">factor_analyzer.analyze module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer.factor_analyzer">factor_analyzer.factor_analyzer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-factor_analyzer">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">factor_analyzer</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>factor_analyzer package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/factor_analyzer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="factor-analyzer-package">
+<h1>factor_analyzer package<a class="headerlink" href="#factor-analyzer-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-factor_analyzer.analyze">
+<span id="factor-analyzer-analyze-module"></span><h2>factor_analyzer.analyze module<a class="headerlink" href="#module-factor_analyzer.analyze" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="factor_analyzer.analyze.main">
+<code class="descclassname">factor_analyzer.analyze.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.analyze.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the script.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-factor_analyzer.factor_analyzer">
+<span id="factor-analyzer-factor-analyzer-module"></span><h2>factor_analyzer.factor_analyzer module<a class="headerlink" href="#module-factor_analyzer.factor_analyzer" title="Permalink to this headline">¶</a></h2>
+<p>Factor analysis using MINRES or ML,
+with optional rotation using Varimax or Promax.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">author:</th><td class="field-body">Jeremy Biggs (<a class="reference external" href="mailto:jbiggs&#37;&#52;&#48;ets&#46;org">jbiggs<span>&#64;</span>ets<span>&#46;</span>org</a>)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">date:</th><td class="field-body">10/25/2017</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">organization:</th><td class="field-body">ETS</td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer">
+<em class="property">class </em><code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">FactorAnalyzer</code><span class="sig-paren">(</span><em>log_warnings=False</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="docutils">
+<dt>A FactorAnalyzer class, which -</dt>
+<dd><ol class="first last arabic simple">
+<li>Fits a factor analysis model using minres or maximum likelihood,
+and returns the loading matrix</li>
+<li>Optionally performs a rotation on the loading matrix using
+either -<ol class="loweralpha">
+<li>varimax (orthogonal rotation)</li>
+<li>promax (oblique rotation)</li>
+</ol>
+</li>
+</ol>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>log_warnings</strong> (<em>bool</em>) – Whether to log warnings, such as failure to
+converge.
+Defaults to False.</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.loadings">
+<code class="descname">loadings</code><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.loadings" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>pd.DataFrame</em> – The factor loadings matrix.
+Default to None, if <cite>analyze()</cite> has not
+been called.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.corr">
+<code class="descname">corr</code><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.corr" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>pd.DataFrame</em> – The original correlation matrix.
+Default to None, if <cite>analyze()</cite> has not
+been called.</p>
+</dd></dl>
+
+<p class="rubric">Notes</p>
+<p>This code was partly derived from the excellent R package
+<cite>psych</cite>.</p>
+<p class="rubric">References</p>
+<p>[1] <a class="reference external" href="https://github.com/cran/psych/blob/master/R/fa.R">https://github.com/cran/psych/blob/master/R/fa.R</a></p>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span> <span class="o">=</span> <span class="n">FactorAnalyzer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">df_features</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">loadings</span>
+<span class="go">           Factor1   Factor2   Factor3</span>
+<span class="go">sex      -0.129912 -0.163982  0.738235</span>
+<span class="go">zygosity  0.038996 -0.046584  0.011503</span>
+<span class="go">moed      0.348741 -0.614523 -0.072557</span>
+<span class="go">faed      0.453180 -0.719267 -0.075465</span>
+<span class="go">faminc    0.366888 -0.443773 -0.017371</span>
+<span class="go">english   0.741414  0.150082  0.299775</span>
+<span class="go">math      0.741675  0.161230 -0.207445</span>
+<span class="go">socsci    0.829102  0.205194  0.049308</span>
+<span class="go">natsci    0.760418  0.237687 -0.120686</span>
+<span class="go">vocab     0.815334  0.124947  0.176397</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.analyze">
+<code class="descname">analyze</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors=3</em>, <em>rotation='promax'</em>, <em>method='minres'</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>normalize=True</em>, <em>impute='median'</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.analyze" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the factor analysis model using either
+minres or ml solutions. By default, use SMC
+as starting guesses and perform Kaiser normalization.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>pd.DataFrame</em>) – The data to analyze.</li>
+<li><strong>n_factors</strong> (<em>int</em>) – The number of factors to select.
+Defaults to 3.</li>
+<li><strong>rotation</strong> (<em>{'varimax'</em><em>, </em><em>'promax'</em><em>, </em><em>None}</em>) – The type of rotation to perform after
+fitting the factor analysis model.
+If set to None, no rotation will be performed,
+nor will any associated Kaiser normalization.
+Defaults to ‘promax’.</li>
+<li><strong>method</strong> (<em>{'minres'</em><em>, </em><em>'ml'}</em>) – The fitting method to use, either MINRES or
+Maximum Likelihood.
+Defaults to ‘minres’.</li>
+<li><strong>use_smc</strong> (<em>bool</em>) – Whether to use squared multiple correlation
+as starting guesses for factor analysis.
+Defaults to True.</li>
+<li><strong>bounds</strong> (<em>tuple</em>) – The lower and upper bounds on the variables
+for “L-BFGS-B” optimization.
+Defaults to (0.005, 1).</li>
+<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+and de-normalization prior to and following
+rotation.
+Defaults to True.</li>
+<li><strong>impute</strong> (<em>{'drop'</em><em>, </em><em>'mean'</em><em>, </em><em>'median'}</em>) – If missing values are present in the data, either use
+list-wise deletion (‘drop’) or impute the column median
+(‘median’) or column mean (‘mean’).
+Defaults to ‘median’.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If rotation not in {‘varimax’, ‘promax’, None}.</li>
+<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If missing values present and <cite>missing_values</cite> is
+not set to either ‘drop’ or ‘impute’.</li>
+<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If a ValueError is raised in attempting to scale
+the data, possibly due to infinite values.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>varimax is an orthogonal rotation, while promax
+is an oblique rotation. For more details on promax
+rotations, see here:</p>
+<p class="rubric">References</p>
+<p>[1] <a class="reference external" href="https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax">https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax</a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.fit_factor_analysis">
+<code class="descname">fit_factor_analysis</code><span class="sig-paren">(</span><em>data</em>, <em>n_factors</em>, <em>use_smc=True</em>, <em>bounds=(0.005</em>, <em>1)</em>, <em>method='minres'</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.fit_factor_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the factor analysis model using either
+minres or ml solutions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>pd.DataFrame</em>) – The data to fit.</li>
+<li><strong>n_factors</strong> (<em>int</em>) – The number of factors to select.</li>
+<li><strong>use_smc</strong> (<em>bool</em>) – Whether to use squared multiple correlation
+as starting guesses for factor analysis.
+Defaults to True.</li>
+<li><strong>bounds</strong> (<em>tuple</em>) – The lower and upper bounds on the variables
+for “L-BFGS-B” optimization.
+Defaults to (0.005, 1).</li>
+<li><strong>method</strong> (<em>{'minres'</em><em>, </em><em>'ml'}</em>) – The fitting method to use, either MINRES or
+Maximum Likelihood.
+Defaults to ‘minres’.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>loadings</strong> – The factor loadings matrix.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">pd.DataFrame</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If any of the correlations are null, most likely due
+to having zero standard deviation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_communalities">
+<code class="descname">get_communalities</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_communalities" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the communalities, given the
+factor loading matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>communalities</strong> – A dataframe with communalities information.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pd.DataFrame</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span> <span class="o">=</span> <span class="n">FactorAnalyzer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">df_features</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">get_communalities</span><span class="p">()</span>
+<span class="go">          Communalities</span>
+<span class="go">sex            0.588758</span>
+<span class="go">zygosity       0.003823</span>
+<span class="go">moed           0.504524</span>
+<span class="go">faed           0.728412</span>
+<span class="go">faminc         0.331843</span>
+<span class="go">english        0.662084</span>
+<span class="go">math           0.619110</span>
+<span class="go">socsci         0.731946</span>
+<span class="go">natsci         0.649296</span>
+<span class="go">vocab          0.711497</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_eigenvalues">
+<code class="descname">get_eigenvalues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_eigenvalues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the eigenvalues, given the
+factor correlation matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>e_values</strong> (<em>pd.DataFrame</em>) – A dataframe with original eigenvalues.</li>
+<li><strong>values</strong> (<em>pd.DataFrame</em>) – A dataframe with common-factor eigenvalues.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span> <span class="o">=</span> <span class="n">FactorAnalyzer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">df_features</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ev</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">fa</span><span class="o">.</span><span class="n">get_eigenvalues</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ev</span>
+<span class="go">   Original_Eigenvalues</span>
+<span class="go">0              3.510189</span>
+<span class="go">1              1.283710</span>
+<span class="go">2              0.737395</span>
+<span class="go">3              0.133471</span>
+<span class="go">4              0.034456</span>
+<span class="go">5              0.010292</span>
+<span class="go">6             -0.007400</span>
+<span class="go">7             -0.036948</span>
+<span class="go">8             -0.059591</span>
+<span class="go">9             -0.074281</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">v</span>
+<span class="go">   Common_Factor_Eigenvalues</span>
+<span class="go">0                   3.510189</span>
+<span class="go">1                   1.283710</span>
+<span class="go">2                   0.737395</span>
+<span class="go">3                   0.133471</span>
+<span class="go">4                   0.034456</span>
+<span class="go">5                   0.010292</span>
+<span class="go">6                  -0.007400</span>
+<span class="go">7                  -0.036948</span>
+<span class="go">8                  -0.059591</span>
+<span class="go">9                  -0.074281</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_factor_variance">
+<code class="descname">get_factor_variance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_factor_variance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the factor variance information,
+including variance, proportional variance
+and cumulative variance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>variance_info</strong> – A dataframe with variance information.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pd.DataFrame</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span> <span class="o">=</span> <span class="n">FactorAnalyzer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">df_features</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">get_factor_variance</span><span class="p">()</span>
+<span class="go">                 Factor1   Factor2   Factor3</span>
+<span class="go">SS Loadings     3.510189  1.283710  0.737395</span>
+<span class="go">Proportion Var  0.351019  0.128371  0.073739</span>
+<span class="go">Cumulative Var  0.351019  0.479390  0.553129</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.get_uniqueness">
+<code class="descname">get_uniqueness</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.get_uniqueness" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the uniquenesses, given the
+factor loading matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>uniqueness</strong> – A dataframe with uniqueness information.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pd.DataFrame</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span> <span class="o">=</span> <span class="n">FactorAnalyzer</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">analyze</span><span class="p">(</span><span class="n">df_features</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fa</span><span class="o">.</span><span class="n">get_uniqueness</span><span class="p">()</span>
+<span class="go">          Uniqueness</span>
+<span class="go">sex         0.411242</span>
+<span class="go">zygosity    0.996177</span>
+<span class="go">moed        0.495476</span>
+<span class="go">faed        0.271588</span>
+<span class="go">faminc      0.668157</span>
+<span class="go">english     0.337916</span>
+<span class="go">math        0.380890</span>
+<span class="go">socsci      0.268054</span>
+<span class="go">natsci      0.350704</span>
+<span class="go">vocab       0.288503</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.promax">
+<code class="descname">promax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=False</em>, <em>power=4</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.promax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform promax (oblique) rotation, with optional
+Kaiser normalization.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>pd.DataFrame</em>) – The loadings matrix to rotate.</li>
+<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+and de-normalization prior to and following
+rotation.
+Defaults to False.</li>
+<li><strong>power</strong> (<em>int</em>) – The power to which to raise the varimax loadings
+(minus 1). Numbers should generally range form 2 to 4.
+Defaults to 4.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>loadings</strong> (<em>pd.DataFrame</em>) – The loadings matrix
+(n_cols, n_factors)</li>
+<li><strong>rotation_mtx</strong> (<em>np.array</em>) – The rotation matrix
+(n_factors, n_factors)</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.remove_non_numeric">
+<code class="descname">remove_non_numeric</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.remove_non_numeric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove non-numeric columns from data,
+as these columns cannot be used in
+factor analysis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>pd.DataFrame</em>) – The dataframe from which to remove
+non-numeric columns.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>data</strong> – The dataframe with non-numeric columns removed.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pd.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.smc">
+<em class="property">static </em><code class="descname">smc</code><span class="sig-paren">(</span><em>data</em>, <em>sort=False</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.smc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the squared multiple correlations.
+This is equivalent to regressing each variable
+on all others and calculating the r-squared values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>pd.DataFrame</em>) – The dataframe used to calculate SMC.</li>
+<li><strong>sort</strong> (<em>bool</em>) – Whether to sort the values for SMC
+before returning.
+Defaults to False.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>smc</strong> – The squared multiple correlations matrix.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pd.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">factor_analyzer</span> <span class="k">import</span> <span class="n">FactorAnalyzer</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;test02.csv&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">FactorAnalyzer</span><span class="o">.</span><span class="n">smc</span><span class="p">(</span><span class="n">df_features</span><span class="p">)</span>
+<span class="go">               SMC</span>
+<span class="go">sex       0.212047</span>
+<span class="go">zygosity  0.010857</span>
+<span class="go">moed      0.385399</span>
+<span class="go">faed      0.453161</span>
+<span class="go">faminc    0.273753</span>
+<span class="go">english   0.566065</span>
+<span class="go">math      0.547790</span>
+<span class="go">socsci    0.677035</span>
+<span class="go">natsci    0.576016</span>
+<span class="go">vocab     0.660264</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="factor_analyzer.factor_analyzer.FactorAnalyzer.varimax">
+<code class="descname">varimax</code><span class="sig-paren">(</span><em>data</em>, <em>normalize=True</em>, <em>max_iter=500</em>, <em>tolerance=1e-05</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.FactorAnalyzer.varimax" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform varimax (orthogonal) rotation, with optional
+Kaiser normalization.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>pd.DataFrame</em>) – The loadings matrix to rotate.</li>
+<li><strong>normalize</strong> (<em>bool</em>) – Whether to perform Kaiser normalization
+and de-normalization prior to and following
+rotation.
+Defaults to True.</li>
+<li><strong>max_iter</strong> (<em>int</em>) – Maximum number of iterations.
+Defaults to 500.</li>
+<li><strong>tolerance</strong> (<em>float</em>) – The tolerance for convergence.
+Defaults to 1e-5.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>loadings</strong> (<em>pd.DataFrame</em>) – The loadings matrix
+(n_cols, n_factors)</li>
+<li><strong>rotation_mtx</strong> (<em>np.array</em>) – The rotation matrix
+(n_factors, n_factors)</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="factor_analyzer.factor_analyzer.calculate_bartlett_sphericity">
+<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">calculate_bartlett_sphericity</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.calculate_bartlett_sphericity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test the hypothesis that the correlation matrix
+is equal to the identity matrix.identity</p>
+<p>H0: The matrix of population correlations is equal to I.
+H1: The matrix of population correlations is not equal to I.</p>
+<p>The formula for Bartlett’s Sphericity test is:</p>
+<div class="math">
+<p><span class="math">-1 * (n - 1 - ((2p + 5) / 6)) * ln(det(R))</span></p>
+</div><p>Where R det(R) is the determinant of the correlation matrix,
+and p is the number of variables.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>pd.DataFrame</em>) – The data to analyze.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>chi_square</strong> (<em>float</em>) – The chi-square value</li>
+<li><strong>p_value</strong> (<em>float</em>) – The p-value for the test.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="factor_analyzer.factor_analyzer.read_file">
+<code class="descclassname">factor_analyzer.factor_analyzer.</code><code class="descname">read_file</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#factor_analyzer.factor_analyzer.read_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function to read file in
+CSV or TSV format into a data_frame.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file_path</strong> (<em>str</em>) – The path to a CSV or TSV file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>data</strong> – The data file read into a pandas data_frame.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pd.DataFrame</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the file is not CSV, TSV.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-factor_analyzer">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-factor_analyzer" title="Permalink to this headline">¶</a></h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">author:</th><td class="field-body">Jeremy Biggs (<a class="reference external" href="mailto:jbiggs&#37;&#52;&#48;ets&#46;org">jbiggs<span>&#64;</span>ets<span>&#46;</span>org</a>)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">organization:</th><td class="field-body">ETS</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Welcome to the FactorAnalyzer documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Jeremy Biggs.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

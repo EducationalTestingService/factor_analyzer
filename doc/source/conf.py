@@ -50,8 +50,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'factor_analyzer'
-copyright = '2017, jbiggs'
-author = 'jbiggs'
+copyright = '2017, Jeremy Biggs'
+author = 'Jeremy Biggs'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -148,10 +148,10 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-#latex_documents = [
+# latex_documents = [
 #    (master_doc, 'factor_analyzer.tex', 'factor\\_analyzer Documentation',
 #     'jbiggs', 'manual'),
-#]
+# ]
 
 
 # -- Options for manual page output ---------------------------------------
@@ -174,8 +174,6 @@ texinfo_documents = [
      author, 'factor_analyzer', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
 
 # -- Options for Epub output ----------------------------------------------
 
