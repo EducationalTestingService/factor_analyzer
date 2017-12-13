@@ -12,8 +12,7 @@ FactorAnalyzer
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
 .. image:: https://readthedocs.org/projects/factor-analyzer/badge/?version=latest
-    :target: http://factor-analyzer.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+    :target: http://factor-analyzer.readthedocs.io/en/latest/
 
 
 This is Python module to perform exploratory factor analysis, with
