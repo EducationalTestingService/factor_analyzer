@@ -11,9 +11,6 @@ FactorAnalyzer
 .. image:: https://anaconda.org/desilinguist/factor_analyzer/badges/installer/conda.svg
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
-.. image:: https://readthedocs.org/projects/factor-analyzer/badge/?version=latest
-    :target: http://factor-analyzer.readthedocs.io/en/latest/
-
 
 This is Python module to perform exploratory factor analysis, with
 optional varimax and promax rotations. Estimation can be performed using
