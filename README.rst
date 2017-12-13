@@ -136,7 +136,7 @@ You can install this package via ``pip`` with:
 
 Alternatively, you can install via ``conda`` with:
 
-``conda install -c desilinguist factor_analyzer``
+``$ conda install -c desilinguist factor_analyzer``
 
 License
 -------
