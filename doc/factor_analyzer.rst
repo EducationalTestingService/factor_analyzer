@@ -8,7 +8,7 @@ factor\_analyzer package
     :undoc-members:
     :show-inheritance:
 
-:py:mod:`factor\_analyzer\.factor\_analyzer`
+:py:mod:`factor\_analyzer\.factor\_analyzer` Module
 --------------------------------------------------------
 .. automodule:: factor_analyzer.factor_analyzer
     :members:
