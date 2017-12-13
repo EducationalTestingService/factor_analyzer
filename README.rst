@@ -2,11 +2,18 @@ FactorAnalyzer
 --------------
 
 .. image:: https://circleci.com/gh/EducationalTestingService/factor_analyzer/tree/master.svg?style=shield
-   :alt: Build status
-   :target: https://circleci.com/gh/EducationalTestingService/factor_analyzer
+    :alt: Build status
+    :target: https://circleci.com/gh/EducationalTestingService/factor_analyzer
 
 .. image:: https://coveralls.io/repos/github/EducationalTestingService/factor_analyzer/badge.svg?branch=master
     :target: https://coveralls.io/github/EducationalTestingService/factor_analyzer?branch=master
+
+.. image:: https://anaconda.org/desilinguist/factor_analyzer/badges/installer/conda.svg
+    :target: https://anaconda.org/desilinguist/factor_analyzer/
+
+.. image:: https://readthedocs.org/projects/factor-analyzer/badge/?version=latest
+    :target: http://factor-analyzer.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 This is Python module to perform exploratory factor analysis, with
 optional varimax and promax rotations. Estimation can be performed using
