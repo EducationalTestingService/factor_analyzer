@@ -9,15 +9,15 @@ package:
   version: '{{ version }}'
 
 source:
-  fn: '{{ name }}-{{ version }}.{{ file_ext }}'
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}
-  '{{ hash_type }}': '{{ hash_value }}'
+  path : ../../../factor_analyzer
 
 build:
   number: 0
   entry_points:
     - factor_analyzer = factor_analyzer.analyze:main
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  script:
+    - cd $SRC_DIR
+    - $PYTHON setup.py install
 
 requirements:
   build:
