@@ -15,6 +15,7 @@ FactorAnalyzer
     :target: http://factor-analyzer.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+
 This is Python module to perform exploratory factor analysis, with
 optional varimax and promax rotations. Estimation can be performed using
 a minimum residual (minres) solution, or maximum likelihood estimation
