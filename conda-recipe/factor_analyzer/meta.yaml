@@ -1,0 +1,47 @@
+{% set name = "factor_analyzer" %}
+{% set version = "0.2.1" %}
+{% set file_ext = "tar.gz" %}
+{% set hash_type = "sha256" %}
+{% set hash_value = "94ea4c7d46e846cc7174787adce47156cf58dc257905c878edc5181b4fa300ed" %}
+
+package:
+  name: '{{ name|lower }}'
+  version: '{{ version }}'
+
+source:
+  fn: '{{ name }}-{{ version }}.{{ file_ext }}'
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}
+  '{{ hash_type }}': '{{ hash_value }}'
+
+build:
+  number: 0
+  entry_points:
+    - factor_analyzer = factor_analyzer.analyze:main
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - scikit-learn ==0.19.1
+    - pandas
+    - scipy
+    - numpy
+  run:
+    - python
+    - scikit-learn ==0.19.1
+    - pandas
+    - scipy
+    - numpy
+
+test:
+  imports:
+    - factor_analyzer
+  commands:
+    - factor_analyzer --help
+
+about:
+  home: https://github.com/EducationalTestingService/factor_analyzer
+  license: GPL V2
+  license_family: GPL
+  summary: Exploratory factor analysis in Python
