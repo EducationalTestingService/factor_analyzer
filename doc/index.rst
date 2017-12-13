@@ -37,8 +37,14 @@ Requirements
 
 Installation
 ==================
-You can install this package via pip:
+
+You can install this package via ``pip`` with:
+
 ``$ pip install factor_analyzer``
+
+Alternatively, you can install via ``conda`` with:
+
+``conda install -c desilinguist factor_analyzer``
 
 .. toctree::
    :maxdepth: 2
