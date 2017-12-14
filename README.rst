@@ -12,7 +12,7 @@ FactorAnalyzer
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
 
-This is Python module to perform exploratory factor analysis, with
+This is a Python module to perform exploratory factor analysis, with
 optional varimax and promax rotations. Estimation can be performed using
 a minimum residual (minres) solution, or maximum likelihood estimation
 (MLE).
@@ -34,7 +34,7 @@ latent factors.
 The matrix of weights, or factor loadings, generated from an EFA model
 describes the underlying relationships between each variable and the
 latent factors. Typically, a number of factors (K) is selected such that
-is substantially smaller than the number of variables. The factor
+it is substantially smaller than the number of variables. The factor
 analysis model can be estimated using a variety of standard estimation
 methods, including but not limited to OLS, minres, or MLE.
 
