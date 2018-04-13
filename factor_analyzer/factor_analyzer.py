@@ -245,7 +245,7 @@ class FactorAnalyzer:
         sstar = np.dot(np.dot(sc, corr_mtx), sc)
 
         # get the eigenvalues and eigenvectors for n_factors
-        values, _ = np.linalg.eigh(sstar)
+        values, _ = sp.linalg.eigh(sstar)
         values = values[::-1][n_factors:]
 
         # calculate the error
