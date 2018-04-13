@@ -180,23 +180,20 @@ class FactorAnalyzer:
         np.fill_diagonal(corr_mtx, 1 - psi)
 
         # get the eigen values and vectors for n_factors
-        values, vectors = np.linalg.eig(corr_mtx)
-
-        # make sure that only the real part of each eigenvalue
-        # is used, if `complex` is returned
-        values = np.real(values)
+        values, vectors = sp.linalg.eigh(corr_mtx)
+        values = values[::-1]
 
         # this is a bit of a hack, borrowed from R's `fac()` function;
         # if values are smaller than the smallest representable positive
         # number * 100, set them to that number instead.
         values = np.maximum(values, np.finfo(float).eps * 100)
 
-        values = sorted(values, reverse=True)[:n_factors]
-        vectors = vectors[:, :n_factors]
+        # sort the values and vectors in ascending order
+        values = values[:n_factors]
+        vectors = vectors[:, ::-1][:, :n_factors]
 
         # calculate the loadings
         if n_factors > 1:
-
             loadings = np.dot(vectors,
                               np.diag(np.sqrt(values)))
         else:
@@ -233,13 +230,23 @@ class FactorAnalyzer:
         error : float
             The scalar error calculated from the residuals
             of the loading matrix.
+
+        Note
+        ----
+        The ML objective is based on the `factanal()` function
+        from R's `stats` package. It may generate results different
+        from the `fa()` function in `psych`.
+
+        References
+        ----------
+        [1] https://github.com/SurajGupta/r-source/blob/master/src/library/stats/R/factanal.R
         """
         sc = np.diag(1 / np.sqrt(psi))
         sstar = np.dot(np.dot(sc, corr_mtx), sc)
 
         # get the eigenvalues and eigenvectors for n_factors
-        values, _ = np.linalg.eig(sstar)
-        values = sorted(values)[:-n_factors][::-1]
+        values, _ = np.linalg.eigh(sstar)
+        values = values[::-1][n_factors:]
 
         # calculate the error
         error = -(np.sum(np.log(values) - values) -
@@ -269,12 +276,11 @@ class FactorAnalyzer:
         sp.fill_diagonal(corr_mtx, 1 - solution)
 
         # get the eigenvalues and vectors for n_factors
-        values, vectors = sp.linalg.eig(corr_mtx)
-        values, vectors = values[:n_factors], vectors[:, :n_factors]
+        values, vectors = sp.linalg.eigh(corr_mtx)
 
-        # make sure that only the real part of the value
-        # is used, if `complex` is returned
-        values = sp.real(values)
+        # sort the values and vectors in ascending order
+        values = values[::-1][:n_factors]
+        vectors = vectors[:, ::-1][:, :n_factors]
 
         # calculate loadings
         # if values are smaller than 0, set them to zero
@@ -304,12 +310,13 @@ class FactorAnalyzer:
         sstar = np.dot(np.dot(sc, corr_mtx), sc)
 
         # get the eigenvalues for n_factors
-        values, vectors = np.linalg.eig(sstar)
-        values = np.array(sorted(values, reverse=True)[:n_factors])
-        values = np.maximum(values - 1, 0)
+        values, vectors = sp.linalg.eigh(sstar)
 
-        # get the eigenvectors for n_factors
-        vectors = vectors[:, :n_factors]
+        # sort the values and vectors in ascending order
+        values = values[::-1][:n_factors]
+        vectors = vectors[:, ::-1][:, :n_factors]
+
+        values = np.maximum(values - 1, 0)
 
         # get the loadings
         loadings = np.dot(vectors,
@@ -869,17 +876,15 @@ class FactorAnalyzer:
 
             corr = self.corr.as_matrix()
 
-            e_values, _ = sp.linalg.eig(corr)
-            e_values = np.real(e_values)
-            e_values = pd.DataFrame(sorted(e_values, reverse=True),
+            e_values, _ = sp.linalg.eigh(corr)
+            e_values = pd.DataFrame(e_values[::-1],
                                     columns=['Original_Eigenvalues'])
 
             communalities = self.get_communalities()
             np.fill_diagonal(corr, communalities)
 
-            values, _ = sp.linalg.eig(corr)
-            values = np.real(values)
-            values = pd.DataFrame(sorted(values, reverse=True),
+            values, _ = sp.linalg.eigh(corr)
+            values = pd.DataFrame(values[::-1],
                                   columns=['Common_Factor_Eigenvalues'])
 
             return e_values, values
