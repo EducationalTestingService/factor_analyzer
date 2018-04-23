@@ -49,12 +49,9 @@ def test_calculate_kmo():
     expected_by_item = pd.DataFrame(values,
                                     columns=['KMO'],
                                     index=index)
-    print(expected_by_item)
 
     (kmo_by_item,
      kmo_overall) = calculate_kmo(data)
-
-    print(kmo_by_item)
 
     assert_almost_equal(kmo_by_item, expected_by_item)
     assert_almost_equal(kmo_overall, expected_overall)
@@ -95,48 +92,45 @@ def test_partial_correlations():
                             index=[0, 1, 2])
 
     result = partial_correlations(data)
-
     assert_almost_equal(result, expected)
 
 
 def test_partial_correlations_num_columns_greater():
 
+    # columns greater than rows
     data = pd.DataFrame([[23, 12, 23],
                          [42, 25, 21]])
 
-    empty_array = [[1.0, np.nan, np.nan],
-                   [np.nan, 1.0, np.nan],
-                   [np.nan, np.nan, 1.0]]
+    empty_array = np.empty((3, 3))
+    empty_array[:] = np.nan
+    np.fill_diagonal(empty_array, 1.0)
 
     expected = pd.DataFrame(empty_array,
                             columns=[0, 1, 2],
                             index=[0, 1, 2])
 
     result = partial_correlations(data)
-
     assert_almost_equal(result, expected)
 
 
-def test_partial_correlations_linalgerror():
+def test_partial_correlations_catch_linalgerror():
 
-    # Covariance matrix will be singular
+    # Covariance matrix that will be singular
     data = pd.DataFrame([[10, 10, 10, 10],
                          [12, 12, 12, 12],
                          [15, 15, 15, 15],
                          [20, 20, 20, 20],
                          [11, 11, 11, 11]])
 
-    empty_array = [[1.0, np.nan, np.nan, np.nan],
-                   [np.nan, 1.0, np.nan, np.nan],
-                   [np.nan, np.nan, 1.0, np.nan],
-                   [np.nan, np.nan, np.nan, 1.0]]
+    empty_array = np.empty((4, 4))
+    empty_array[:] = np.nan
+    np.fill_diagonal(empty_array, 1.0)
 
     expected = pd.DataFrame(empty_array,
                             columns=[0, 1, 2, 3],
                             index=[0, 1, 2, 3])
 
     result = partial_correlations(data)
-
     assert_almost_equal(result, expected)
 
 
