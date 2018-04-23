@@ -14,8 +14,10 @@ from nose.tools import raises
 from pandas.util.testing import assert_frame_equal, assert_almost_equal
 
 from factor_analyzer.factor_analyzer import FactorAnalyzer
-from factor_analyzer.factor_analyzer import (read_file,
-                                             calculate_bartlett_sphericity)
+from factor_analyzer.factor_analyzer import (calculate_kmo,
+                                             calculate_bartlett_sphericity,
+                                             covariance_to_correlation,
+                                             partial_correlations)
 
 
 def test_calculate_bartlett_sphericity():
@@ -28,33 +30,114 @@ def test_calculate_bartlett_sphericity():
     assert_almost_equal(p, 0)
 
 
-def test_read_file_csv():
+def test_calculate_kmo():
 
-    expected = pd.DataFrame({'a': [1],
-                             'b': [2],
-                             'c': [3]})
+    path = 'tests/data/test02.csv'
+    data = pd.read_csv(path)
 
-    path = 'tests/files/test.csv'
-    data = read_file(path)
-    assert_frame_equal(data, expected)
+    expected_overall = 0.81498469767761361
+
+    index = ['sex', 'zygosity', 'moed', 'faed',
+             'faminc', 'english', 'math', 'socsci',
+             'natsci', 'vocab']
+
+    values = [0.405516, 0.560049, 0.700033,
+              0.705446, 0.829063, 0.848425,
+              0.863502, 0.841143, 0.877076,
+              0.839272]
+
+    expected_by_item = pd.DataFrame(values,
+                                    columns=['KMO'],
+                                    index=index)
+    print(expected_by_item)
+
+    (kmo_by_item,
+     kmo_overall) = calculate_kmo(data)
+
+    print(kmo_by_item)
+
+    assert_almost_equal(kmo_by_item, expected_by_item)
+    assert_almost_equal(kmo_overall, expected_overall)
 
 
-def test_read_file_tsv():
+def test_covariance_to_correlation():
 
-    expected = pd.DataFrame({'a': [1],
-                             'b': [2],
-                             'c': [3]})
+    path = 'tests/data/test02.csv'
+    data = pd.read_csv(path)
 
-    path = 'tests/files/test.tsv'
-    data = read_file(path)
-    assert_frame_equal(data, expected)
+    expected_corr = data.corr().as_matrix()
+
+    corr = covariance_to_correlation(data.cov().as_matrix())
+
+    assert_almost_equal(corr, expected_corr)
 
 
 @raises(ValueError)
-def test_read_file_wrong_extension():
+def test_covariance_to_correlation_value_error():
 
-    path = 'tests/files/test.xml'
-    read_file(path)
+    covariance_to_correlation(np.array([[23, 12, 23],
+                                        [42, 25, 21]]))
+
+
+def test_partial_correlations():
+
+    data = pd.DataFrame([[12, 14, 15],
+                         [24, 12, 52],
+                         [35, 12, 41],
+                         [23, 12, 42]])
+
+    expected = [[1.0, -0.730955, -0.50616],
+                [-0.730955, 1.0, -0.928701],
+                [-0.50616, -0.928701, 1.0]]
+
+    expected = pd.DataFrame(expected,
+                            columns=[0, 1, 2],
+                            index=[0, 1, 2])
+
+    result = partial_correlations(data)
+
+    assert_almost_equal(result, expected)
+
+
+def test_partial_correlations_num_columns_greater():
+
+    data = pd.DataFrame([[23, 12, 23],
+                         [42, 25, 21]])
+
+    empty_array = [[1.0, np.nan, np.nan],
+                   [np.nan, 1.0, np.nan],
+                   [np.nan, np.nan, 1.0]]
+
+    expected = pd.DataFrame(empty_array,
+                            columns=[0, 1, 2],
+                            index=[0, 1, 2])
+
+    result = partial_correlations(data)
+
+    assert_almost_equal(result, expected)
+
+
+def test_partial_correlations_linalgerror():
+
+    # Covariance matrix will be singular
+    data = pd.DataFrame([[10, 10, 10, 10],
+                         [12, 12, 12, 12],
+                         [15, 15, 15, 15],
+                         [20, 20, 20, 20],
+                         [11, 11, 11, 11]])
+
+    empty_array = [[1.0, np.nan, np.nan, np.nan],
+                   [np.nan, 1.0, np.nan, np.nan],
+                   [np.nan, np.nan, 1.0, np.nan],
+                   [np.nan, np.nan, np.nan, 1.0]]
+
+    expected = pd.DataFrame(empty_array,
+                            columns=[0, 1, 2, 3],
+                            index=[0, 1, 2, 3])
+
+    result = partial_correlations(data)
+
+    assert_almost_equal(result, expected)
 
 
 class TestFactorAnalyzer:

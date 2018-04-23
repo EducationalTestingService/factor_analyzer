@@ -5,4 +5,5 @@
 """
 
 from .factor_analyzer import (FactorAnalyzer,
-                              calculate_bartlett_sphericity)
+                              calculate_bartlett_sphericity,
+                              calculate_kmo)
