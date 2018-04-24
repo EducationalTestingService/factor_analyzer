@@ -10,8 +10,9 @@ Factor analysis command line script.
 import os
 import argparse
 import logging
+import pandas as pd
 
-from factor_analyzer.factor_analyzer import FactorAnalyzer, read_file
+from factor_analyzer.factor_analyzer import FactorAnalyzer
 
 
 def main():
@@ -46,7 +47,10 @@ def main():
 
     file_path = args.feature_file
 
-    data = read_file(file_path)
+    if not file_path.lower().endswith('.csv'):
+        raise ValueError('The feature file must be in CSV format.')
+
+    data = pd.read_csv(file_path)
 
     # get the logger
     logger = logging.getLogger(__name__)
