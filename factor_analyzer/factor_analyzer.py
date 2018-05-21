@@ -17,8 +17,8 @@ import pandas as pd
 from scipy.optimize import minimize
 from sklearn.preprocessing import scale
 
-# from factor_analyzer.rotator import Rotator
-# from factor_analyzer.rotator import POSSIBLE_ROTATIONS
+from factor_analyzer.rotator import Rotator
+from factor_analyzer.rotator import POSSIBLE_ROTATIONS
 
 
 def covariance_to_correlation(m):
@@ -682,9 +682,9 @@ class FactorAnalyzer:
         [1] https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax
         """
 
-        if rotation not in {'varimax', 'promax', None}:
-            raise ValueError("The value for `rotation` must be in the "
-                             "set: {'varimax', 'promax', None}.")
+        if rotation not in POSSIBLE_ROTATIONS + [None]:
+            raise ValueError("The value for `rotation` must `None` or in the "
+                             "set: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
 
         df = data.copy()
 

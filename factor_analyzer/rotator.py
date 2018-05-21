@@ -14,7 +14,8 @@ import scipy as sp
 import pandas as pd
 
 
-POSSIBLE_ROTATIONS = ['varimax', 'promax']
+POSSIBLE_ROTATIONS = ['varimax', 'promax',
+                      'oblimax', 'quartimax']
 
 
 class Rotator:
@@ -39,6 +40,24 @@ class Rotator:
         gradient = -(4 * loadings**3 / (np.sum(loadings**4)) - 4 * loadings /
                      (np.sum(loadings**2)))
         error = (np.log(np.sum(loadings**4)) - 2 * np.log(np.sum(loadings**2)))
+        return {'grad': gradient, 'error': error}
+
+    @staticmethod
+    def _quartimax_obj(loadings):
+        """
+        Quartimax function
+
+        Parameters
+        ----------
+        loadings : array-like
+            The loading matrix
+
+        Returns
+        -------
+        dict
+        """
+        gradient = -loadings**3
+        error = -np.sum(np.diag(np.dot((loadings**2).T, loadings**2))) / 4
         return {'grad': gradient, 'error': error}
 
     def rotate(self, loadings, method='varimax', **kwargs):
@@ -83,6 +102,10 @@ class Rotator:
             (new_loadings,
              new_rotation_mtx) = self.orthogonal(loadings, self._oblimax_obj, **kwargs)
 
+        elif method == 'quartimax':
+            (new_loadings,
+             new_rotation_mtx) = self.orthogonal(loadings, self._quartimax_obj, **kwargs)
+
         else:
             raise ValueError("The value for `method` must be one of the "
                              "following: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
@@ -126,8 +149,8 @@ class Rotator:
         """
         df = loadings.copy()
 
-        column_names = df.index.values
-        index_names = df.columns.values
+        column_names = df.columns.values
+        index_names = df.index.values
 
         n_rows, n_cols = loadings.shape
         rotation_matrix = np.eye(n_cols)
@@ -217,8 +240,8 @@ class Rotator:
         """
         df = loadings.copy()
 
-        column_names = df.index.values
-        index_names = df.columns.values
+        column_names = df.columns.values
+        index_names = df.index.values
 
         # initialize the rotation matrix
         n_rows, n_cols = df.shape
