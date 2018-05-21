@@ -13,8 +13,6 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
-from sklearn.linear_model import LinearRegression
-
 
 POSSIBLE_ROTATIONS = ['varimax', 'promax']
 
@@ -224,12 +222,7 @@ class Rotator:
         Y = X * np.abs(X)**(power - 1)
 
         # fit linear regression model
-        linear_regression = LinearRegression(fit_intercept=False)
-        linear_regression.fit(X, Y)
-
-        # get coefficients, and transpose them
-        coef = linear_regression.coef_
-        coef = coef.T
+        coef = np.dot(np.linalg.inv(np.dot(X.T, X)), np.dot(X.T, Y))
 
         # calculate diagonal of inverse square
         try:
