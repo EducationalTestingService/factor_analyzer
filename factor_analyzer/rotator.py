@@ -15,7 +15,8 @@ import pandas as pd
 
 
 POSSIBLE_ROTATIONS = ['varimax', 'promax',
-                      'oblimax', 'quartimax']
+                      'oblimax', 'quartimax',
+                      'oblimin', 'quartimin']
 
 
 class Rotator:
@@ -60,57 +61,49 @@ class Rotator:
         error = -np.sum(np.diag(np.dot((loadings**2).T, loadings**2))) / 4
         return {'grad': gradient, 'error': error}
 
-    def rotate(self, loadings, method='varimax', **kwargs):
+    @staticmethod
+    def _oblimin_obj(loadings, gam=0):
         """
-        Rotate the factor loading matrix.
+        The Oblimin function
 
         Parameters
         ----------
-        loadings : pd.DataFrame
-            The loadings matrix from your factor analysis.
-        method : str
-            The factor rotation method. Options include:
-
-                (a) varimax (orthogonal rotation)
-                (b) promax (oblique rotation)
+        loadings : array-like
+            The loading matrix
+        gam : int, optional
+            The gamma level.
+            Defaults to 0.
 
         Returns
         -------
-        loadings : pd.DataFrame
-            The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
-            The rotation matrix
-            (n_factors, n_factors)
-
-        Raises
-        ------
-        ValueError
-            If the `method` is not in the list of
-            acceptable methods.
+        dict
         """
-        method = method.lower()
-        if method == 'varimax':
-            (new_loadings,
-             new_rotation_mtx) = self.varimax(loadings, **kwargs)
+        X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
+        if (0 != gam):
+            p = loadings.shape[0]
+            X = np.diag(1, p) - np.dot(np.zeros((p, p)), X)
+        gradient = loadings * X
+        error = np.sum(loadings**2 * X) / 4
+        return {'grad': gradient, 'error': error}
 
-        elif method == 'promax':
-            (new_loadings,
-             new_rotation_mtx) = self.promax(loadings, **kwargs)
+    @staticmethod
+    def _quartimin_obj(loadings):
+        """
+        Quartimin function
 
-        elif method == 'oblimax':
-            (new_loadings,
-             new_rotation_mtx) = self.orthogonal(loadings, self._oblimax_obj, **kwargs)
+        Parameters
+        ----------
+        loadings : array-like
+            The loading matrix
 
-        elif method == 'quartimax':
-            (new_loadings,
-             new_rotation_mtx) = self.orthogonal(loadings, self._quartimax_obj, **kwargs)
-
-        else:
-            raise ValueError("The value for `method` must be one of the "
-                             "following: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
-
-        return new_loadings, new_rotation_mtx
+        Returns
+        -------
+        dict
+        """
+        X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
+        gradient = loadings * X
+        error = np.sum(loadings**2 * X) / 4
+        return {'grad': gradient, 'error': error}
 
     def oblique(self,
                 loadings,
@@ -155,7 +148,7 @@ class Rotator:
         n_rows, n_cols = loadings.shape
         rotation_matrix = np.eye(n_cols)
 
-        al = 1
+        alpha = 1
         rotation_matrix_inv = np.linalg.inv(rotation_matrix)
         new_loadings = np.dot(loadings, rotation_matrix_inv.T)
 
@@ -174,10 +167,10 @@ class Rotator:
             if (s < tolerance):
                 break
 
-            al = 2 * al
+            alpha = 2 * alpha
 
             for j in range(0, 11):
-                X = rotation_matrix - al * gradient_new
+                X = rotation_matrix - alpha * gradient_new
 
                 v = 1 / np.sqrt(np.dot(np.ones(X.shape[0]), X**2))
                 new_rotation_matrix = np.dot(X, np.diag(v))
@@ -186,10 +179,10 @@ class Rotator:
                 obj_t = objective(new_loadings)
                 improvement = error - obj_t['error']
 
-                if (improvement > 0.5 * s**2 * al):
+                if (improvement > 0.5 * s**2 * alpha):
                     break
 
-                al = al / 2
+                alpha = alpha / 2
 
             rotation_matrix = new_rotation_matrix
             error = obj_t['error']
@@ -247,7 +240,7 @@ class Rotator:
         n_rows, n_cols = df.shape
         rotation_matrix = np.eye(n_cols)
 
-        al = 1
+        alpha = 1
         new_loadings = np.dot(df, rotation_matrix)
 
         obj = objective(new_loadings)
@@ -265,20 +258,20 @@ class Rotator:
             if (s < tolerance):
                 break
 
-            al = 2 * al
+            alpha = 2 * alpha
 
             for j in range(0, 11):
-                X = rotation_matrix - al * gradient_new
+                X = rotation_matrix - alpha * gradient_new
                 U, D, V = np.linalg.svd(X)
                 new_rotation_matrix = np.dot(U, V)
                 new_loadings = np.dot(df, new_rotation_matrix)
 
                 obj_t = objective(new_loadings)
 
-                if (obj_t['error'] < (error - 0.5 * s**2 * al)):
+                if (obj_t['error'] < (error - 0.5 * s**2 * alpha)):
                     break
 
-                al = al / 2
+                alpha = alpha / 2
 
             rotation_matrix = new_rotation_matrix
             error = obj_t['error']
@@ -473,3 +466,64 @@ class Rotator:
                                 index=column_names)
 
         return loadings, rotation_mtx
+
+    def rotate(self, loadings, method='varimax', **kwargs):
+        """
+        Rotate the factor loading matrix.
+
+        Parameters
+        ----------
+        loadings : pd.DataFrame
+            The loadings matrix from your factor analysis.
+        method : str
+            The factor rotation method. Options include:
+
+                (a) varimax (orthogonal rotation)
+                (b) promax (oblique rotation)
+
+
+        Returns
+        -------
+        loadings : pd.DataFrame
+            The loadings matrix
+            (n_cols, n_factors)
+        rotation_mtx : np.array
+            The rotation matrix
+            (n_factors, n_factors)
+
+        Raises
+        ------
+        ValueError
+            If the `method` is not in the list of
+            acceptable methods.
+        """
+        method = method.lower()
+        if method == 'varimax':
+            (new_loadings,
+             new_rotation_mtx) = self.varimax(loadings, **kwargs)
+
+        elif method == 'promax':
+            (new_loadings,
+             new_rotation_mtx) = self.promax(loadings, **kwargs)
+
+        elif method == 'oblimax':
+            (new_loadings,
+             new_rotation_mtx) = self.orthogonal(loadings, self._oblimax_obj, **kwargs)
+
+        elif method == 'quartimax':
+            (new_loadings,
+             new_rotation_mtx) = self.orthogonal(loadings, self._quartimax_obj, **kwargs)
+
+        elif method == 'oblimin':
+            (new_loadings,
+             new_rotation_mtx) = self.oblique(loadings, self._oblimin_obj, **kwargs)
+
+        elif method == 'quartimin':
+            (new_loadings,
+             new_rotation_mtx) = self.oblique(loadings, self._quartimin_obj, **kwargs)
+
+        else:
+            raise ValueError("The value for `method` must be one of the "
+                             "following: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
+
+        return new_loadings, new_rotation_mtx
