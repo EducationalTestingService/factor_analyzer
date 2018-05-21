@@ -195,11 +195,14 @@ class FactorAnalyzer:
     A FactorAnalyzer class, which -
         (1) Fits a factor analysis model using minres or maximum likelihood,
             and returns the loading matrix
-        (2) Optionally performs a rotation on the loading matrix using
-            either -
+        (2) Optionally performs a rotation, with method including:
 
             (a) varimax (orthogonal rotation)
             (b) promax (oblique rotation)
+            (c) oblimin (oblique rotation)
+            (d) oblimax (orthogonal rotation)
+            (e) quartimin (oblique rotation)
+            (f) quartimax (orthogonal rotation)
 
     Parameters
     ----------
@@ -631,12 +634,22 @@ class FactorAnalyzer:
         n_factors : int
             The number of factors to select.
             Defaults to 3.
-        rotation : {'varimax', 'promax', None}
+        rotation : str
             The type of rotation to perform after
             fitting the factor analysis model.
             If set to None, no rotation will be performed,
             nor will any associated Kaiser normalization.
+
+            Methods include:
+                (a) varimax (orthogonal rotation)
+                (b) promax (oblique rotation)
+                (c) oblimin (oblique rotation)
+                (d) oblimax (orthogonal rotation)
+                (e) quartimin (oblique rotation)
+                (f) quartimax (orthogonal rotation)
+
             Defaults to 'promax'.
+
         method : {'minres', 'ml'}
             The fitting method to use, either MINRES or
             Maximum Likelihood.
