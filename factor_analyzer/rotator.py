@@ -36,12 +36,17 @@ class Rotator:
 
         Returns
         -------
-        dict
+        gradient_dict : dict
+            A dictionary with
+                - grad : np.array
+                    The gradient for the objective
+                - criterion : float
+                    The value of the criterion for the objective.
         """
         gradient = -(4 * loadings**3 / (np.sum(loadings**4)) - 4 * loadings /
                      (np.sum(loadings**2)))
-        error = (np.log(np.sum(loadings**4)) - 2 * np.log(np.sum(loadings**2)))
-        return {'grad': gradient, 'error': error}
+        criterion = (np.log(np.sum(loadings**4)) - 2 * np.log(np.sum(loadings**2)))
+        return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
     def _quartimax_obj(loadings):
@@ -55,11 +60,16 @@ class Rotator:
 
         Returns
         -------
-        dict
+        gradient_dict : dict
+            A dictionary with
+                - grad : np.array
+                    The gradient for the objective
+                - criterion : float
+                    The value of the criterion for the objective.
         """
         gradient = -loadings**3
-        error = -np.sum(np.diag(np.dot((loadings**2).T, loadings**2))) / 4
-        return {'grad': gradient, 'error': error}
+        criterion = -np.sum(np.diag(np.dot((loadings**2).T, loadings**2))) / 4
+        return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
     def _oblimin_obj(loadings, gam=0):
@@ -76,15 +86,20 @@ class Rotator:
 
         Returns
         -------
-        dict
+        gradient_dict : dict
+            A dictionary with
+                - grad : np.array
+                    The gradient for the objective
+                - criterion : float
+                    The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
         if (0 != gam):
             p = loadings.shape[0]
             X = np.diag(1, p) - np.dot(np.zeros((p, p)), X)
         gradient = loadings * X
-        error = np.sum(loadings**2 * X) / 4
-        return {'grad': gradient, 'error': error}
+        criterion = np.sum(loadings**2 * X) / 4
+        return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
     def _quartimin_obj(loadings):
@@ -98,12 +113,17 @@ class Rotator:
 
         Returns
         -------
-        dict
+        gradient_dict : dict
+            A dictionary with
+                - grad : np.array
+                    The gradient for the objective
+                - criterion : float
+                    The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
         gradient = loadings * X
-        error = np.sum(loadings**2 * X) / 4
-        return {'grad': gradient, 'error': error}
+        criterion = np.sum(loadings**2 * X) / 4
+        return {'grad': gradient, 'criterion': criterion}
 
     def oblique(self,
                 loadings,
@@ -154,7 +174,7 @@ class Rotator:
 
         obj = objective(new_loadings)
         gradient = -np.dot(new_loadings.T, np.dot(obj['grad'], rotation_matrix_inv)).T
-        error = obj['error']
+        criterion = obj['criterion']
 
         obj_t = objective(new_loadings)
 
@@ -177,7 +197,7 @@ class Rotator:
                 new_loadings = np.dot(loadings, np.linalg.inv(new_rotation_matrix).T)
 
                 obj_t = objective(new_loadings)
-                improvement = error - obj_t['error']
+                improvement = criterion - obj_t['criterion']
 
                 if (improvement > 0.5 * s**2 * alpha):
                     break
@@ -185,7 +205,7 @@ class Rotator:
                 alpha = alpha / 2
 
             rotation_matrix = new_rotation_matrix
-            error = obj_t['error']
+            criterion = obj_t['criterion']
             gradient = -np.dot(np.dot(new_loadings.T, obj_t['grad']),
                                np.linalg.inv(new_rotation_matrix)).T
 
@@ -245,7 +265,7 @@ class Rotator:
 
         obj = objective(new_loadings)
         gradient = np.dot(df.T, obj['grad'])
-        error = obj['error']
+        criterion = obj['criterion']
 
         obj_t = objective(new_loadings)
 
@@ -268,13 +288,13 @@ class Rotator:
 
                 obj_t = objective(new_loadings)
 
-                if (obj_t['error'] < (error - 0.5 * s**2 * alpha)):
+                if (obj_t['criterion'] < (criterion - 0.5 * s**2 * alpha)):
                     break
 
                 alpha = alpha / 2
 
             rotation_matrix = new_rotation_matrix
-            error = obj_t['error']
+            criterion = obj_t['criterion']
             gradient = np.dot(df.T, obj_t['grad'])
 
         # convert loadings matrix to data frame
@@ -480,7 +500,10 @@ class Rotator:
 
                 (a) varimax (orthogonal rotation)
                 (b) promax (oblique rotation)
-
+                (c) oblimin (oblique rotation)
+                (d) oblimax (orthogonal rotation)
+                (e) quartimin (oblique rotation)
+                (f) quartimax (orthogonal rotation)
 
         Returns
         -------
