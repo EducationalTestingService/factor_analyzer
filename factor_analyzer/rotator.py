@@ -40,7 +40,8 @@ class Rotator:
     >>> from factor_analyzer import Rotator
     >>> unrotated_loadings = pd.read_csv('loading_uls_none_3_test01.csv')
     >>> rotator = Rotator()
-    >>> rotator.rotate(unrotated_loadings, method='varimax')
+    >>> loadings, rotate_mtx = rotator.rotate(unrotated_loadings, 'varimax')
+    >>> loadings
                Factor1   Factor2   Factor3
     sex      -0.076925  0.044992  0.762026
     zygosity  0.018420  0.057579  0.012978
