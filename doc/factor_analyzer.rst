@@ -15,3 +15,9 @@ factor\_analyzer package
     :undoc-members:
     :show-inheritance:
 
+:py:mod:`factor\_analyzer\.rotator` Module
+--------------------------------------------------------
+.. automodule:: factor_analyzer.rotator
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,8 +1,15 @@
 """
+Tests for Rotator class
+
+:author: Jeremy Biggs (jbiggs@ets.org)
+
+:date: 10/25/2017
+:organization: ETS
 """
 
 from factor_analyzer.test_utils import check_rotation
 
+# set a threshold of roughly 95 percent matching
 THRESHOLD = 0.95
 
 
@@ -155,6 +162,17 @@ def test_07_quartimin_minres_2_factors():
     factors = 2
     method = 'uls'
     rotation = 'quartimin'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check > THRESHOLD
+
+
+def test_07_equamax_minres_2_factors():
+
+    test_name = 'test07'
+    factors = 2
+    method = 'uls'
+    rotation = 'equamax'
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD

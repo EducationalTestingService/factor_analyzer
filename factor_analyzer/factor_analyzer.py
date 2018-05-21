@@ -641,12 +641,14 @@ class FactorAnalyzer:
             nor will any associated Kaiser normalization.
 
             Methods include:
+
                 (a) varimax (orthogonal rotation)
                 (b) promax (oblique rotation)
                 (c) oblimin (oblique rotation)
                 (d) oblimax (orthogonal rotation)
                 (e) quartimin (oblique rotation)
                 (f) quartimax (orthogonal rotation)
+                (g) equamax (orthogonal rotation)
 
             Defaults to 'promax'.
 

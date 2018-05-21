@@ -16,7 +16,8 @@ import pandas as pd
 
 POSSIBLE_ROTATIONS = ['varimax', 'promax',
                       'oblimax', 'quartimax',
-                      'oblimin', 'quartimin']
+                      'oblimin', 'quartimin',
+                      'equamax']
 
 
 class Rotator:
@@ -56,7 +57,7 @@ class Rotator:
     """
 
     @staticmethod
-    def _oblimax_obj(loadings):
+    def _oblimax_obj(loadings, **kwargs):
         """
         The Oblimax function objective.
 
@@ -80,7 +81,7 @@ class Rotator:
         return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
-    def _quartimax_obj(loadings):
+    def _quartimax_obj(loadings, **kwargs):
         """
         Quartimax function objective.
 
@@ -103,7 +104,7 @@ class Rotator:
         return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
-    def _oblimin_obj(loadings, gam=0):
+    def _oblimin_obj(loadings, gamma=0, **kwargs):
         """
         The Oblimin function objective.
 
@@ -111,7 +112,7 @@ class Rotator:
         ----------
         loadings : array-like
             The loading matrix
-        gam : int, optional
+        gamma : int, optional
             The gamma level.
             Defaults to 0.
 
@@ -125,7 +126,7 @@ class Rotator:
                     The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
-        if (0 != gam):
+        if (0 != gamma):
             p = loadings.shape[0]
             X = np.diag(1, p) - np.dot(np.zeros((p, p)), X)
         gradient = loadings * X
@@ -133,7 +134,7 @@ class Rotator:
         return {'grad': gradient, 'criterion': criterion}
 
     @staticmethod
-    def _quartimin_obj(loadings):
+    def _quartimin_obj(loadings, **kwargs):
         """
         Quartimin function objective.
 
@@ -154,6 +155,42 @@ class Rotator:
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
         gradient = loadings * X
         criterion = np.sum(loadings**2 * X) / 4
+        return {'grad': gradient, 'criterion': criterion}
+
+    @staticmethod
+    def _equamax_obj(loadings, kappa=0, **kwargs):
+        """
+        Equamax function objective.
+
+        Parameters
+        ----------
+        loadings : array-like
+            The loading matrix
+
+        Returns
+        -------
+        gradient_dict : dict
+            A dictionary with
+                - grad : np.array
+                    The gradient.
+                - criterion : float
+                    The value of the criterion for the objective.
+        """
+        p, k = loadings.shape
+
+        N = np.ones(k) - np.eye(k)
+        M = np.ones(p) - np.eye(p)
+
+        loadings_squared = loadings**2
+        f1 = (1 - kappa) * np.sum(np.diag(np.dot(loadings_squared.T,
+                                                 np.dot(loadings_squared, N)))) / 4
+        f2 = kappa * np.sum(np.diag(np.dot(loadings_squared.T,
+                                           np.dot(M, loadings_squared)))) / 4
+
+        gradient = ((1 - kappa) * loadings * np.dot(loadings_squared, N) +
+                    kappa * loadings * np.dot(M, loadings_squared))
+
+        criterion = f1 + f2
         return {'grad': gradient, 'criterion': criterion}
 
     def oblique(self,
@@ -560,6 +597,7 @@ class Rotator:
                 (d) oblimax (orthogonal rotation)
                 (e) quartimin (oblique rotation)
                 (f) quartimax (orthogonal rotation)
+                (g) equamax (orthogonal rotation)
         kwargs
             Additional key word arguments
             are passed to the rotation method.
@@ -603,6 +641,10 @@ class Rotator:
         elif method == 'quartimin':
             (new_loadings,
              new_rotation_mtx) = self.oblique(loadings, self._quartimin_obj, **kwargs)
+
+        elif method == 'equamax':
+            (new_loadings,
+             new_rotation_mtx) = self.orthogonal(loadings, self._equamax_obj, **kwargs)
 
         else:
             raise ValueError("The value for `method` must be one of the "

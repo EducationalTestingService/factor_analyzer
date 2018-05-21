@@ -9,7 +9,9 @@ Tests for FactorAnalyzer class
 
 from factor_analyzer.test_utils import check_scenario
 
-
+# set a slightly lower threshold than just rotation
+# since we have to make sure both the fitting
+# and the rotations are matching
 THRESHOLD = 0.9
 
 
@@ -112,7 +114,6 @@ def test_03_none_minres_3_factors():
     factors = 3
     method = 'uls'
     rotation = 'none'
-
 
     for check in check_scenario(test_name,
                                 factors,
