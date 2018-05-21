@@ -22,6 +22,25 @@ class Rotator:
     The Rotator class.
     """
 
+    @staticmethod
+    def _oblimax_obj(loadings):
+        """
+        The Oblimax function
+
+        Parameters
+        ----------
+        loadings : array-like
+            The loading matrix
+
+        Returns
+        -------
+        dict
+        """
+        gradient = -(4 * loadings**3 / (np.sum(loadings**4)) - 4 * loadings /
+                     (np.sum(loadings**2)))
+        error = (np.log(np.sum(loadings**4)) - 2 * np.log(np.sum(loadings**2)))
+        return {'grad': gradient, 'error': error}
+
     def rotate(self, loadings, method='varimax', **kwargs):
         """
         Rotate the factor loading matrix.
@@ -59,6 +78,10 @@ class Rotator:
         elif method == 'promax':
             (new_loadings,
              new_rotation_mtx) = self.promax(loadings, **kwargs)
+
+        elif method == 'oblimax':
+            (new_loadings,
+             new_rotation_mtx) = self.orthogonal(loadings, self._oblimax_obj, **kwargs)
 
         else:
             raise ValueError("The value for `method` must be one of the "

@@ -17,7 +17,8 @@ import pandas as pd
 from scipy.optimize import minimize
 from sklearn.preprocessing import scale
 
-from factor_analyzer.rotator import Rotator
+# from factor_analyzer.rotator import Rotator
+# from factor_analyzer.rotator import POSSIBLE_ROTATIONS
 
 
 def covariance_to_correlation(m):
