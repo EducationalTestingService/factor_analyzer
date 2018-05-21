@@ -66,14 +66,193 @@ class Rotator:
 
         return new_loadings, new_rotation_mtx
 
-    def varimax(self, data, normalize=True, max_iter=500, tolerance=1e-5):
+    def oblique(self,
+                loadings,
+                objective,
+                max_iter=1000,
+                tolerance=1e-5,
+                **kwargs):
+        """
+        A generic function for performing
+        oblique rotations, except for
+        promax, which is implemented
+        differently.
+
+        Parameters
+        ----------
+        loadings : pd.DataFrame
+            The original loadings matrix
+        objective : function
+            The function for a given orthogonal
+            rotation method.
+        max_iter : int, optional
+            The maximum number of iterations.
+            Defaults to `1000`.
+        tolerance : float, optional
+            The convergence threshold.
+            Defaults to `1e-5`.
+
+        Return
+        ------
+        loadings : np.array
+            The loadings matrix
+            (n_cols, n_factors)
+        rotation_mtx : np.array
+            The rotation matrix
+            (n_factors, n_factors)
+        """
+        df = loadings.copy()
+
+        column_names = df.index.values
+        index_names = df.columns.values
+
+        n_rows, n_cols = loadings.shape
+        rotation_matrix = np.eye(n_cols)
+
+        al = 1
+        rotation_matrix_inv = np.linalg.inv(rotation_matrix)
+        new_loadings = np.dot(loadings, rotation_matrix_inv.T)
+
+        obj = objective(new_loadings)
+        gradient = -np.dot(new_loadings.T, np.dot(obj['grad'], rotation_matrix_inv)).T
+        error = obj['error']
+
+        obj_t = objective(new_loadings)
+
+        for i in range(0, max_iter + 1):
+            gradient_new = gradient - np.dot(rotation_matrix,
+                                             np.diag(np.dot(np.ones(gradient.shape[0]),
+                                                            rotation_matrix * gradient)))
+            s = np.sqrt(np.sum(np.diag(np.dot(gradient_new.T, gradient_new))))
+
+            if (s < tolerance):
+                break
+
+            al = 2 * al
+
+            for j in range(0, 11):
+                X = rotation_matrix - al * gradient_new
+
+                v = 1 / np.sqrt(np.dot(np.ones(X.shape[0]), X**2))
+                new_rotation_matrix = np.dot(X, np.diag(v))
+                new_loadings = np.dot(loadings, np.linalg.inv(new_rotation_matrix).T)
+
+                obj_t = objective(new_loadings)
+                improvement = error - obj_t['error']
+
+                if (improvement > 0.5 * s**2 * al):
+                    break
+
+                al = al / 2
+
+            rotation_matrix = new_rotation_matrix
+            error = obj_t['error']
+            gradient = -np.dot(np.dot(new_loadings.T, obj_t['grad']),
+                               np.linalg.inv(new_rotation_matrix)).T
+
+        # convert loadings matrix to data frame
+        loadings = pd.DataFrame(new_loadings,
+                                columns=column_names,
+                                index=index_names)
+
+        return loadings, rotation_matrix
+
+    def orthogonal(self,
+                   loadings,
+                   objective,
+                   max_iter=1000,
+                   tolerance=1e-5,
+                   **kwargs):
+        """
+        A generic function for performing
+        orthogonal rotations, except for
+        varimax, which is implemented
+        differently.
+
+        Parameters
+        ----------
+        loadings : pd.DataFrame
+            The original loadings matrix
+        objective : function
+            The function for a given orthogonal
+            rotation method.
+        max_iter : int, optional
+            The maximum number of iterations.
+            Defaults to `1000`.
+        tolerance : float, optional
+            The convergence threshold.
+            Defaults to `1e-5`.
+
+        Return
+        ------
+        loadings : np.array
+            The loadings matrix
+            (n_cols, n_factors)
+        rotation_mtx : np.array
+            The rotation matrix
+            (n_factors, n_factors)
+        """
+        df = loadings.copy()
+
+        column_names = df.index.values
+        index_names = df.columns.values
+
+        # initialize the rotation matrix
+        n_rows, n_cols = df.shape
+        rotation_matrix = np.eye(n_cols)
+
+        al = 1
+        new_loadings = np.dot(df, rotation_matrix)
+
+        obj = objective(new_loadings)
+        gradient = np.dot(df.T, obj['grad'])
+        error = obj['error']
+
+        obj_t = objective(new_loadings)
+
+        for i in range(0, max_iter + 1):
+            M = np.dot(rotation_matrix.T, gradient)
+            S = (M + M.T) / 2
+            gradient_new = gradient - np.dot(rotation_matrix, S)
+            s = np.sqrt(np.sum(np.diag(np.dot(gradient_new.T, gradient_new))))
+
+            if (s < tolerance):
+                break
+
+            al = 2 * al
+
+            for j in range(0, 11):
+                X = rotation_matrix - al * gradient_new
+                U, D, V = np.linalg.svd(X)
+                new_rotation_matrix = np.dot(U, V)
+                new_loadings = np.dot(df, new_rotation_matrix)
+
+                obj_t = objective(new_loadings)
+
+                if (obj_t['error'] < (error - 0.5 * s**2 * al)):
+                    break
+
+                al = al / 2
+
+            rotation_matrix = new_rotation_matrix
+            error = obj_t['error']
+            gradient = np.dot(df.T, obj_t['grad'])
+
+        # convert loadings matrix to data frame
+        loadings = pd.DataFrame(new_loadings,
+                                columns=column_names,
+                                index=index_names)
+
+        return loadings, rotation_matrix
+
+    def varimax(self, loadings, normalize=True, max_iter=500, tolerance=1e-5):
         """
         Perform varimax (orthogonal) rotation, with optional
         Kaiser normalization.
 
         Parameters
         ----------
-        data : pd.DataFrame
+        loadings : pd.DataFrame
             The loadings matrix to rotate.
         normalize : bool
             Whether to perform Kaiser normalization
@@ -96,7 +275,7 @@ class Rotator:
             The rotation matrix
             (n_factors, n_factors)
         """
-        df = data.copy()
+        df = loadings.copy()
 
         column_names = df.index.values
         index_names = df.columns.values
@@ -163,7 +342,7 @@ class Rotator:
 
         return loadings, rotation_mtx
 
-    def promax(self, data, normalize=False, power=4):
+    def promax(self, loadings, normalize=False, power=4):
         """
         Perform promax (oblique) rotation, with optional
         Kaiser normalization.
@@ -191,7 +370,7 @@ class Rotator:
             The rotation matrix
             (n_factors, n_factors)
         """
-        df = data.copy()
+        df = loadings.copy()
 
         column_names = df.index.values
         index_names = df.columns.values
