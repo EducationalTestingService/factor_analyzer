@@ -113,7 +113,7 @@ class Rotator:
         loadings : array-like
             The loading matrix
         gamma : int, optional
-            The gamma level.
+            The gamma level for the objective.
             Defaults to 0.
 
         Returns
@@ -166,6 +166,9 @@ class Rotator:
         ----------
         loadings : array-like
             The loading matrix
+        kappa : int, optional
+            The kappa value for the objective
+            Defaults to 0.
 
         Returns
         -------
@@ -402,15 +405,15 @@ class Rotator:
         ----------
         loadings : pd.DataFrame
             The loadings matrix to rotate.
-        normalize : bool
+        normalize : bool, optional
             Whether to perform Kaiser normalization
             and de-normalization prior to and following
             rotation.
             Defaults to True.
-        max_iter : int
+        max_iter : int, optional
             Maximum number of iterations.
             Defaults to 500.
-        tolerance : float
+        tolerance : float, optional
             The tolerance for convergence.
             Defaults to 1e-5.
 
@@ -503,12 +506,12 @@ class Rotator:
         ----------
         data : pd.DataFrame
             The loadings matrix to rotate.
-        normalize : bool
+        normalize : bool, optional
             Whether to perform Kaiser normalization
             and de-normalization prior to and following
             rotation.
             Defaults to False.
-        power : int
+        power : int, optional
             The power to which to raise the varimax loadings
             (minus 1). Numbers should generally range form 2 to 4.
             Defaults to 4.
@@ -588,7 +591,7 @@ class Rotator:
         ----------
         loadings : pd.DataFrame
             The loadings matrix from your factor analysis.
-        method : str
+        method : str, optional
             The factor rotation method. Options include:
 
                 (a) varimax (orthogonal rotation)
@@ -598,6 +601,8 @@ class Rotator:
                 (e) quartimin (oblique rotation)
                 (f) quartimax (orthogonal rotation)
                 (g) equamax (orthogonal rotation)
+
+            Defaults to 'varimax'.
         kwargs
             Additional key word arguments
             are passed to the rotation method.

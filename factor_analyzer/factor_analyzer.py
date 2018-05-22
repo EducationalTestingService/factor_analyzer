@@ -14,8 +14,8 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
+from scipy.stats import chi2
 from scipy.optimize import minimize
-from sklearn.preprocessing import scale
 
 from factor_analyzer.rotator import Rotator
 from factor_analyzer.rotator import POSSIBLE_ROTATIONS
@@ -174,10 +174,10 @@ def calculate_bartlett_sphericity(data):
 
     Returns
     -------
-    chi_square : float
+    statistic : float
         The chi-square value.
     p_value : float
-        The p-value for the test.
+        The associated p-value for the test.
     """
     n, p = data.shape
 
@@ -186,7 +186,7 @@ def calculate_bartlett_sphericity(data):
     corr_det = np.linalg.det(corr)
     statistic = -np.log(corr_det) * (n - 1 - (2 * p + 5) / 6)
     degrees_of_freedom = p * (p - 1) / 2
-    p_value = sp.stats.chi2.pdf(statistic, degrees_of_freedom)
+    p_value = chi2.pdf(statistic, degrees_of_freedom)
     return statistic, p_value
 
 
@@ -221,6 +221,9 @@ class FactorAnalyzer:
         The original correlation matrix.
         Default to None, if `analyze()` has not
         been called.
+    rotation_matrix : np.array
+        The rotation matrix, if a rotation
+        has been performed.
 
     Notes
     -----
@@ -440,7 +443,7 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The dataframe used to calculate SMC.
-        sort : bool
+        sort : bool, optional
             Whether to sort the values for SMC
             before returning.
             Defaults to False.
@@ -557,7 +560,7 @@ class FactorAnalyzer:
 
         # if any variables have zero standard deviation, then
         # the correlation will be NaN, as you cannot divide by zero:
-        # corr(i,j ) = cov(i, j) / (stdev(i) * stdev(j))
+        # corr(i, j) = cov(i, j) / (stdev(i) * stdev(j))
         if corr.isnull().any().any():
             raise ValueError('The correlation matrix cannot have '
                              'features that are null or infinite. '
@@ -603,7 +606,7 @@ class FactorAnalyzer:
 
         # transform the final loading matrix (using wls for MINRES,
         # and ml normalization for ML), and convert to DataFrame
-        if method == 'ml':
+        if method == 'ml' or method == 'mle':
             loadings = self._normalize_ml(res.x, corr, n_factors)
         else:
             loadings = self._normalize_wls(res.x, corr, n_factors)
@@ -631,10 +634,10 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The data to analyze.
-        n_factors : int
+        n_factors : int, optional
             The number of factors to select.
             Defaults to 3.
-        rotation : str
+        rotation : str, optional
             The type of rotation to perform after
             fitting the factor analysis model.
             If set to None, no rotation will be performed,
@@ -652,24 +655,24 @@ class FactorAnalyzer:
 
             Defaults to 'promax'.
 
-        method : {'minres', 'ml'}
+        method : {'minres', 'ml'}, optional
             The fitting method to use, either MINRES or
             Maximum Likelihood.
             Defaults to 'minres'.
-        use_smc : bool
+        use_smc : bool, optional
             Whether to use squared multiple correlation
             as starting guesses for factor analysis.
             Defaults to True.
-        bounds : tuple
+        bounds : tuple, optional
             The lower and upper bounds on the variables
             for "L-BFGS-B" optimization.
             Defaults to (0.005, 1).
-        normalize : bool
+        normalize : bool, optional
             Whether to perform Kaiser normalization
             and de-normalization prior to and following
             rotation.
             Defaults to True.
-        impute : {'drop', 'mean', 'median'}
+        impute : {'drop', 'mean', 'median'}, optional
             If missing values are present in the data, either use
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
@@ -678,13 +681,10 @@ class FactorAnalyzer:
         Raises
         ------
         ValueError
-            If rotation not in {'varimax', 'promax', None}.
+            If rotation not `None` or in `POSSIBLE_ROTATIONS`.
         ValueError
             If missing values present and `missing_values` is
             not set to either 'drop' or 'impute'.
-        ValueError
-            If a ValueError is raised in attempting to scale
-            the data, possibly due to infinite values.
 
         Notes
         -----
@@ -725,14 +725,8 @@ class FactorAnalyzer:
                                  "`impute` was not set to either 'drop', "
                                  "'mean', or 'median'.")
 
-        # try scaling the data
-        try:
-            X = scale(df)
-        except ValueError as error:
-            raise ValueError('Could not scale the data. This may be due to '
-                             'infinite values in your data: {}.'.format(error))
-
-        X = pd.DataFrame(X, columns=df.columns)
+        # scale the data
+        X = (df - df.mean(0)) / df.std(0)
 
         # fit factor analysis model
         loadings = self.fit_factor_analysis(X,
