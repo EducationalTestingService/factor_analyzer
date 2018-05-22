@@ -203,6 +203,7 @@ class FactorAnalyzer:
             (d) oblimax (orthogonal rotation)
             (e) quartimin (oblique rotation)
             (f) quartimax (orthogonal rotation)
+            (g) equamax (orthogonal rotation)
 
     Parameters
     ----------
@@ -624,7 +625,8 @@ class FactorAnalyzer:
                 use_smc=True,
                 bounds=(0.005, 1),
                 normalize=True,
-                impute='median'):
+                impute='median',
+                **kwargs):
         """
         Fit the factor analysis model using either
         minres or ml solutions. By default, use SMC
@@ -677,6 +679,9 @@ class FactorAnalyzer:
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
             Defaults to 'median'.
+        kwargs
+            Additional key word arguments
+            are passed to the rotation method.
 
         Raises
         ------
@@ -742,8 +747,10 @@ class FactorAnalyzer:
         if rotation is not None:
 
             rotator = Rotator()
-            loadings, rotation_mtx = rotator.rotate(loadings, rotation,
-                                                    normalize=normalize)
+            loadings, rotation_mtx = rotator.rotate(loadings,
+                                                    rotation,
+                                                    normalize=normalize,
+                                                    **kwargs)
 
         self.corr = df.corr()
         self.loadings = loadings
