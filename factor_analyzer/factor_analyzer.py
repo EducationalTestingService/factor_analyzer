@@ -613,15 +613,6 @@ class FactorAnalyzer:
         else:
             loadings = self._normalize_wls(res.x, corr, n_factors)
 
-        if n_factors > 1:
-
-            # update loading signs to match column sums
-            # this is to ensure that signs align with R
-            # results
-            signs = np.sign(loadings.sum(0))
-            signs[(signs == 0)] = 1
-            loadings = np.dot(loadings, np.diag(signs))
-
         loadings = pd.DataFrame(loadings,
                                 index=data.columns.values,
                                 columns=columns)
@@ -765,6 +756,18 @@ class FactorAnalyzer:
                                                         rotation,
                                                         normalize=normalize,
                                                         **kwargs)
+
+        if n_factors > 1:
+
+            # update loading signs to match column sums
+            # this is to ensure that signs align with R
+            # results
+            signs = np.sign(loadings.sum(0))
+            signs[(signs == 0)] = 1
+            loadings = pd.DataFrame(np.dot(loadings, np.diag(signs)),
+                                    index=loadings.index,
+                                    columns=loadings.columns)
+
         self.corr = df.corr()
         self.loadings = loadings
         self.rotation_matrix = rotation_mtx
