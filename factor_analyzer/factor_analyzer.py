@@ -9,6 +9,7 @@ with optional rotation using Varimax or Promax.
 """
 
 import logging
+import warnings
 
 import numpy as np
 import scipy as sp
@@ -612,6 +613,15 @@ class FactorAnalyzer:
         else:
             loadings = self._normalize_wls(res.x, corr, n_factors)
 
+        if n_factors > 1:
+
+            # update loading signs to match column sums
+            # this is to ensure that signs align with R
+            # results
+            signs = np.sign(loadings.sum(0))
+            signs[(signs == 0)] = 1
+            loadings = np.dot(loadings, np.diag(signs))
+
         loadings = pd.DataFrame(loadings,
                                 index=data.columns.values,
                                 columns=columns)
@@ -746,12 +756,15 @@ class FactorAnalyzer:
         # whether to rotate the loadings matrix
         if rotation is not None:
 
-            rotator = Rotator()
-            loadings, rotation_mtx = rotator.rotate(loadings,
-                                                    rotation,
-                                                    normalize=normalize,
-                                                    **kwargs)
-
+            if loadings.shape[1] == 1:
+                warnings.warn('No rotation will be performed when '
+                              'the number of factors equals 1.')
+            else:
+                rotator = Rotator()
+                loadings, rotation_mtx = rotator.rotate(loadings,
+                                                        rotation,
+                                                        normalize=normalize,
+                                                        **kwargs)
         self.corr = df.corr()
         self.loadings = loadings
         self.rotation_matrix = rotation_mtx
