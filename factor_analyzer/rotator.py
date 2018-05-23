@@ -13,11 +13,11 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
+ORTHO_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax']
 
-POSSIBLE_ROTATIONS = ['varimax', 'promax',
-                      'oblimax', 'quartimax',
-                      'oblimin', 'quartimin',
-                      'equamax']
+OBLIQUE_ROTATIONS = ['promax', 'oblimin', 'quartimin']
+
+POSSIBLE_ROTATIONS = ORTHO_ROTATIONS + OBLIQUE_ROTATIONS
 
 
 class Rotator:
@@ -291,12 +291,15 @@ class Rotator:
             gradient = -np.dot(np.dot(new_loadings.T, obj_t['grad']),
                                np.linalg.inv(new_rotation_matrix)).T
 
+        # calculate phi
+        phi = np.dot(rotation_matrix.T, rotation_matrix)
+
         # convert loadings matrix to data frame
         loadings = pd.DataFrame(new_loadings,
                                 columns=column_names,
                                 index=index_names)
 
-        return loadings, rotation_matrix
+        return loadings, rotation_matrix, phi
 
     def orthogonal(self,
                    loadings,
@@ -576,12 +579,15 @@ class Rotator:
 
         rotation_mtx = sp.dot(rotation_mtx, coef)
 
+        coef_inv = np.linalg.inv(coef)
+        phi = np.dot(coef_inv, coef_inv.T)
+
         # convert loadings matrix to data frame
         loadings = pd.DataFrame(z,
                                 columns=column_names,
                                 index=index_names)
 
-        return loadings, rotation_mtx
+        return loadings, rotation_mtx, phi
 
     def rotate(self, loadings, method='varimax', **kwargs):
         """
@@ -622,6 +628,12 @@ class Rotator:
             If the `method` is not in the list of
             acceptable methods.
         """
+
+        # default phi to None
+        # it will only be calculated
+        # for oblique rotations
+        phi = None
+
         method = method.lower()
         if method == 'varimax':
             (new_loadings,
@@ -629,7 +641,7 @@ class Rotator:
 
         elif method == 'promax':
             (new_loadings,
-             new_rotation_mtx) = self.promax(loadings, **kwargs)
+             new_rotation_mtx, phi) = self.promax(loadings, **kwargs)
 
         elif method == 'oblimax':
             (new_loadings,
@@ -641,11 +653,11 @@ class Rotator:
 
         elif method == 'oblimin':
             (new_loadings,
-             new_rotation_mtx) = self.oblique(loadings, self._oblimin_obj, **kwargs)
+             new_rotation_mtx, phi) = self.oblique(loadings, self._oblimin_obj, **kwargs)
 
         elif method == 'quartimin':
             (new_loadings,
-             new_rotation_mtx) = self.oblique(loadings, self._quartimin_obj, **kwargs)
+             new_rotation_mtx, phi) = self.oblique(loadings, self._quartimin_obj, **kwargs)
 
         elif method == 'equamax':
             (new_loadings,
@@ -655,4 +667,4 @@ class Rotator:
             raise ValueError("The value for `method` must be one of the "
                              "following: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
 
-        return new_loadings, new_rotation_mtx
+        return new_loadings, new_rotation_mtx, phi

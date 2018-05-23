@@ -19,7 +19,7 @@ from scipy.stats import chi2
 from scipy.optimize import minimize
 
 from factor_analyzer.rotator import Rotator
-from factor_analyzer.rotator import POSSIBLE_ROTATIONS
+from factor_analyzer.rotator import POSSIBLE_ROTATIONS, OBLIQUE_ROTATIONS
 
 
 def covariance_to_correlation(m):
@@ -263,6 +263,9 @@ class FactorAnalyzer:
         self.log_warnings = log_warnings
 
         # default matrices to None
+        self.phi = None
+        self.structure = None
+
         self.corr = None
         self.loadings = None
         self.rotation_matrix = None
@@ -741,32 +744,53 @@ class FactorAnalyzer:
                                             bounds,
                                             method)
 
+        # only used if we do an oblique rotations
+        phi = None
+        structure = None
+
         # default rotation matrix to None
         rotation_mtx = None
 
         # whether to rotate the loadings matrix
         if rotation is not None:
 
-            if loadings.shape[1] == 1:
+            if loadings.shape[1] > 1:
+                rotator = Rotator()
+                loadings, rotation_mtx, phi = rotator.rotate(loadings,
+                                                             rotation,
+                                                             normalize=normalize,
+                                                             **kwargs)
+
+                if rotation != 'promax':
+
+                    # update the rotation matrix for everything except promax
+                    rotation_mtx = np.linalg.inv(rotation_mtx).T
+
+            else:
                 warnings.warn('No rotation will be performed when '
                               'the number of factors equals 1.')
-            else:
-                rotator = Rotator()
-                loadings, rotation_mtx = rotator.rotate(loadings,
-                                                        rotation,
-                                                        normalize=normalize,
-                                                        **kwargs)
 
         if n_factors > 1:
 
             # update loading signs to match column sums
             # this is to ensure that signs align with R
-            # results
             signs = np.sign(loadings.sum(0))
             signs[(signs == 0)] = 1
             loadings = pd.DataFrame(np.dot(loadings, np.diag(signs)),
                                     index=loadings.index,
                                     columns=loadings.columns)
+
+            if phi is not None:
+
+                # update phi, if it exists -- that is, if the rotation is oblique
+                phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
+
+                # create the structure matrix for any oblique rotation
+                structure = np.dot(loadings, phi) if rotation in OBLIQUE_ROTATIONS else None
+                structure = pd.DataFrame(structure, columns=loadings.columns, index=loadings.index)
+
+        self.phi = phi
+        self.structure = structure
 
         self.corr = df.corr()
         self.loadings = loadings

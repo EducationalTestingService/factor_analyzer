@@ -333,7 +333,7 @@ def check_rotation(test_name,
     r_loading = normalize(r_loading, absolute=False)
 
     rotator = Rotator()
-    rotated_loading, _ = rotator.rotate(r_loading, rotation)
+    rotated_loading, _, _ = rotator.rotate(r_loading, rotation)
 
     r_output = collect_r_output(test_name, factors, method, rotation,
                                 output_types=['loading'])
