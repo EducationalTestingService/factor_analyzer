@@ -74,8 +74,6 @@ def calculate_py_output(test_name,
 
     evalues, values = fa.get_eigenvalues()
 
-    fa.structure
-
     return {'value': values,
             'evalues': evalues,
             'structure': fa.structure,
@@ -166,9 +164,11 @@ def normalize(data, absolute=False):
         The normalized data frame.
     """
     # check for possible index column
+
+    # if there is an unnamed column, we want to make it the index
     possible_index = [col for col in data.columns if 'Unnamed' in col]
 
-    # get numeric columns
+    # get numeric columns, in case we are taking absolute value
     numeric_cols = [col for col in data.dtypes[data.dtypes != 'object'].index.values
                     if col not in possible_index]
 
@@ -186,7 +186,6 @@ def normalize(data, absolute=False):
     # update index name and column names
     data.index.name = ''
     data.columns = ['col{}'.format(i) for i in range(1, data.shape[1] + 1)]
-
     return data.reset_index(drop=True)
 
 
