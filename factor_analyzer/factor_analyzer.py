@@ -905,6 +905,7 @@ class FactorAnalyzer:
         ------
         uniqueness : pd.DataFrame
             A dataframe with uniqueness information.
+
         Examples
         --------
         >>> import pandas as pd
@@ -981,3 +982,56 @@ class FactorAnalyzer:
                                                 'Cumulative Var'])
 
             return variance_info
+
+    def get_scores(self, data):
+        """
+        Get the factor scores, given the data.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The data to calculate factor scores.
+
+        Returns
+        -------
+        scores : pd.DataFrame
+            The factor scores.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation='varimax')
+        >>> fa.get_scores(df_features).head()
+            Factor1   Factor2   Factor3
+        0 -1.158106  0.081212  0.342195
+        1 -1.799933  0.155316  0.311530
+        2 -0.557422 -1.596457  0.548574
+        3 -0.973182 -1.530071  0.543792
+        4 -1.450108 -1.553214  0.446574
+        """
+        if self.loadings is not None:
+
+            df = data.copy()
+            corr = data.corr()
+
+            # scale the data
+            X = (df - df.mean(0)) / df.std(0)
+
+            if self.structure is not None:
+                structure = self.structure
+            else:
+                structure = self.loadings
+
+            try:
+                weights = np.linalg.solve(corr, structure)
+            except Exception as error:
+                warnings.warn('Unable to calculate the factor score weights; '
+                              'factor loadings used instead: {}'.format(error))
+                weights = self.loadings
+
+            scores = np.dot(X, weights)
+            scores = pd.DataFrame(scores, columns=structure.columns)
+            return scores

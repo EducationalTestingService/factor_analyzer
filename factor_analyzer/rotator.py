@@ -8,7 +8,6 @@ rotations of factor loading matrices.
 :organization: ETS
 """
 
-
 import numpy as np
 import scipy as sp
 import pandas as pd

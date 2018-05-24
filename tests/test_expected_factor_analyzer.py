@@ -33,7 +33,35 @@ def test_01_none_minres_2_factors():
     method = 'uls'
     rotation = 'none'
 
-    for check in check_scenario(test_name, factors, method, rotation):
+    for check in check_scenario(test_name, factors, method, rotation,
+                                check_scores=True):
+        assert check > THRESHOLD
+
+
+def test_01_varimax_minres_2_factors():
+
+    test_name = 'test01'
+    factors = 2
+    method = 'uls'
+    rotation = 'varimax'
+
+    for check in check_scenario(test_name, factors, method, rotation,
+                                check_scores=True):
+        assert check > THRESHOLD
+
+
+def test_01_promax_minres_2_factors():
+
+    test_name = 'test01'
+    factors = 2
+    method = 'uls'
+    rotation = 'promax'
+
+    for check in check_scenario(test_name, factors, method, rotation,
+                                ignore_value=True,
+                                ignore_communalities=True,
+                                check_structure=True,
+                                check_scores=True):
         assert check > THRESHOLD
 
 
@@ -104,7 +132,23 @@ def test_02_varimax_minres_2_factors():
     for check in check_scenario(test_name,
                                 factors,
                                 method,
-                                rotation):
+                                rotation,
+                                check_scores=True):
+        assert check > THRESHOLD
+
+
+def test_02_promax_minres_2_factors():
+
+    test_name = 'test02'
+    factors = 2
+    method = 'uls'
+    rotation = 'promax'
+
+    for check in check_scenario(test_name, factors, method, rotation,
+                                ignore_value=True,
+                                ignore_communalities=True,
+                                check_structure=True,
+                                check_scores=True):
         assert check > THRESHOLD
 
 

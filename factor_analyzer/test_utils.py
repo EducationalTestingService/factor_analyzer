@@ -26,7 +26,9 @@ OUTPUT_TYPES = ['value',
                 'evalues',
                 'loading',
                 'uniquenesses',
-                'communalities']
+                'communalities',
+                'structure',
+                'scores']
 
 
 def calculate_py_output(test_name,
@@ -72,11 +74,15 @@ def calculate_py_output(test_name,
 
     evalues, values = fa.get_eigenvalues()
 
+    fa.structure
+
     return {'value': values,
             'evalues': evalues,
+            'structure': fa.structure,
             'loading': fa.loadings,
             'uniquenesses': fa.get_uniqueness(),
-            'communalities': fa.get_communalities()}
+            'communalities': fa.get_communalities(),
+            'scores': fa.get_scores(data)}
 
 
 def collect_r_output(test_name,
@@ -138,7 +144,7 @@ def collect_r_output(test_name,
     return output
 
 
-def normalize(data, absolute=True):
+def normalize(data, absolute=False):
     """
     Normalize the data to ensure that Python
     and R output match. This involves ensuring
@@ -184,7 +190,7 @@ def normalize(data, absolute=True):
     return data.reset_index(drop=True)
 
 
-def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1):
+def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1, absolute=False):
     """
     Check to make sure all values in two data frames
     are close. Returns the proportion that match.
@@ -201,14 +207,18 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1):
     abs_tol : float, optional
         The absolute tolerance.
         Defaults to 0.1.
+    absolute : bool, optional
+        Whether to take the absolute value of
+        all elements in the data frame.
+        Defaults to False
 
     Returns
     -------
     check : float
         The proportion that match.
     """
-    data1 = normalize(data1)
-    data2 = normalize(data2)
+    data1 = normalize(data1, absolute)
+    data2 = normalize(data2, absolute)
 
     assert data1.shape == data2.shape
 
@@ -231,6 +241,8 @@ def check_scenario(test_name,
                    rotation,
                    ignore_value=False,
                    ignore_communalities=False,
+                   check_scores=False,
+                   check_structure=False,
                    data_dir=None,
                    expected_dir=None,
                    rel_tol=0,
@@ -253,6 +265,14 @@ def check_scenario(test_name,
         Defaults to False.
     ignore_communalities : bool, optional
         Whether to ignore the `communalities` output type.
+        Defaults to False.
+    check_scores : bool, optional
+        Check the factor scores
+        Defaults to False.
+    check_structure : bool, optional
+        Check the structure matrix.
+        This should only be used with
+        oblique rotations.
         Defaults to False.
     data_dir : str, optional
         The directory with input data files.
@@ -277,10 +297,16 @@ def check_scenario(test_name,
     output_types = ['loading', 'evalues']
 
     if not ignore_value:
-        output_types.extend(['value'])
+        output_types.append('value')
 
     if not ignore_communalities:
         output_types.extend(['uniquenesses', 'communalities'])
+
+    if check_scores:
+        output_types.append('scores')
+
+    if check_structure:
+        output_types.append('structure')
 
     r_output = collect_r_output(test_name, factors, method, rotation, output_types, expected_dir)
     py_output = calculate_py_output(test_name, factors, method, rotation, data_dir)
