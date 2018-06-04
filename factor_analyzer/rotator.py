@@ -12,11 +12,11 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 
-ORTHO_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax']
+ORTHOGONAL_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax']
 
 OBLIQUE_ROTATIONS = ['promax', 'oblimin', 'quartimin']
 
-POSSIBLE_ROTATIONS = ORTHO_ROTATIONS + OBLIQUE_ROTATIONS
+POSSIBLE_ROTATIONS = ORTHOGONAL_ROTATIONS + OBLIQUE_ROTATIONS
 
 
 class Rotator:

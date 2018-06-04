@@ -683,7 +683,7 @@ class FactorAnalyzer:
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
             Defaults to 'median'.
-        kwargs
+        kwargs, optional
             Additional key word arguments
             are passed to the rotation method.
 
