@@ -62,9 +62,9 @@ def test_covariance_to_correlation():
     path = 'tests/data/test02.csv'
     data = pd.read_csv(path)
 
-    expected_corr = data.corr().as_matrix()
+    expected_corr = data.corr().values
 
-    corr = covariance_to_correlation(data.cov().as_matrix())
+    corr = covariance_to_correlation(data.cov().values)
 
     assert_almost_equal(corr, expected_corr)
 

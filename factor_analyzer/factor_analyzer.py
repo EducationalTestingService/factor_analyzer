@@ -9,14 +9,17 @@ with optional rotation using Varimax or Promax.
 """
 
 import logging
+import warnings
 
 import numpy as np
 import scipy as sp
 import pandas as pd
 
+from scipy.stats import chi2
 from scipy.optimize import minimize
-from sklearn.preprocessing import scale
-from sklearn.linear_model import LinearRegression
+
+from factor_analyzer.rotator import Rotator
+from factor_analyzer.rotator import POSSIBLE_ROTATIONS, OBLIQUE_ROTATIONS
 
 
 def covariance_to_correlation(m):
@@ -121,11 +124,11 @@ def calculate_kmo(data):
 
     # calculate the partial correlations
     partial_corr = partial_correlations(data)
-    partial_corr = partial_corr.as_matrix()
+    partial_corr = partial_corr.values
 
     # calcualte the pair-wise correlations
     corr = data.corr()
-    corr = corr.as_matrix()
+    corr = corr.values
 
     # fill matrix diagonals with zeros
     # and square all elements
@@ -172,10 +175,10 @@ def calculate_bartlett_sphericity(data):
 
     Returns
     -------
-    chi_square : float
+    statistic : float
         The chi-square value.
     p_value : float
-        The p-value for the test.
+        The associated p-value for the test.
     """
     n, p = data.shape
 
@@ -184,7 +187,7 @@ def calculate_bartlett_sphericity(data):
     corr_det = np.linalg.det(corr)
     statistic = -np.log(corr_det) * (n - 1 - (2 * p + 5) / 6)
     degrees_of_freedom = p * (p - 1) / 2
-    p_value = sp.stats.chi2.pdf(statistic, degrees_of_freedom)
+    p_value = chi2.pdf(statistic, degrees_of_freedom)
     return statistic, p_value
 
 
@@ -193,11 +196,15 @@ class FactorAnalyzer:
     A FactorAnalyzer class, which -
         (1) Fits a factor analysis model using minres or maximum likelihood,
             and returns the loading matrix
-        (2) Optionally performs a rotation on the loading matrix using
-            either -
+        (2) Optionally performs a rotation, with method including:
 
             (a) varimax (orthogonal rotation)
             (b) promax (oblique rotation)
+            (c) oblimin (oblique rotation)
+            (d) oblimax (orthogonal rotation)
+            (e) quartimin (oblique rotation)
+            (f) quartimax (orthogonal rotation)
+            (g) equamax (orthogonal rotation)
 
     Parameters
     ----------
@@ -216,6 +223,9 @@ class FactorAnalyzer:
         The original correlation matrix.
         Default to None, if `analyze()` has not
         been called.
+    rotation_matrix : np.array
+        The rotation matrix, if a rotation
+        has been performed.
 
     Notes
     -----
@@ -253,6 +263,9 @@ class FactorAnalyzer:
         self.log_warnings = log_warnings
 
         # default matrices to None
+        self.phi = None
+        self.structure = None
+
         self.corr = None
         self.loadings = None
         self.rotation_matrix = None
@@ -435,7 +448,7 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The dataframe used to calculate SMC.
-        sort : bool
+        sort : bool, optional
             Whether to sort the values for SMC
             before returning.
             Defaults to False.
@@ -552,19 +565,19 @@ class FactorAnalyzer:
 
         # if any variables have zero standard deviation, then
         # the correlation will be NaN, as you cannot divide by zero:
-        # corr(i,j ) = cov(i, j) / (stdev(i) * stdev(j))
+        # corr(i, j) = cov(i, j) / (stdev(i) * stdev(j))
         if corr.isnull().any().any():
             raise ValueError('The correlation matrix cannot have '
                              'features that are null or infinite. '
                              'Check to make sure you do not have any '
                              'features with zero standard deviation.')
 
-        corr = corr.as_matrix()
+        corr = corr.values
 
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
         if use_smc:
-            smc_mtx = self.smc(data).as_matrix()
+            smc_mtx = self.smc(data).values
             start = (np.diag(corr) - smc_mtx.T).squeeze()
 
         # otherwise, just start with a guess of 0.5 for everything
@@ -598,7 +611,7 @@ class FactorAnalyzer:
 
         # transform the final loading matrix (using wls for MINRES,
         # and ml normalization for ML), and convert to DataFrame
-        if method == 'ml':
+        if method == 'ml' or method == 'mle':
             loadings = self._normalize_ml(res.x, corr, n_factors)
         else:
             loadings = self._normalize_wls(res.x, corr, n_factors)
@@ -616,7 +629,8 @@ class FactorAnalyzer:
                 use_smc=True,
                 bounds=(0.005, 1),
                 normalize=True,
-                impute='median'):
+                impute='median',
+                **kwargs):
         """
         Fit the factor analysis model using either
         minres or ml solutions. By default, use SMC
@@ -626,48 +640,60 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The data to analyze.
-        n_factors : int
+        n_factors : int, optional
             The number of factors to select.
             Defaults to 3.
-        rotation : {'varimax', 'promax', None}
+        rotation : str, optional
             The type of rotation to perform after
             fitting the factor analysis model.
             If set to None, no rotation will be performed,
             nor will any associated Kaiser normalization.
+
+            Methods include:
+
+                (a) varimax (orthogonal rotation)
+                (b) promax (oblique rotation)
+                (c) oblimin (oblique rotation)
+                (d) oblimax (orthogonal rotation)
+                (e) quartimin (oblique rotation)
+                (f) quartimax (orthogonal rotation)
+                (g) equamax (orthogonal rotation)
+
             Defaults to 'promax'.
-        method : {'minres', 'ml'}
+
+        method : {'minres', 'ml'}, optional
             The fitting method to use, either MINRES or
             Maximum Likelihood.
             Defaults to 'minres'.
-        use_smc : bool
+        use_smc : bool, optional
             Whether to use squared multiple correlation
             as starting guesses for factor analysis.
             Defaults to True.
-        bounds : tuple
+        bounds : tuple, optional
             The lower and upper bounds on the variables
             for "L-BFGS-B" optimization.
             Defaults to (0.005, 1).
-        normalize : bool
+        normalize : bool, optional
             Whether to perform Kaiser normalization
             and de-normalization prior to and following
             rotation.
             Defaults to True.
-        impute : {'drop', 'mean', 'median'}
+        impute : {'drop', 'mean', 'median'}, optional
             If missing values are present in the data, either use
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
             Defaults to 'median'.
+        kwargs, optional
+            Additional key word arguments
+            are passed to the rotation method.
 
         Raises
         ------
         ValueError
-            If rotation not in {'varimax', 'promax', None}.
+            If rotation not `None` or in `POSSIBLE_ROTATIONS`.
         ValueError
             If missing values present and `missing_values` is
             not set to either 'drop' or 'impute'.
-        ValueError
-            If a ValueError is raised in attempting to scale
-            the data, possibly due to infinite values.
 
         Notes
         -----
@@ -680,9 +706,9 @@ class FactorAnalyzer:
         [1] https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax
         """
 
-        if rotation not in {'varimax', 'promax', None}:
-            raise ValueError("The value for `rotation` must be in the "
-                             "set: {'varimax', 'promax', None}.")
+        if rotation not in POSSIBLE_ROTATIONS + [None]:
+            raise ValueError("The value for `rotation` must `None` or in the "
+                             "set: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
 
         df = data.copy()
 
@@ -708,14 +734,8 @@ class FactorAnalyzer:
                                  "`impute` was not set to either 'drop', "
                                  "'mean', or 'median'.")
 
-        # try scaling the data
-        try:
-            X = scale(df)
-        except ValueError as error:
-            raise ValueError('Could not scale the data. This may be due to '
-                             'infinite values in your data.')
-
-        X = pd.DataFrame(X, columns=df.columns)
+        # scale the data
+        X = (df - df.mean(0)) / df.std(0)
 
         # fit factor analysis model
         loadings = self.fit_factor_analysis(X,
@@ -724,208 +744,57 @@ class FactorAnalyzer:
                                             bounds,
                                             method)
 
+        # only used if we do an oblique rotations
+        phi = None
+        structure = None
+
         # default rotation matrix to None
         rotation_mtx = None
 
         # whether to rotate the loadings matrix
         if rotation is not None:
 
-            if rotation == 'varimax':
-                loadings, rotation_mtx = self.varimax(loadings, normalize=normalize)
-            elif rotation == 'promax':
-                loadings, rotation_mtx = self.promax(loadings, normalize=normalize)
+            if loadings.shape[1] > 1:
+                rotator = Rotator()
+                loadings, rotation_mtx, phi = rotator.rotate(loadings,
+                                                             rotation,
+                                                             normalize=normalize,
+                                                             **kwargs)
+
+                if rotation != 'promax':
+
+                    # update the rotation matrix for everything except promax
+                    rotation_mtx = np.linalg.inv(rotation_mtx).T
+
+            else:
+                warnings.warn('No rotation will be performed when '
+                              'the number of factors equals 1.')
+
+        if n_factors > 1:
+
+            # update loading signs to match column sums
+            # this is to ensure that signs align with R
+            signs = np.sign(loadings.sum(0))
+            signs[(signs == 0)] = 1
+            loadings = pd.DataFrame(np.dot(loadings, np.diag(signs)),
+                                    index=loadings.index,
+                                    columns=loadings.columns)
+
+            if phi is not None:
+
+                # update phi, if it exists -- that is, if the rotation is oblique
+                phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
+
+                # create the structure matrix for any oblique rotation
+                structure = np.dot(loadings, phi) if rotation in OBLIQUE_ROTATIONS else None
+                structure = pd.DataFrame(structure, columns=loadings.columns, index=loadings.index)
+
+        self.phi = phi
+        self.structure = structure
 
         self.corr = df.corr()
         self.loadings = loadings
         self.rotation_matrix = rotation_mtx
-
-    def varimax(self, data, normalize=True, max_iter=500, tolerance=1e-5):
-        """
-        Perform varimax (orthogonal) rotation, with optional
-        Kaiser normalization.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            The loadings matrix to rotate.
-        normalize : bool
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to True.
-        max_iter : int
-            Maximum number of iterations.
-            Defaults to 500.
-        tolerance : float
-            The tolerance for convergence.
-            Defaults to 1e-5.
-
-        Return
-        ------
-        loadings : pd.DataFrame
-            The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
-            The rotation matrix
-            (n_factors, n_factors)
-        """
-        df = data.copy()
-
-        column_names = df.index.values
-        index_names = df.columns.values
-
-        n_rows, n_cols = df.shape
-
-        if n_cols < 2:
-            return df
-
-        X = df.as_matrix()
-
-        # normalize the loadings matrix
-        # using sqrt of the sum of squares (Kaiser)
-        if normalize:
-            normalized_mtx = df.apply(lambda x: np.sqrt(sum(x**2)),
-                                      axis=1).as_matrix()
-
-            X = (X.T / normalized_mtx).T
-
-        # initialize the rotation matrix
-        # to N x N identity matrix
-        rotation_mtx = np.eye(n_cols)
-
-        d = 0
-        for _ in range(max_iter):
-
-            old_d = d
-
-            # take inner product of loading matrix
-            # and rotation matrix
-            basis = np.dot(X, rotation_mtx)
-
-            # transform data for singular value decomposition
-            transformed = np.dot(X.T, basis**3 - (1.0 / n_rows) *
-                                 np.dot(basis, np.diag(np.diag(np.dot(basis.T, basis)))))
-
-            # perform SVD on
-            # the transformed matrix
-            U, S, V = np.linalg.svd(transformed)
-
-            # take inner product of U and V, and sum of S
-            rotation_mtx = np.dot(U, V)
-            d = np.sum(S)
-
-            # check convergence
-            if old_d != 0 and d / old_d < 1 + tolerance:
-                break
-
-        # take inner product of loading matrix
-        # and rotation matrix
-        X = np.dot(X, rotation_mtx)
-
-        # de-normalize the data
-        if normalize:
-            X = X.T * normalized_mtx
-
-        else:
-            X = X.T
-
-        # convert loadings matrix to dataframe
-        loadings = pd.DataFrame(X,
-                                columns=column_names,
-                                index=index_names).T
-
-        return loadings, rotation_mtx
-
-    def promax(self, data, normalize=False, power=4):
-        """
-        Perform promax (oblique) rotation, with optional
-        Kaiser normalization.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            The loadings matrix to rotate.
-        normalize : bool
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to False.
-        power : int
-            The power to which to raise the varimax loadings
-            (minus 1). Numbers should generally range form 2 to 4.
-            Defaults to 4.
-
-        Return
-        ------
-        loadings : pd.DataFrame
-            The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
-            The rotation matrix
-            (n_factors, n_factors)
-        """
-        df = data.copy()
-
-        column_names = df.index.values
-        index_names = df.columns.values
-
-        n_rows, n_cols = df.shape
-
-        if n_cols < 2:
-            return df
-
-        if normalize:
-
-            # pre-normalization is done in R's
-            # `kaiser()` function when rotate='Promax'.
-            array = df.as_matrix()
-            h2 = sp.diag(np.dot(array, array.T))
-            h2 = np.reshape(h2, (h2.shape[0], 1))
-            weights = array / sp.sqrt(h2)
-
-            # convert back to DataFrame for `varimax`
-            weights = pd.DataFrame(weights,
-                                   columns=index_names,
-                                   index=column_names)
-        else:
-            weights = df.copy()
-
-        # first get varimax rotation
-        X, rotation_mtx = self.varimax(weights, normalize=normalize)
-        Y = X * np.abs(X)**(power - 1)
-
-        # fit linear regression model
-        linear_regression = LinearRegression(fit_intercept=False)
-        linear_regression.fit(X, Y)
-
-        # get coefficients, and transpose them
-        coef = linear_regression.coef_
-        coef = coef.T
-
-        # calculate diagonal of inverse square
-        try:
-            diag_inv = sp.diag(sp.linalg.inv(sp.dot(coef.T, coef)))
-        except np.linalg.LinAlgError:
-            diag_inv = sp.diag(sp.linalg.pinv(sp.dot(coef.T, coef)))
-
-        # transform and calculate inner products
-        coef = sp.dot(coef, sp.diag(sp.sqrt(diag_inv)))
-        z = sp.dot(X, coef)
-
-        if normalize:
-
-            # post-normalization is done in R's
-            # `kaiser()` function when rotate='Promax'
-            z = z * sp.sqrt(h2)
-
-        rotation_mtx = sp.dot(rotation_mtx, coef)
-
-        # convert loadings matrix to DataFrame
-        loadings = pd.DataFrame(z,
-                                columns=index_names,
-                                index=column_names)
-
-        return loadings, rotation_mtx
 
     def get_eigenvalues(self):
         """
@@ -974,7 +843,7 @@ class FactorAnalyzer:
         """
         if (self.corr is not None and self.loadings is not None):
 
-            corr = self.corr.as_matrix()
+            corr = self.corr.values
 
             e_values, _ = sp.linalg.eigh(corr)
             e_values = pd.DataFrame(e_values[::-1],
@@ -1036,6 +905,7 @@ class FactorAnalyzer:
         ------
         uniqueness : pd.DataFrame
             A dataframe with uniqueness information.
+
         Examples
         --------
         >>> import pandas as pd
@@ -1112,3 +982,56 @@ class FactorAnalyzer:
                                                 'Cumulative Var'])
 
             return variance_info
+
+    def get_scores(self, data):
+        """
+        Get the factor scores, given the data.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The data to calculate factor scores.
+
+        Returns
+        -------
+        scores : pd.DataFrame
+            The factor scores.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer()
+        >>> fa.analyze(df_features, 3, rotation='varimax')
+        >>> fa.get_scores(df_features).head()
+            Factor1   Factor2   Factor3
+        0 -1.158106  0.081212  0.342195
+        1 -1.799933  0.155316  0.311530
+        2 -0.557422 -1.596457  0.548574
+        3 -0.973182 -1.530071  0.543792
+        4 -1.450108 -1.553214  0.446574
+        """
+        if self.loadings is not None:
+
+            df = data.copy()
+            corr = data.corr()
+
+            # scale the data
+            X = (df - df.mean(0)) / df.std(0)
+
+            if self.structure is not None:
+                structure = self.structure
+            else:
+                structure = self.loadings
+
+            try:
+                weights = np.linalg.solve(corr, structure)
+            except Exception as error:
+                warnings.warn('Unable to calculate the factor score weights; '
+                              'factor loadings used instead: {}'.format(error))
+                weights = self.loadings
+
+            scores = np.dot(X, weights)
+            scores = pd.DataFrame(scores, columns=structure.columns)
+            return scores
