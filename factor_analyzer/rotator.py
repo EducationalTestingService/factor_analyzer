@@ -442,13 +442,13 @@ class Rotator:
         if n_cols < 2:
             return df
 
-        X = df.as_matrix()
+        X = df.values
 
         # normalize the loadings matrix
         # using sqrt of the sum of squares (Kaiser)
         if normalize:
             normalized_mtx = df.apply(lambda x: np.sqrt(sum(x**2)),
-                                      axis=1).as_matrix()
+                                      axis=1).values
 
             X = (X.T / normalized_mtx).T
 
@@ -541,7 +541,7 @@ class Rotator:
 
             # pre-normalization is done in R's
             # `kaiser()` function when rotate='Promax'.
-            array = df.as_matrix()
+            array = df.values
             h2 = sp.diag(np.dot(array, array.T))
             h2 = np.reshape(h2, (h2.shape[0], 1))
             weights = array / sp.sqrt(h2)

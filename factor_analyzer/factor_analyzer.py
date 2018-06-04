@@ -124,11 +124,11 @@ def calculate_kmo(data):
 
     # calculate the partial correlations
     partial_corr = partial_correlations(data)
-    partial_corr = partial_corr.as_matrix()
+    partial_corr = partial_corr.values
 
     # calcualte the pair-wise correlations
     corr = data.corr()
-    corr = corr.as_matrix()
+    corr = corr.values
 
     # fill matrix diagonals with zeros
     # and square all elements
@@ -572,12 +572,12 @@ class FactorAnalyzer:
                              'Check to make sure you do not have any '
                              'features with zero standard deviation.')
 
-        corr = corr.as_matrix()
+        corr = corr.values
 
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
         if use_smc:
-            smc_mtx = self.smc(data).as_matrix()
+            smc_mtx = self.smc(data).values
             start = (np.diag(corr) - smc_mtx.T).squeeze()
 
         # otherwise, just start with a guess of 0.5 for everything
@@ -843,7 +843,7 @@ class FactorAnalyzer:
         """
         if (self.corr is not None and self.loadings is not None):
 
-            corr = self.corr.as_matrix()
+            corr = self.corr.values
 
             e_values, _ = sp.linalg.eigh(corr)
             e_values = pd.DataFrame(e_values[::-1],
