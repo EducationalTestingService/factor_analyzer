@@ -56,11 +56,11 @@ Two common types of rotations are:
    upon the varimax rotation, but ultimately allows factors to become
    correlated.
 
-This package includes a stand-alone Python module with a single
-``FactorAnalyzer()`` class. The class includes an ``analyze()`` method
-that allows users to perform factor analysis using either minres or MLE,
-with optional promax or varimax rotations on the factor loading
-matrices.
+This package includes a stand-alone Python module with a ``FactorAnalyzer()``
+class. The class includes an ``analyze()`` method that allows users to perform
+factor analysis using either minres or MLE, with optional promax or varimax
+rotations on the factor loading matrices. The package also offers a stand-alone
+``Rotator()`` class to perform common rotations on an unrotated loading matrix.
 
 Example
 -------
@@ -118,7 +118,6 @@ Requirements
 -  Python 3.4 or higher
 -  ``numpy``
 -  ``pandas``
--  ``scikit-learn``
 -  ``scipy``
 
 Contributing

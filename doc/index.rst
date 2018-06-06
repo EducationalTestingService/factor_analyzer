@@ -62,6 +62,7 @@ Alternatively, you can install via ``conda`` with:
    :caption: Contents:
 
    factor_analyzer
+
    rotator
 
 
