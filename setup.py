@@ -16,11 +16,14 @@ def requirements():
 
 
 setup(name='factor_analyzer',
-      version='0.2.2',
+      version='0.2.3',
       description='A Factor Analysis class',
       long_description=readme(),
       keywords='factor analysis',
       packages=find_packages(),
+      author="Jeremy Biggs",
+      author_email="jbiggs@ets.org",
+      url="https://github.com/EducationalTestingService/factor_analyzer",
       install_requires=requirements(),
       include_package_data=True,
       entry_points={'console_scripts':

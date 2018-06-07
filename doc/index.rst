@@ -17,7 +17,7 @@ Exploratory factor analysis (EFA) is a statistical technique used to identify la
 
 The matrix of weights, or factor loadings, generated from an EFA model describes the underlying relationships between each variable and the latent factors. Typically, a number of factors (K) is selected such that is substantially smaller than the number of variables. The factor analysis model can be estimated using a variety of standard estimation methods, including but not limited to OLS, minres, or MLE.
 
-Factor loadings are similar to standardized regression coefficients, and variables with higher loadings on a particular factor can be interpreted as explaining a larger proportion of the variation in that factor. In many cases, factor loading matrices are rotated after the factor analysis model is estimated in order to produce a simpler, more interpretable structure to identify which variables are loading on a particular factor. Rotations can be either orthoginal, where the factors remain uncorrelated after rotation, or oblique, where factors may become correlated.
+This package includes a stand-alone Python module with a ``FactorAnalyzer()`` class. The class includes an ``analyze()`` method that allows users to perform factor analysis using either minres or MLE, with optional rotations on the factor loading matrices. The package also offers a stand-alone ``Rotator()`` class to perform common rotations on an unrotated loading matrix.
 
 The ``factor_analyzer`` package offers the following rotation methods:
 
@@ -62,6 +62,7 @@ Alternatively, you can install via ``conda`` with:
    :caption: Contents:
 
    factor_analyzer
+
    rotator
 
 

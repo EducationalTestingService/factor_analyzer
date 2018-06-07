@@ -1,5 +1,5 @@
 {% set name = "factor_analyzer" %}
-{% set version = "0.2.2" %}
+{% set version = "0.2.3" %}
 {% set file_ext = "tar.gz" %}
 {% set hash_type = "sha256" %}
 {% set hash_value = "94ea4c7d46e846cc7174787adce47156cf58dc257905c878edc5181b4fa300ed" %}
@@ -23,13 +23,11 @@ requirements:
   build:
     - python
     - setuptools
-    - scikit-learn ==0.19.1
     - pandas
     - scipy
     - numpy
   run:
     - python
-    - scikit-learn ==0.19.1
     - pandas
     - scipy
     - numpy
