@@ -38,7 +38,8 @@ jobs:
         paths:
         - ~/miniconda3/pkgs
     - run: ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
-    - run: echo | ls ${HOME}/miniconda3/bin
+    - run: echo | ls ${HOME}/miniconda3/bin/coveralls
+    - run: cd ${HOME}/miniconda3/bin/coveralls
     # - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
 
     # Save test results
