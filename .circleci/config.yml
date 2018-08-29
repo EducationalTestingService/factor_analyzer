@@ -32,9 +32,9 @@ jobs:
     - run: ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
     - run: ${HOME}/miniconda3/bin/pip install -e .
 
-    - run: echo | ls ${HOME}
-    - run: echo | ls ${CIRCLE_TEST_REPORTS}
-    - run: echo | ls ${CIRCLE_ARTIFACTS}
+    - run: echo | ls ${HOME}/miniconda3
+    - run: echo | ls ${HOME}/bin    
+
 
     # Save dependency cache
     - save_cache:
@@ -42,6 +42,8 @@ jobs:
         paths:
         - ~/miniconda3/pkgs
     - run: ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
+    - run: echo | ls ${HOME}/miniconda3
+    - run: echo | ls ${HOME}/bin   
     # - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
 
     # Save test results
