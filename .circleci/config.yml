@@ -3,36 +3,34 @@ version: 2
 jobs:
   build:
     working_directory: ~/build-on-linux
-    parallelism: 1
+    parallelism: 2
     shell: /bin/bash --login
     environment:
       COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
     docker:
       - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+
     steps:
       - checkout
+      - run: mkdir -p ~/build-on-linux/artifacts
       - run:
-        name: install miniconda and dependencies
-        command: |
-          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-          chmod +x miniconda.sh
-          ./miniconda.sh -b -f
-          ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
-          ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
+          name: install miniconda and dependencies
+          command: |
+            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+            chmod +x miniconda.sh
+            ./miniconda.sh -b -f
+            ~/miniconda3/bin/conda install --file conda_requirements.txt --yes
+            ~/miniconda3/bin/pip install nose-cov python-coveralls
       - run:
-        name: install factor analyzer and run tests
-        command: |
-          ${HOME}/miniconda3/bin/pip install -e .
-          ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
+          name: install factor analyzer and run tests
+          command: |
+            ~/miniconda3/bin/pip install -e .
+            ~/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
 
-      - run: echo | ls ~/build-on-linux || true
-      - run: echo | ls ${HOME} || true
-      - run: echo | ls ${HOME}/miniconda3/ || true
-      - run: echo | ls ${HOME}/miniconda3/bin || true
-      - run: echo | ls ${HOME}/miniconda3/bin || true
-
-      - store_test_results:
-        path: ~/build-on-linux/test-results
+      - run: echo | ls ~/build-on-linux/test-results
+      - run: echo | ls ~/build-on-linux/artifacts
 
       - store_artifacts:
-        path: /build-on-linux/artifacts
+          path: ~/build-on-linux/artifacts
+
+      - run: ~/miniconda3/bin/coveralls
