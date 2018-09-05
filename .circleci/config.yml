@@ -7,6 +7,9 @@ jobs:
     shell: /bin/bash --login
     environment:
       COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
+    notify:
+      webhooks:
+        - url: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
 
     # alternatively, we could just use `machine`.
     docker:
