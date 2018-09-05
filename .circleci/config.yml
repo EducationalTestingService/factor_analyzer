@@ -13,7 +13,7 @@ jobs:
 
     docker:
     - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
-      command: /sbin/init
+      # command: /sbin/init
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
@@ -37,17 +37,20 @@ jobs:
         key: v1-dep-{{ .Branch }}-{{ epoch }}
         paths:
         - ~/miniconda3/pkgs
+
     - run: ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
-    - run: echo | ls ${HOME}/miniconda3/bin/coveralls
-    - run: cd ${HOME}/miniconda3/bin/coveralls
+    # - run: cd ${HOME}/miniconda3/bin/coveralls
     # - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
 
     # Save test results
     - store_test_results:
-        path: /tmp/circleci-test-results
+        path: test-results
+        destination: test-results
 
     # Save artifacts
     - store_artifacts:
-        path: /tmp/circleci-artifacts
-    - store_artifacts:
-        path: /tmp/circleci-test-results
+        path: test-reports
+        destination: test-reports
+
+    - run: echo | ls ${HOME}/test-results || true
+    - run: echo | ls ${HOME}/test-reports || true
