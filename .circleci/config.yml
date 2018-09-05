@@ -1,56 +1,49 @@
 
 version: 2
 jobs:
-  build:
-    working_directory: ~/EducationalTestingService/factor_analyzer
-    parallelism: 1
+
+  build-on-linux:
     shell: /bin/bash --login
-
+    parallelism: 3
+    working_directory: ~/build-on-linux
     environment:
-      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
-      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
-
     docker:
-    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
-      # command: /sbin/init
+      - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
     steps:
-    - checkout
-    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
-    - restore_cache:
-        keys:
-        # This branch if available
-        - v1-dep-{{ .Branch }}-
-        # Default branch if not
-        - v1-dep-master-
+      - checkout
+      - run: 
+        command: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+          chmod +x miniconda.sh
+          ./miniconda.sh -b -f
+          ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
+          ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
+          ${HOME}/miniconda3/bin/pip install -e .
+      - run: ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
 
-    # This is based on your 1.0 configuration file or project settings
-    - run: wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-    - run: chmod +x miniconda.sh
-    - run: ./miniconda.sh -b -f
-    - run: ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
-    - run: ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
-    - run: ${HOME}/miniconda3/bin/pip install -e .
+      - run: echo | ls $~/build-on-linux || true
+      - run: echo | ls ${HOME} || true
+      - run: echo | ls ${HOME}/miniconda3/ || true
+      - run: echo | ls ${HOME}/miniconda3/bin || true
+      - run: echo | ls ${HOME}/miniconda3/bin || true
 
-    # Save dependency cache
-    - save_cache:
-        key: v1-dep-{{ .Branch }}-{{ epoch }}
-        paths:
-        - ~/miniconda3/pkgs
+workflows:
+  version: 2
+  test-all-environments:
+    jobs:
+      - build-on-linux
 
-    - run: ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
-    # - run: cd ${HOME}/miniconda3/bin/coveralls
-    # - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
+# - run: cd ${HOME}/miniconda3/bin/coveralls
+# - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
 
-    # Save test results
-    - store_test_results:
-        path: test-results
-        destination: test-results
+# Save test results
+# - store_test_results:
+#     path: test-results
+#     destination: test-results
 
-    # Save artifacts
-    - store_artifacts:
-        path: test-reports
-        destination: test-reports
-
-    - run: echo | ls ${HOME}/test-results || true
-    - run: echo | ls ${HOME}/test-reports || true
+# Save artifacts
+# - store_artifacts:
+#     path: test-reports
+#     destination: test-reports
+    
