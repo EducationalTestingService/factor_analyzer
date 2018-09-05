@@ -27,9 +27,6 @@ jobs:
             ~/miniconda3/bin/pip install -e .
             ~/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
 
-      - run: echo | ls ~/build-on-linux/test-results
-      - run: echo | ls ~/build-on-linux/artifacts
-
       - store_artifacts:
           path: ~/build-on-linux/artifacts
 
