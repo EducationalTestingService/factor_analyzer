@@ -14,18 +14,18 @@ jobs:
     steps:
       - checkout
       - run:
-          name: install miniconda and dependencies
-          command: |
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-            chmod +x miniconda.sh
-            ./miniconda.sh -b -f
-            ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
-            ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
+        name: install miniconda and dependencies
+        command: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+          chmod +x miniconda.sh
+          ./miniconda.sh -b -f
+          ${HOME}/miniconda3/bin/conda install --file conda_requirements.txt --yes
+          ${HOME}/miniconda3/bin/pip install nose-cov python-coveralls
       - run:
-          name: install factor analyzer and run tests
-          command: |
-            ${HOME}/miniconda3/bin/pip install -e .
-            ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
+        name: install factor analyzer and run tests
+        command: |
+          ${HOME}/miniconda3/bin/pip install -e .
+          ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
 
       - run: echo | ls ~/build-on-linux || true
       - run: echo | ls ${HOME} || true
@@ -40,22 +40,3 @@ jobs:
       - store_artifacts:
         path: /build-on-linux/artifacts
         destination: ~/build-on-linux/artifacts
-
-# workflows:
-#   version: 2
-#   test-all-environments:
-#     jobs:
-#       - build-on-linux
-
-# - run: cd ${HOME}/miniconda3/bin/coveralls
-# - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
-
-# Save test results
-# - store_test_results:
-#     path: test-results
-#     destination: test-results
-
-# Save artifacts
-# - store_artifacts:
-#     path: test-reports
-#     destination: test-reports
