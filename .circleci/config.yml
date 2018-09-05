@@ -33,11 +33,11 @@ jobs:
       - run: echo | ls ${HOME}/miniconda3/bin || true
       - run: echo | ls ${HOME}/miniconda3/bin || true
 
-# workflows:
-#   version: 2
-#   test-all-environments:
-#     jobs:
-#       - build-on-linux
+workflows:
+  version: 2
+  test-all-environments:
+    jobs:
+      - build-on-linux
 
 # - run: cd ${HOME}/miniconda3/bin/coveralls
 # - run: cd ${CIRCLE_TEST_REPORTS}/miniconda3/bin/coveralls
