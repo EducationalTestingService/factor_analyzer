@@ -1,12 +1,10 @@
 
 version: 2
 jobs:
-
-  # build using a linux image
   build:
-    shell: /bin/bash --login
-    parallelism: 1
     working_directory: ~/build-on-linux
+    parallelism: 1
+    shell: /bin/bash --login
     environment:
       COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
     docker:
@@ -35,8 +33,6 @@ jobs:
 
       - store_test_results:
         path: ~/build-on-linux/test-results
-        destination: ~/build-on-linux/test-results
 
       - store_artifacts:
         path: /build-on-linux/artifacts
-        destination: ~/build-on-linux/artifacts
