@@ -15,9 +15,9 @@ jobs:
       - run: mkdir -p ~/build-on-linux/artifacts
 
       - restore_cache:
-        keys:
-          - source-v1-{{ .Branch }}-{{ .Revision}}
-          - source-v1-{{ .Branch }}-
+          keys:
+            - source-v1-{{ .Branch }}-{{ .Revision}}
+            - source-v1-{{ .Branch }}-
 
       - run:
           name: Install miniconda and dependencies
@@ -32,8 +32,9 @@ jobs:
           command: ~/miniconda3/bin/pip install -e .
 
       - save_cache:
-        key: source-v1-{{ .Branch }}-{{ .Revision }}
-        path: ~/miniconda
+          key: source-v1-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - /home/ubuntu/
 
       - run:
           name: Run tests
