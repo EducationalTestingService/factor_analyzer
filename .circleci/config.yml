@@ -1,31 +1,19 @@
 
 version: 2
 jobs:
+
   build:
-    working_directory: ~/build-on-linux
-    parallelism: 2
-    shell: /bin/bash --login
-    environment:
-      COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
-    notify:
-      webhooks:
-        - url: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
-
-    # alternatively, we could just use `machine`.
     docker:
-      - image: circleci/builder-base:1.1
+      - image: buildpack-deps:trusty
 
-    # run all of the following steps
+    working_directory: ~/factor_analyzer
     steps:
       - checkout
-      - run: mkdir -p ~/build-on-linux/artifacts
-
       - restore_cache:
           keys:
-            - source-v1-{{ .Branch }}-{{ .Revision }}
-            - source-v1-{{ .Branch }}-
+          - v1-dependencies-{{ checksum "conda_requirements.txt" }}
+          - v1-dependencies-
 
-      # install miniconda and all of the package dependencies
       - run:
           name: Install miniconda and dependencies
           command: |
@@ -35,16 +23,15 @@ jobs:
             ~/miniconda3/bin/conda install --file conda_requirements.txt --yes
             ~/miniconda3/bin/pip install nose-cov python-coveralls
 
+      - save_cache:
+          paths:
+            - ~/factor_analyzer
+          key: v1-dependencies-{{ checksum "conda_requirements.txt" }}
+
       # install factor analyzer
       - run:
           name: Install factor analyzer
           command: ~/miniconda3/bin/pip install -e .
-
-      # cache the current packages
-      - save_cache:
-          key: source-v1-{{ .Branch }}-{{ .Revision }}
-          paths:
-            - ~/miniconda3/pkgs
 
       # run all of the tests
       - run:
@@ -54,8 +41,9 @@ jobs:
       # change to factor analyzer directory and run coveralls
       - run:
           name: Run coveralls
-          command: cd ~/build-on-linux/factor_analyzer && ~/miniconda3/bin/coveralls
+          command: cd ~/factor_analyzer && ~/miniconda3/bin/coveralls
 
-      # store any remaining artifacts
-      - store_artifacts:
-          path: ~/build-on-linux/artifacts
+# custom notification for coveralls
+notify:
+  webhooks:
+      - url: https://coveralls.io/webhook?repo_token=aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
