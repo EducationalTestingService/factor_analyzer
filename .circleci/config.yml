@@ -7,7 +7,7 @@ jobs:
        COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
     docker:
       - image: buildpack-deps:trusty
-    working_directory: ~/factor_analyzer
+    working_directory: ~/repo
     steps:
       - checkout
       - restore_cache:
@@ -15,6 +15,7 @@ jobs:
           - v1-dependencies-{{ checksum "conda_requirements.txt" }}
           - v1-dependencies-
 
+      - run: mkdir ~/repo/artifacts
       - run:
           name: Install miniconda and dependencies
           command: |
@@ -26,7 +27,7 @@ jobs:
 
       - save_cache:
           paths:
-            - ~/factor_analyzer
+            - ~/repo
           key: v1-dependencies-{{ checksum "conda_requirements.txt" }}
 
       # install factor analyzer
@@ -42,9 +43,8 @@ jobs:
       # change to factor analyzer directory and run coveralls
       - run:
           name: Run coveralls
-          command: cd ~/factor_analyzer && ~/miniconda3/bin/coveralls
+          command: cd ~/repo/factor_analyzer && ~/miniconda3/bin/coveralls
 
-# custom notification for coveralls
-notify:
-  webhooks:
-      - url: https://coveralls.io/webhook?repo_token=aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
+      - store_artifacts:
+          path:  ~/repo/artifacts
+          destination:  artifacts
