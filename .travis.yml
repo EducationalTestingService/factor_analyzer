@@ -27,4 +27,4 @@ script:
 - ${HOME}/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
 
 after_success:
-- cd ${HOME}/factor_analyzer && ${HOME}/miniconda3/bin/coveralls 
+- cd ${HOME}/factor_analyzer && ${HOME}/miniconda3/bin/coveralls
