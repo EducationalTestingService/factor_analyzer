@@ -4,6 +4,7 @@ python:
 env:
   global:
   - COVERALLS_PARALLEL=true
+  - COVERALLS_REPO_TOKEN=UufMjgYuCcDAmDVFFUy9pE58uoFVP8JCB
   matrix:
   - TESTFILES="tests/test_expected_factor_analyzer.py"
   - TESTFILES="tests/test_expected_rotator.py"
