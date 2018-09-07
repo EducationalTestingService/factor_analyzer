@@ -1,9 +1,6 @@
 language: python
 python:
 - 3.6
-notifications:
-  email: false
-  webhooks: https://coveralls.io/webhooks
 env:
   global:
   - COVERALLS_PARALLEL=true
@@ -28,3 +25,7 @@ script:
 
 after_success:
 - ${HOME}/miniconda3/bin/coveralls -c .coveragerc
+
+notifications:
+  email: false
+  webhooks: https://coveralls.io/webhooks
