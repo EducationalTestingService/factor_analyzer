@@ -35,6 +35,7 @@ def calculate_py_output(test_name,
                         factors,
                         method,
                         rotation,
+                        use_corr_matrix=False,
                         top_dir=None):
     """
     Use the `FactorAnalyzer()` class to perform the factor analysis
@@ -50,6 +51,9 @@ def calculate_py_output(test_name,
         The rotation method
     rotation : str
         The type of rotation
+    use_corr_matrix : bool, optional
+        Whether to use the correlation matrix.
+        Defaults to False.
     top_dir : str, optional
         The top directory for test data
         Defaults to `DATA_DIR``
@@ -66,11 +70,16 @@ def calculate_py_output(test_name,
     filename = join(top_dir, test_name + '.csv')
     data = pd.read_csv(filename)
 
+    if use_corr_matrix:
+        X = data.corr()
+    else:
+        X = data.copy()
+
     rotation = None if rotation == 'none' else rotation
     method = {'uls': 'minres'}.get(method, method)
 
     fa = FactorAnalyzer()
-    fa.analyze(data, factors, method=method, rotation=rotation)
+    fa.analyze(X, factors, method=method, rotation=rotation, use_corr_matrix=use_corr_matrix)
 
     evalues, values = fa.get_eigenvalues()
 
@@ -242,6 +251,7 @@ def check_scenario(test_name,
                    ignore_communalities=False,
                    check_scores=False,
                    check_structure=False,
+                   use_corr_matrix=False,
                    data_dir=None,
                    expected_dir=None,
                    rel_tol=0,
@@ -272,6 +282,9 @@ def check_scenario(test_name,
         Check the structure matrix.
         This should only be used with
         oblique rotations.
+        Defaults to False.
+    use_corr_matrix : bool, optional
+        Whether to use the correlation matrix.
         Defaults to False.
     data_dir : str, optional
         The directory with input data files.
@@ -308,7 +321,7 @@ def check_scenario(test_name,
         output_types.append('structure')
 
     r_output = collect_r_output(test_name, factors, method, rotation, output_types, expected_dir)
-    py_output = calculate_py_output(test_name, factors, method, rotation, data_dir)
+    py_output = calculate_py_output(test_name, factors, method, rotation, use_corr_matrix, data_dir)
 
     for output_type in output_types:
 

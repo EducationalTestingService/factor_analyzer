@@ -15,6 +15,17 @@ from factor_analyzer.test_utils import check_scenario
 THRESHOLD = 0.9
 
 
+def test_01_none_minres_3_factors_use_corr():
+
+    test_name = 'test01'
+    factors = 3
+    method = 'uls'
+    rotation = 'none'
+
+    for check in check_scenario(test_name, factors, method, rotation, use_corr_matrix=True):
+        assert check > THRESHOLD
+
+
 def test_01_none_minres_3_factors():
 
     test_name = 'test01'
@@ -87,6 +98,23 @@ def test_01_promax_ml_3_factors():
                                 factors,
                                 method,
                                 rotation,
+                                ignore_value=True,
+                                ignore_communalities=True):
+        assert check > THRESHOLD
+
+
+def test_01_promax_ml_3_factors_use_corr():
+
+    test_name = 'test01'
+    factors = 3
+    method = 'ml'
+    rotation = 'promax'
+
+    for check in check_scenario(test_name,
+                                factors,
+                                method,
+                                rotation,
+                                use_corr_matrix=True,
                                 ignore_value=True,
                                 ignore_communalities=True):
         assert check > THRESHOLD
