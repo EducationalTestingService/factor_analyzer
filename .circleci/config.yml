@@ -15,6 +15,7 @@ jobs:
           - v1-dependencies-{{ checksum "conda_requirements.txt" }}
           - v1-dependencies-
 
+      - run: rm -r ~/repo/artifacts
       - run: mkdir ~/repo/artifacts
       - run:
           name: Install miniconda and dependencies
