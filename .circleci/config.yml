@@ -4,7 +4,7 @@ jobs:
 
   build:
     environment:
-       COVERALLS_REPO_TOKEN: aSN6kpjINvc8uDM9OxnRW0bPcbBbhFLz5
+       COVERALLS_REPO_TOKEN: UufMjgYuCcDAmDVFFUy9pE58uoFVP8JCB
     docker:
       - image: buildpack-deps:trusty
     working_directory: ~/repo
