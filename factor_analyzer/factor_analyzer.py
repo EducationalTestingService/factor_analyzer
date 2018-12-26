@@ -438,7 +438,7 @@ class FactorAnalyzer:
         return np.dot(np.diag(np.sqrt(solution)), loadings)
 
     @staticmethod
-    def smc(data, sort=False):
+    def smc(data, sort=False, use_corr_matrix=False):
         """
         Calculate the squared multiple correlations.
         This is equivalent to regressing each variable
@@ -451,6 +451,10 @@ class FactorAnalyzer:
         sort : bool, optional
             Whether to sort the values for SMC
             before returning.
+            Defaults to False.
+        use_corr_matrix : bool, optional
+            Set to true if the `data` is the correlation
+            matrix.
             Defaults to False.
 
         Returns
@@ -476,7 +480,11 @@ class FactorAnalyzer:
         natsci    0.576016
         vocab     0.660264
         """
-        corr = data.corr()
+        if use_corr_matrix:
+            corr = data.copy()
+        else:
+            corr = data.corr()
+
         columns = data.columns
 
         corr_inv = sp.linalg.inv(corr)
@@ -521,7 +529,8 @@ class FactorAnalyzer:
                             n_factors,
                             use_smc=True,
                             bounds=(0.005, 1),
-                            method='minres'):
+                            method='minres',
+                            use_corr_matrix=False):
         """
         Fit the factor analysis model using either
         minres or ml solutions.
@@ -544,6 +553,10 @@ class FactorAnalyzer:
             The fitting method to use, either MINRES or
             Maximum Likelihood.
             Defaults to 'minres'.
+        use_corr_matrix : bool, optional
+            Set to true if the `data` is the correlation
+            matrix.
+            Defaults to False.
 
         Returns
         -------
@@ -561,7 +574,10 @@ class FactorAnalyzer:
                             "MINRES will be used by default, as {} is not a valid "
                             "option.".format(method))
 
-        corr = data.corr()
+        if use_corr_matrix:
+            corr = data.copy()
+        else:
+            corr = data.corr()
 
         # if any variables have zero standard deviation, then
         # the correlation will be NaN, as you cannot divide by zero:
@@ -577,7 +593,7 @@ class FactorAnalyzer:
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
         if use_smc:
-            smc_mtx = self.smc(data).values
+            smc_mtx = self.smc(data, use_corr_matrix).values
             start = (np.diag(corr) - smc_mtx.T).squeeze()
 
         # otherwise, just start with a guess of 0.5 for everything
@@ -630,6 +646,9 @@ class FactorAnalyzer:
                 bounds=(0.005, 1),
                 normalize=True,
                 impute='median',
+                remove_non_numeric=True,
+                use_scaling=True,
+                use_corr_matrix=False,
                 **kwargs):
         """
         Fit the factor analysis model using either
@@ -683,6 +702,19 @@ class FactorAnalyzer:
             list-wise deletion ('drop') or impute the column median
             ('median') or column mean ('mean').
             Defaults to 'median'.
+        remove_non_numeric : bool, optional
+            Remove any non-numeric data. If `use_corr_matrix` is True,
+            no non-numeric data will be removed.
+            Defaults to True.
+        use_scaling : bool, optional
+            Whether to scale the data by subtracting out the mean
+            and dividing by the standard deviation. If `use_corr_matrix`
+            is True, scaling will not be performed.
+            Defaults to True.
+        use_corr_matrix : bool, optional
+            Set to true if the `data` is the correlation
+            matrix.
+            Defaults to False.
         kwargs, optional
             Additional key word arguments
             are passed to the rotation method.
@@ -713,9 +745,10 @@ class FactorAnalyzer:
         df = data.copy()
 
         # remove non-numeric columns
-        df = self.remove_non_numeric(df)
+        if remove_non_numeric and not use_corr_matrix:
+            df = self.remove_non_numeric(df)
 
-        if df.isnull().any().any():
+        if df.isnull().any().any() and not use_corr_matrix:
 
             # impute median, if `impute` is set to 'median'
             if impute == 'median':
@@ -734,21 +767,31 @@ class FactorAnalyzer:
                                  "`impute` was not set to either 'drop', "
                                  "'mean', or 'median'.")
 
-        # scale the data
-        X = (df - df.mean(0)) / df.std(0)
+        # save the original correlation matrix
+        if use_corr_matrix:
+            self.corr = df.copy()
+        else:
+            self.corr = df.corr()
+
+        # scale the data, if it is not a correlation
+        # matrix and `use_scaling` is True
+        if use_scaling and not use_corr_matrix:
+            X = (df - df.mean(0)) / df.std(0)
+        else:
+            X = df.copy()
 
         # fit factor analysis model
         loadings = self.fit_factor_analysis(X,
                                             n_factors,
                                             use_smc,
                                             bounds,
-                                            method)
+                                            method,
+                                            use_corr_matrix)
 
-        # only used if we do an oblique rotations
+        # only used if we do an oblique rotations;
+        # default rotation matrix to None
         phi = None
         structure = None
-
-        # default rotation matrix to None
         rotation_mtx = None
 
         # whether to rotate the loadings matrix
@@ -761,9 +804,8 @@ class FactorAnalyzer:
                                                              normalize=normalize,
                                                              **kwargs)
 
+                # update the rotation matrix for everything except promax
                 if rotation != 'promax':
-
-                    # update the rotation matrix for everything except promax
                     rotation_mtx = np.linalg.inv(rotation_mtx).T
 
             else:
@@ -783,16 +825,14 @@ class FactorAnalyzer:
             if phi is not None:
 
                 # update phi, if it exists -- that is, if the rotation is oblique
-                phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
-
                 # create the structure matrix for any oblique rotation
+                phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
                 structure = np.dot(loadings, phi) if rotation in OBLIQUE_ROTATIONS else None
                 structure = pd.DataFrame(structure, columns=loadings.columns, index=loadings.index)
 
         self.phi = phi
         self.structure = structure
 
-        self.corr = df.corr()
         self.loadings = loadings
         self.rotation_matrix = rotation_mtx
 
