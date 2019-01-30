@@ -1,0 +1,54 @@
+
+version: 2
+jobs:
+
+  build:
+    environment:
+       COVERALLS_REPO_TOKEN: UufMjgYuCcDAmDVFFUy9pE58uoFVP8JCB
+    docker:
+      - image: buildpack-deps:trusty
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "conda_requirements.txt" }}
+          - v1-dependencies-
+
+      - run: rm -r ~/repo/artifacts
+      - run: mkdir ~/repo/artifacts
+      - run:
+          name: Install miniconda and dependencies
+          command: |
+            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+            chmod +x miniconda.sh
+            ./miniconda.sh -b -f
+            ~/miniconda3/bin/conda install --file conda_requirements.txt --yes
+            ~/miniconda3/bin/pip install nose-cov python-coveralls
+
+      - save_cache:
+          paths:
+            - ~/repo
+          key: v1-dependencies-{{ checksum "conda_requirements.txt" }}
+
+      # install factor analyzer
+      - run:
+          name: Install factor analyzer
+          command: ~/miniconda3/bin/pip install -e .
+
+      # run all of the tests
+      - run:
+          name: Run tests
+          command: ~/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
+
+      # change to factor analyzer directory and run coveralls
+      - run:
+          name: Run coveralls
+          command: cd ~/repo/factor_analyzer && ~/miniconda3/bin/coveralls
+
+      - store_artifacts:
+          path:  ~/repo/artifacts
+          destination:  artifacts
+    notify:
+      webhooks:
+        - url: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
