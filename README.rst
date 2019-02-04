@@ -63,7 +63,7 @@ loading matrices. The package also offers a stand-alone ``Rotator`` class to
 perform common rotations on an unrotated loading matrix.
 
 The following rotations options are available in both ``FactorAnalyzer``
-and `Rotator``:
+and ``Rotator``:
 
     (a) varimax (orthogonal rotation)
     (b) promax (oblique rotation)
