@@ -62,8 +62,8 @@ factor analysis using either minres or MLE, with optional rotations on the facto
 loading matrices. The package also offers a stand-alone ``Rotator`` class to
 perform common rotations on an unrotated loading matrix.
 
-The following rotations options are available in both ``FactorAnalyzer()``
-and `Rotator()``:
+The following rotations options are available in both ``FactorAnalyzer``
+and `Rotator``:
 
     (a) varimax (orthogonal rotation)
     (b) promax (oblique rotation)
