@@ -5,7 +5,7 @@ Confirmatory factor analysis using ML.
 :date: 2/05/2019
 :organization: ETS
 """
-
+import logging
 import pandas as pd
 import numpy as np
 
@@ -316,9 +316,21 @@ class ModelParser:
                     covariance constraints will be imposed on the
                     confirmatory factor analysis model. This list
                     should be in the following format:
-                        ```
-                        [cov(x1, x2'), cov(x1, x3), cov(x2, x3), ...]
-                        ```
+                    ```
+                        x1        x2        x3        x4        x5
+                    ----------------------------------------------
+                    x1. 0.        0.        0.        0.        0.
+
+                    x2  c(x1,x2)  0.        0.        0.        0.
+
+                    x3  c(x1,x3)  c(x2,x3)  0.        0.        0.
+
+                    x4  c(x1,x4)  c(x2,x4)  c(x3,x4)  0.        0.
+
+                    x5  c(x1,x5)  c(x2,x5)  c(x3,x5)  c(x4,x5)  0.
+
+                    factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
+                    ```
                 - factor_vars : list or None, optional
                     A list of factor variances. If None, no
                     factor variance constraints will be imposed on the
@@ -382,15 +394,26 @@ class ConfirmatoryFactorAnalyzer:
     A ConfirmatoryFactorAnalyzer class, which fits a
     confirmatory factor analysis model using maximum likelihood.
 
-
     Attributes
     ----------
-    loadings : pd.DataFrame
-
-    error_vars : pd.DataFrame
-
-    factor_covs : pd.DataFrame
-
+    loadings : pd.DataFrame or None
+        The factor loadings matrix.
+    error_vars : pd.DataFrame or None
+        The error variances.
+    factor_covs : pd.DataFrame or None
+        The factor covariances.
+    is_fitted :bool
+        True if the model has been estimated.
+    use_bollen : bool
+        Whether to a reduced form of the objective
+        was used. This will only be true when `is_cov=True`
+        and `n_obs=None` (Bollen, 1989).
+    log_likelihood : float or None
+        The likelihood from the optimization routine.
+    aic : float or None
+        The Akaike information criterion.
+    bic : float or None
+        The Bayesian information criterion.
 
     Examples
     --------
@@ -401,14 +424,29 @@ class ConfirmatoryFactorAnalyzer:
     >>> cfa = ConfirmatoryFactorAnalyzer()
     >>> cfa.analyze(data, model)
     >>> cfa.loadings
-
+        F1  F2
+    X1  1.000000    0.000000
+    X2  0.464864    0.000000
+    X3  0.353236    0.000000
+    X4  0.000000    1.000000
+    X5  0.000000    0.744179
+    X6  0.000000    0.381194
     """
 
-    def __init__(self):
+    def __init__(self,
+                 log_warnings=False):
 
+        self.log_warnings = log_warnings
+
+        self.is_fitted = False
+        self.use_bollen = False
         self.loadings = None
         self.error_vars = None
         self.factor_covs = None
+
+        self.log_likelihood = None
+        self.aic = None
+        self.bic = None
 
     @staticmethod
     def combine(loadings,
@@ -509,7 +547,8 @@ class ConfirmatoryFactorAnalyzer:
                   n_factors,
                   n_variables,
                   n_lower_diag,
-                  fix_first):
+                  fix_first,
+                  n_obs):
         """
         The objective function.
 
@@ -545,6 +584,9 @@ class ConfirmatoryFactorAnalyzer:
         fix_first : bool
             Whether to fix the first variable loading
             on a given factor to 1.
+        n_obs : int or None
+            The number of observations. If this is None,
+            then the reduced form objective will be used.
 
         Returns
         -------
@@ -556,49 +598,61 @@ class ConfirmatoryFactorAnalyzer:
          factor_vars_init,
          factor_covs_init) = self.split(x0, n_factors, n_variables, n_lower_diag)
 
+        # if `fix_first` is True, then we fix the first variable
+        # that loads on each factor to 1; otherwise, we let is vary freely
         if fix_first:
             row_idx = [np.where(loadings[:, i] == 1)[0][0] for i in range(n_factors)]
             col_idx = [i for i in range(n_factors)]
             loadings_init[row_idx, col_idx] = 1
 
-        # loadings
+        # set the loadings to zero where applicable
         loadings_init[np.where(loadings == 0)] = 0
 
-        # factor variances
-        # factor_vars_init[~pd.isna(factor_vars)] = factor_vars[~pd.isna(factor_vars)]
+        # if any factor variance constraints were set, fix these
+        factor_vars_init[~pd.isna(factor_vars)] = factor_vars[~pd.isna(factor_vars)]
 
-        # factor covariances
-        # factor_covs_init[~pd.isna(factor_covs)] = factor_covs[~pd.isna(factor_covs)]
+        # if any factor covariance constraints were set, fix these
+        factor_covs_init[~pd.isna(factor_covs)] = factor_covs[~pd.isna(factor_covs)]
 
-        # combine factor variances and covariances
+        # combine factor variances and covariances into a single matrix
         factor_cov_init_final = fill_lower_diag(factor_covs_init)
         factor_cov_init_final += factor_cov_init_final.T
         np.fill_diagonal(factor_cov_init_final, factor_vars_init)
 
-        # error covarianes
-        # error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
+        # if any error variance constraints were set, fix these;
+        # then, create the error covariance matrix (a diagonal matrix)
+        error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
         error_covs_init = np.zeros((n_variables, n_variables))
         np.fill_diagonal(error_covs_init, error_vars_init)
 
-        # calculate objective
+        # calculate sigma-theta, needed for the objective function
         sigma_theta = loadings_init.dot(factor_cov_init_final) \
                                    .dot(loadings_init.T) + error_covs_init
-        error = (np.log(np.linalg.det(sigma_theta)) +
-                 np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
-                 np.log(np.linalg.det(cov)) - n_variables))
+
+        # if we do not have the number of observations, we use the Bollen approach;
+        # this should yield the same coefficient estimates, but the variances may differ
+        if n_obs is None:
+            error = (np.log(np.linalg.det(sigma_theta)) +
+                     np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
+                     np.log(np.linalg.det(cov)) - n_variables))
+        else:
+            error = -(((-n_obs * n_variables / 2) * np.log(2 * np.pi)) -
+                      (n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
+                                     np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
 
         return error
 
     def analyze(self,
                 data,
                 model,
+                n_obs=None,
                 is_cov=False,
                 fix_first=True,
                 bounds=None,
                 maxiter=50,
                 tol=None):
         """
-        Perform confirmatory factor analysis
+        Perform confirmatory factor analysis.
 
         Parameters
         ----------
@@ -624,9 +678,21 @@ class ConfirmatoryFactorAnalyzer:
                     covariance constraints will be imposed on the
                     confirmatory factor analysis model. This list
                     should be in the following format:
-                        ```
-                        [cov(x1, x2'), cov(x1, x3), cov(x2, x3), ...]
-                        ```
+                    ```
+                        x1        x2        x3        x4        x5
+                    ----------------------------------------------
+                    x1. 0.        0.        0.        0.        0.
+
+                    x2  c(x1,x2)  0.        0.        0.        0.
+
+                    x3  c(x1,x3)  c(x2,x3)  0.        0.        0.
+
+                    x4  c(x1,x4)  c(x2,x4)  c(x3,x4)  0.        0.
+
+                    x5  c(x1,x5)  c(x2,x5)  c(x3,x5)  c(x4,x5)  0.
+
+                    factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
+                    ```
                 - factor_vars : list or None, optional
                     A list of factor variances. If None, no
                     factor variance constraints will be imposed on the
@@ -635,6 +701,12 @@ class ConfirmatoryFactorAnalyzer:
                     A list of error variances. If None, no
                     error variance constraints will be imposed on the
                     confirmatory factor analysis model.
+        n_obs : int or None, optional
+            The number of observations in the original
+            data set. If this is not passed and `is_cov=True`,
+            then a reduced form of the objective function will
+            be used.
+            Defaults to None.
         is_cov : bool, optional
             Whether the input `data` is a
             covariance matrix. If False,
@@ -661,12 +733,22 @@ class ConfirmatoryFactorAnalyzer:
             The tolerance for convergence.
             Defaults to None.
 
-        Returns
-        -------
-        results
+        Raises
+        ------
+        AssertionError
+            If len(bounds) != len(x0)
         """
         if not is_cov:
-            data = data.cov() * ((data.shape[0] - 1) / data.shape[0])
+            n_obs = data.shape[0] if n_obs is None else n_obs
+            data = data.cov() * ((n_obs - 1) / n_obs)
+        else:
+            if n_obs is None:
+                self.use_bollen = True
+                if self.log_warnings:
+                    logging.warning("You have passed a covariance matrix (`is_cov=True`) "
+                                    "but you have not specified the number of observations "
+                                    "(`n_obs=None`). Therefore, a reduced version of the "
+                                    "objective function will be used (Bollen, 1989 p.107)")
 
         (loadings,
          error_vars,
@@ -678,11 +760,14 @@ class ConfirmatoryFactorAnalyzer:
          n_variables,
          n_lower_diag) = ModelParser().parse(model)
 
+        # we initialize all of the arrays, setting the covariances
+        # lower than the expected variances and the loadings to 1 or 0
         loading_init = loadings.copy()
         error_vars_init = np.full((error_vars.shape[0], 1), 0.5)
         factor_vars_init = np.full((factor_vars.shape[0], 1), 0.5)
         factor_covs_init = np.full((factor_covs.shape[0], 1), 0.05)
 
+        # we merge all of the arrays into a single 1d vector
         x0 = self.combine(loading_init,
                           error_vars_init,
                           factor_vars_init,
@@ -691,6 +776,9 @@ class ConfirmatoryFactorAnalyzer:
                           n_variables,
                           n_lower_diag)
 
+        # if the bounds argument is None, then we initialized most of the
+        # boundaries to (None, None), except the loading matrix, which is
+        # bounded between a minimum of 0 and a maximum of 1.
         if bounds is None:
             bounds = [(0, 1) for _ in range(loading_init.shape[0] *
                                             loading_init.shape[1])]
@@ -702,6 +790,9 @@ class ConfirmatoryFactorAnalyzer:
                      'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
         assert len(bounds) == len(x0), error_msg
 
+        # fit the actual model using L-BFGS algorithm;
+        # the constraints are set inside the objective function,
+        # so that we can avoid using linear programming methods (e.g. SLSQP)
         res = minimize(self.objective, x0,
                        method='L-BFGS-B',
                        options={'maxiter': maxiter, 'disp': True},
@@ -714,13 +805,17 @@ class ConfirmatoryFactorAnalyzer:
                              n_factors,
                              n_variables,
                              n_lower_diag,
-                             fix_first))
+                             fix_first,
+                             n_obs))
 
+        # we split all the 1d array back into the set of original arrays
         (loadings,
          error_vars,
          factor_vars,
          factor_covs) = self.split(res.x, n_factors, n_variables, n_lower_diag)
 
+        # we also combine the factor covariances and variances into
+        # a single variance-covariance matrix to make things easier
         factor_covs_full = fill_lower_diag(factor_covs)
         factor_covs_full += factor_covs_full.T
         np.fill_diagonal(factor_covs_full, factor_vars)
@@ -728,3 +823,27 @@ class ConfirmatoryFactorAnalyzer:
         self.loadings = pd.DataFrame(loadings, columns=factor_names, index=variable_names)
         self.error_vars = pd.DataFrame(error_vars, columns=['error_vars'], index=variable_names)
         self.factor_covs = pd.DataFrame(factor_covs_full, columns=factor_names, index=factor_names)
+
+        # we also calculate the log-likelihood, AIC, and BIC
+        self.log_likelihood = -res.fun
+        self.aic = 2 * res.fun + 2 * (x0.shape[0] + n_variables)
+        if n_obs is not None:
+            self.bic = 2 * res.fun + np.log(n_obs) * (x0.shape[0] + n_variables)
+
+        self.is_fitted = True
+
+    def get_model_implied_cov(self):
+        """
+        Get the model-implied covariance
+        matrix, if the model has been estimated.
+
+        Returns
+        -------
+        model_implied_cov : pd.DataFrame
+            The model-implied covariance
+            matrix.
+        """
+        if self.is_fitted:
+            error_vars = self.error_vars
+            error = np.eye(error_vars.shape[0])
+            return self.loadings.dot(self.factor_covs).dot(self.loadings.T) + error
