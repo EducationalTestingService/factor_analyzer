@@ -198,7 +198,7 @@ class ModelParser:
             equal to `n_variables`.
         """
         if error_vars is not None:
-            error_vars = np.array(error_vars, dtype=float)
+            error_vars = np.array(error_vars, dtype=float).reshape(n_variables, 1)
             error_msg = ('The length of `error_vars` must equal '
                          'the number of variables in your data set '
                          '{} != {}'.format(len(error_vars), n_variables))
@@ -232,7 +232,7 @@ class ModelParser:
             equal to `n_factors`.
         """
         if factor_vars is not None:
-            factor_vars = np.array(factor_vars, dtype=float)
+            factor_vars = np.array(factor_vars, dtype=float).reshape(n_factors, 1)
             error_msg = ('The length of `factor_vars` must equal '
                          'the number of factors in your loading matrix '
                          '{} != {}'.format(len(factor_vars), n_factors))
@@ -404,9 +404,9 @@ class ConfirmatoryFactorAnalyzer:
         The factor covariances.
     is_fitted :bool
         True if the model has been estimated.
-    use_bollen : bool
-        Whether to a reduced form of the objective
-        was used. This will only be true when `is_cov=True`
+    used_bollen : bool
+        Whether a reduced form of the objective
+        was used used. This will only be true when `is_cov=True`
         and `n_obs=None` (Bollen, 1989).
     log_likelihood : float or None
         The likelihood from the optimization routine.
@@ -424,7 +424,7 @@ class ConfirmatoryFactorAnalyzer:
     >>> cfa = ConfirmatoryFactorAnalyzer()
     >>> cfa.analyze(data, model)
     >>> cfa.loadings
-        F1  F2
+        F1          F2
     X1  1.000000    0.000000
     X2  0.464864    0.000000
     X3  0.353236    0.000000
@@ -439,7 +439,7 @@ class ConfirmatoryFactorAnalyzer:
         self.log_warnings = log_warnings
 
         self.is_fitted = False
-        self.use_bollen = False
+        self.using_bollen = False
         self.loadings = None
         self.error_vars = None
         self.factor_covs = None
@@ -743,7 +743,7 @@ class ConfirmatoryFactorAnalyzer:
             data = data.cov() * ((n_obs - 1) / n_obs)
         else:
             if n_obs is None:
-                self.use_bollen = True
+                self.used_bollen = True
                 if self.log_warnings:
                     logging.warning("You have passed a covariance matrix (`is_cov=True`) "
                                     "but you have not specified the number of observations "
