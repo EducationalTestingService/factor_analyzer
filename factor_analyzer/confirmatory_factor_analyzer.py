@@ -10,35 +10,14 @@ import pandas as pd
 import numpy as np
 
 from scipy.optimize import minimize
+from scipy.linalg import block_diag
 
-
-def fill_lower_diag(x):
-    """
-    Fill the lower diagonal of a square matrix,
-    given a 1d input array.
-
-    Parameters
-    ----------
-    x : np.array
-        The input matrix that will be used to fill
-        the lower diagonal of the square matrix.
-
-    Returns
-    -------
-    out : np.array
-        The output square matrix, with the lower
-        diagonal filled by x.
-
-    Reference
-    ---------
-    [1] https://stackoverflow.com/questions/51439271/
-        convert-1d-array-to-lower-triangular-matrix
-    """
-    x = np.squeeze(x, axis=1)
-    n = int(np.sqrt(len(x) * 2)) + 1
-    out = np.zeros((n, n), dtype=float)
-    out[np.tri(n, dtype=bool, k=-1)] = x
-    return out
+from factor_analyzer.utils import (commutation_matrix,
+                                   duplication_matrix_pre_post,
+                                   get_free_parameter_idxs,
+                                   get_symmetric_lower_idx,
+                                   get_symmetric_upper_idx,
+                                   merge_variance_covariance)
 
 
 class ModelParser:
@@ -448,6 +427,12 @@ class ConfirmatoryFactorAnalyzer:
         self.aic = None
         self.bic = None
 
+        self.n_factors = None
+        self.n_variables = None
+        self.n_lower_diag = None
+
+        self.fix_first = None
+
     @staticmethod
     def combine(loadings,
                 error_vars,
@@ -543,12 +528,7 @@ class ConfirmatoryFactorAnalyzer:
                   loadings,
                   error_vars,
                   factor_vars,
-                  factor_covs,
-                  n_factors,
-                  n_variables,
-                  n_lower_diag,
-                  fix_first,
-                  n_obs):
+                  factor_covs):
         """
         The objective function.
 
@@ -573,20 +553,6 @@ class ConfirmatoryFactorAnalyzer:
         factor_covs : array-like (n_lower_diag * 1)
             The factor covariance array. This tells the objective
             function what elements should be fixed.
-        n_factors : int
-            The number of factors.
-        n_variables : int
-            The number of variables.
-        n_lower_diag :int
-            The number of elements in the `factor_covs`
-            array, which is equal to the lower diagonal
-            of the factor covariance matrix.
-        fix_first : bool
-            Whether to fix the first variable loading
-            on a given factor to 1.
-        n_obs : int or None
-            The number of observations. If this is None,
-            then the reduced form objective will be used.
 
         Returns
         -------
@@ -596,49 +562,44 @@ class ConfirmatoryFactorAnalyzer:
         (loadings_init,
          error_vars_init,
          factor_vars_init,
-         factor_covs_init) = self.split(x0, n_factors, n_variables, n_lower_diag)
+         factor_covs_init) = self.split(x0, self.n_factors, self.n_variables, self.n_lower_diag)
 
         # if `fix_first` is True, then we fix the first variable
         # that loads on each factor to 1; otherwise, we let is vary freely
-        if fix_first:
-            row_idx = [np.where(loadings[:, i] == 1)[0][0] for i in range(n_factors)]
-            col_idx = [i for i in range(n_factors)]
+        if self.fix_first:
+            row_idx = [np.where(loadings[:, i] == 1)[0][0] for i in range(self.n_factors)]
+            col_idx = [i for i in range(self.n_factors)]
             loadings_init[row_idx, col_idx] = 1
 
         # set the loadings to zero where applicable
         loadings_init[np.where(loadings == 0)] = 0
 
-        # if any factor variance constraints were set, fix these
+        # if any constraints were set, fix these
         factor_vars_init[~pd.isna(factor_vars)] = factor_vars[~pd.isna(factor_vars)]
-
-        # if any factor covariance constraints were set, fix these
         factor_covs_init[~pd.isna(factor_covs)] = factor_covs[~pd.isna(factor_covs)]
+        error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
 
         # combine factor variances and covariances into a single matrix
-        factor_cov_init_final = fill_lower_diag(factor_covs_init)
-        factor_cov_init_final += factor_cov_init_final.T
-        np.fill_diagonal(factor_cov_init_final, factor_vars_init)
+        factor_varcov_init = merge_variance_covariance(factor_vars_init, factor_covs_init)
 
-        # if any error variance constraints were set, fix these;
-        # then, create the error covariance matrix (a diagonal matrix)
-        error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
-        error_covs_init = np.zeros((n_variables, n_variables))
-        np.fill_diagonal(error_covs_init, error_vars_init)
+        # make the error variance into a variance-covariance matrix
+        error_varcov_init = merge_variance_covariance(error_vars_init)
 
         # calculate sigma-theta, needed for the objective function
-        sigma_theta = loadings_init.dot(factor_cov_init_final) \
-                                   .dot(loadings_init.T) + error_covs_init
+        sigma_theta = loadings_init.dot(factor_varcov_init) \
+                                   .dot(loadings_init.T) + error_varcov_init
 
         # if we do not have the number of observations, we use the Bollen approach;
-        # this should yield the same coefficient estimates, but the variances may differ
-        if n_obs is None:
+        # this should yield the same coefficient estimates, but value of the objective
+        # will most likely be different, and AIC and BIC may be wrong
+        if self.n_obs is None:
             error = (np.log(np.linalg.det(sigma_theta)) +
                      np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
-                     np.log(np.linalg.det(cov)) - n_variables))
+                              np.log(np.linalg.det(cov)) - self.n_variables))
         else:
-            error = -(((-n_obs * n_variables / 2) * np.log(2 * np.pi)) -
-                      (n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
-                                     np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
+            error = -(((-self.n_obs * self.n_variables / 2) * np.log(2 * np.pi)) -
+                      (self.n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
+                                          np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
 
         return error
 
@@ -748,7 +709,8 @@ class ConfirmatoryFactorAnalyzer:
                     logging.warning("You have passed a covariance matrix (`is_cov=True`) "
                                     "but you have not specified the number of observations "
                                     "(`n_obs=None`). Therefore, a reduced version of the "
-                                    "objective function will be used (Bollen, 1989 p.107)")
+                                    "objective function will be used (Bollen, 1989 p.107). "
+                                    "The AIC and BIC metrics may not be correct.")
 
         (loadings,
          error_vars,
@@ -760,8 +722,37 @@ class ConfirmatoryFactorAnalyzer:
          n_variables,
          n_lower_diag) = ModelParser().parse(model)
 
+        # we set a bunch of instance-level variables that will be
+        # referenced primarily by the objective function
+        self.n_obs = n_obs
+        self.n_factors = n_factors
+        self.n_variables = n_variables
+        self.n_lower_diag = n_lower_diag
+        self.fix_first = fix_first
+
+        # we want to figure out which values in the matrices
+        # are actually free to vary, and get their indexes
+        loadings_free = get_free_parameter_idxs(loadings, eq=1)
+        error_covs_free = get_free_parameter_idxs(merge_variance_covariance(error_vars))
+        factor_covs_free = get_free_parameter_idxs(merge_variance_covariance(factor_vars,
+                                                                             factor_covs))
+
+        # we make all of these instance-level variables,
+        # so that we can reference them again later
+        self.loadings_free = loadings_free
+        self.error_covs_free = error_covs_free
+        self.factor_covs_free = factor_covs_free
+
+        # we want to know whether any of the variances or
+        # covariances are fixed for the errors or factors,
+        # so that we can force these to their fixed values
+        # after the optimization routine is finished
+        error_vars_fixed = pd.DataFrame(error_vars).notnull().any().any()
+        factor_vars_fixed = pd.DataFrame(factor_vars).notnull().any().any()
+        factor_covs_fixed = pd.DataFrame(factor_covs).notnull().any().any()
+
         # we initialize all of the arrays, setting the covariances
-        # lower than the expected variances and the loadings to 1 or 0
+        # lower than the expected variances, and the loadings to 1 or 0
         loading_init = loadings.copy()
         error_vars_init = np.full((error_vars.shape[0], 1), 0.5)
         factor_vars_init = np.full((factor_vars.shape[0], 1), 0.5)
@@ -782,12 +773,13 @@ class ConfirmatoryFactorAnalyzer:
         if bounds is None:
             bounds = [(0, 1) for _ in range(loading_init.shape[0] *
                                             loading_init.shape[1])]
-            bounds += [(None, None) for _ in range(error_vars_init.shape[0])]
-            bounds += [(None, None) for _ in range(factor_vars_init.shape[0])]
-            bounds += [(None, None) for _ in range(factor_covs_init.shape[0])]
+            bounds += [(None, None) for _ in range(error_vars_init.shape[0] +
+                                                   factor_vars_init.shape[0] +
+                                                   factor_covs_init.shape[0])]
 
         error_msg = ('The length of `bounds` must equal the length of your '
                      'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
+
         assert len(bounds) == len(x0), error_msg
 
         # fit the actual model using L-BFGS algorithm;
@@ -801,28 +793,27 @@ class ConfirmatoryFactorAnalyzer:
                              loadings,
                              error_vars,
                              factor_vars,
-                             factor_covs,
-                             n_factors,
-                             n_variables,
-                             n_lower_diag,
-                             fix_first,
-                             n_obs))
+                             factor_covs))
 
         # we split all the 1d array back into the set of original arrays
-        (loadings,
-         error_vars,
-         factor_vars,
-         factor_covs) = self.split(res.x, n_factors, n_variables, n_lower_diag)
+        (loadings_res,
+         error_vars_res,
+         factor_vars_res,
+         factor_covs_res) = self.split(res.x, n_factors, n_variables, n_lower_diag)
 
-        # we also combine the factor covariances and variances into
-        # a single variance-covariance matrix to make things easier
-        factor_covs_full = fill_lower_diag(factor_covs)
-        factor_covs_full += factor_covs_full.T
-        np.fill_diagonal(factor_covs_full, factor_vars)
+        # we combine the factor covariances and variances into
+        # a single variance-covariance matrix to make things easier,
+        # but also check to make see if anything was fixed
+        factor_covs_final = factor_covs if factor_covs_fixed else factor_covs_res
+        factor_vars_final = factor_vars if factor_vars_fixed else factor_vars_res
+        factor_covs_final = merge_variance_covariance(factor_vars_final, factor_covs_final)
 
-        self.loadings = pd.DataFrame(loadings, columns=factor_names, index=variable_names)
-        self.error_vars = pd.DataFrame(error_vars, columns=['error_vars'], index=variable_names)
-        self.factor_covs = pd.DataFrame(factor_covs_full, columns=factor_names, index=factor_names)
+        # we also check to make see if the error variances were fixed
+        errror_vars_final = error_vars if error_vars_fixed else error_vars_res
+
+        self.loadings = pd.DataFrame(loadings_res, columns=factor_names, index=variable_names)
+        self.error_vars = pd.DataFrame(errror_vars_final, columns=['evars'], index=variable_names)
+        self.factor_covs = pd.DataFrame(factor_covs_final, columns=factor_names, index=factor_names)
 
         # we also calculate the log-likelihood, AIC, and BIC
         self.log_likelihood = -res.fun
@@ -835,7 +826,7 @@ class ConfirmatoryFactorAnalyzer:
     def get_model_implied_cov(self):
         """
         Get the model-implied covariance
-        matrix, if the model has been estimated.
+        matrix (sigma), if the model has been estimated.
 
         Returns
         -------
@@ -844,6 +835,140 @@ class ConfirmatoryFactorAnalyzer:
             matrix.
         """
         if self.is_fitted:
-            error_vars = self.error_vars
-            error = np.eye(error_vars.shape[0])
+            error = np.diag(self.error_vars.values.flatten())
             return self.loadings.dot(self.factor_covs).dot(self.loadings.T) + error
+
+    def get_derivatives_implied_cov(self):
+        """
+        Compute the derivatives for the implied covariance
+        matrix (sigma).
+
+        Returns
+        -------
+        loadings_dx: pd.DataFrame
+            The derivative of the loadings matrix.
+        factor_covs_dx: pd.DataFrame
+            The derivative of the factor covariance matrix.
+        error_covs_dx: pd.DataFrame
+            The derivative of the error covariance matrix.
+        """
+        loadings = self.loadings
+        factor_covs = self.factor_covs
+
+        sym_lower_var_idx = get_symmetric_lower_idx(self.n_variables)
+        sym_upper_fac_idx = get_symmetric_upper_idx(self.n_factors, diag=False)
+        sym_lower_fac_idx = get_symmetric_lower_idx(self.n_factors, diag=False)
+
+        factors_diag = np.eye(self.n_factors)
+        factors_diag_mult = factors_diag.dot(factor_covs).dot(factors_diag.T).dot(loadings.T)
+
+        # calculate the derivative of the loadings matrix, using the commutation matrix
+        loadings_dx = np.eye(self.n_variables**2) + commutation_matrix(self.n_variables,
+                                                                       self.n_variables)
+        loadings_dx = loadings_dx.dot(np.kron(factors_diag_mult, np.eye(self.n_variables)).T)
+
+        # calculate the derivative of the factor_covs matrix
+        factor_covs_dx = loadings.dot(factors_diag)
+        factor_covs_dx = np.kron(factor_covs_dx, factor_covs_dx)
+
+        off_diag = (factor_covs_dx[:, sym_lower_fac_idx] +
+                    factor_covs_dx[:, sym_upper_fac_idx])
+
+        combine_indices = np.concatenate([sym_upper_fac_idx, sym_lower_fac_idx])
+        combine_diag = np.concatenate([off_diag, off_diag], axis=1)
+
+        factor_covs_dx[:, combine_indices] = combine_diag
+        factor_covs_dx = factor_covs_dx[:, :factor_covs.size]
+
+        # calculate the derivative of the error_cov matrix,
+        # which we assume will always be a diagonal matrix
+        error_covs_dx = np.eye(self.n_variables**2)
+
+        # make sure these matrices are symmetric
+        loadings_dx = loadings_dx[sym_lower_var_idx, :]
+        factor_covs_dx = factor_covs_dx[sym_lower_var_idx, :]
+        error_covs_dx = error_covs_dx[sym_lower_var_idx, :]
+
+        return (pd.DataFrame(loadings_dx)[self.loadings_free].copy(),
+                pd.DataFrame(factor_covs_dx)[self.factor_covs_free].copy(),
+                pd.DataFrame(error_covs_dx)[self.error_covs_free].copy())
+
+    def get_derivatives_implied_mu(self):
+        """
+        Compute the derivatives for the implied means.
+
+        Returns
+        -------
+        loadings_dx: pd.DataFrame
+            The derivative of the loadings means.
+        factor_covs_dx: pd.DataFrame
+            The derivative of the factor covariance means.
+        error_covs_dx: pd.DataFrame
+            The derivative of the error covariance means.
+        """
+        alpha = np.zeros((self.n_factors, 1))
+        factors_diag = np.eye(self.n_factors)
+
+        # the mean derivatives will just be zeros for both
+        # the error covariance and factor covariance matrices
+        error_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self.error_covs_free))),
+                                     columns=self.error_covs_free)
+        factor_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self.factor_covs_free))),
+                                      columns=self.factor_covs_free)
+
+        loadings_dx = np.kron(factors_diag.dot(alpha).T, np.eye(self.n_variables))
+        loadings_dx = pd.DataFrame(loadings_dx)[self.loadings_free].copy()
+
+        return (loadings_dx,
+                factor_covs_dx,
+                error_covs_dx)
+
+    def get_standard_errors(self):
+        """
+        Get the standard errors from the implied
+        covariance matrix and means.
+
+        Returns
+        -------
+        standard_errors : pd.DataFrame
+            The standard errors.
+        """
+        if self.n_obs is None:
+            return None
+
+        (loadings_dx,
+         factor_covs_dx,
+         error_cov_dx) = self.get_derivatives_implied_cov()
+
+        (loadings_dx_mu,
+         factor_covs_dx_mu,
+         error_cov_dx_mu) = self.get_derivatives_implied_mu()
+
+        # combine all of our covariance and mean derivatives; below we will
+        # merge all of these together in a single giant matrix
+        loadings_dx = loadings_dx_mu.append(loadings_dx, ignore_index=True)
+        factor_covs_dx = factor_covs_dx_mu.append(factor_covs_dx, ignore_index=True)
+        error_cov_dx = error_cov_dx_mu.append(error_cov_dx, ignore_index=True)
+
+        # we also want to calculate the derivative for additional free parameters, nu
+        nu_dx = np.zeros((loadings_dx.shape[0], self.n_variables))
+        nu_dx[:self.n_variables, :self.n_variables] = np.eye(self.n_variables)
+        nu_dx = pd.DataFrame(nu_dx)
+
+        # get get the implied covariance, invert it, and take the Kronecker product
+        sigma = self.get_model_implied_cov()
+        sigma_inv = np.linalg.inv(sigma)
+        sigma_inv_kron = pd.DataFrame(np.kron(sigma_inv, sigma_inv)).values
+
+        h1_information = 0.5 * duplication_matrix_pre_post(sigma_inv_kron)
+        h1_information = pd.DataFrame(block_diag(sigma_inv, h1_information))
+
+        # we concatenate all the deltas
+        delta = pd.concat([loadings_dx, error_cov_dx, factor_covs_dx, nu_dx], axis=1)
+        delta.columns = list(range(delta.shape[1]))
+
+        # calculate the fisher information matrix
+        information = pd.DataFrame(delta.T.dot(h1_information).dot(delta))
+        information = (1 / self.n_obs) * np.linalg.inv(information)
+
+        return np.sqrt(np.diag(information))

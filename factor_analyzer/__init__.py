@@ -11,5 +11,12 @@ from .factor_analyzer import (FactorAnalyzer,
                               calculate_kmo)
 
 from .confirmatory_factor_analyzer import (ConfirmatoryFactorAnalyzer,
-                                           ModelParser,
-                                           fill_lower_diag)
+                                           ModelParser)
+
+from .utils import (fill_lower_diag,
+                    merge_variance_covariance,
+                    duplication_matrix,
+                    duplication_matrix_pre_post,
+                    commutation_matrix,
+                    get_symmetric_lower_idx,
+                    get_symmetric_upper_idx)
