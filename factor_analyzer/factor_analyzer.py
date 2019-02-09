@@ -3,7 +3,6 @@ Factor analysis using MINRES or ML,
 with optional rotation using Varimax or Promax.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 10/25/2017
 :organization: ETS
 """

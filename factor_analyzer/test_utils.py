@@ -2,7 +2,6 @@
 Testing utilities
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 05/21/2018
 :organization: ETS
 """

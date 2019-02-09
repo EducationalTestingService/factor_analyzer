@@ -378,9 +378,9 @@ class ConfirmatoryFactorAnalyzer:
     loadings : pd.DataFrame or None
         The factor loadings matrix.
     error_vars : pd.DataFrame or None
-        The error variances.
+        The error variance matrix
     factor_covs : pd.DataFrame or None
-        The factor covariances.
+        The factor covariance matrix.
     is_fitted :bool
         True if the model has been estimated.
     used_bollen : bool
@@ -388,11 +388,30 @@ class ConfirmatoryFactorAnalyzer:
         was used used. This will only be true when `is_cov=True`
         and `n_obs=None` (Bollen, 1989).
     log_likelihood : float or None
-        The likelihood from the optimization routine.
+        The log likelihood from the optimization routine.
     aic : float or None
         The Akaike information criterion.
     bic : float or None
         The Bayesian information criterion.
+    n_factors : int or None
+        The number of factors in the CFA model.
+    n_variables : int or None
+        The number of variables in the CFA model.
+    n_lower_diag : int or None
+        The number of elements in the lower diagonal
+        of the factor covariance matrix.
+    fix_first : bool
+        Whether the first variable loading
+        on each factor is fixed to 1.
+    loadings_free : array-like or None
+        The indexes of the free parameters
+        in the loading matrix.
+    error_covs_free : array-like or None
+        The indexes of the free parameters
+        in the error covariance matrix.
+    factor_covs_free : array-like or None
+        The indexes of the free parameters
+        in the factor covariance matrix.
 
     Examples
     --------
@@ -431,7 +450,11 @@ class ConfirmatoryFactorAnalyzer:
         self.n_variables = None
         self.n_lower_diag = None
 
-        self.fix_first = None
+        self.fix_first = True
+
+        self.loadings_free = None
+        self.error_covs_free = None
+        self.factor_covs_free = None
 
     @staticmethod
     def combine(loadings,
@@ -852,6 +875,9 @@ class ConfirmatoryFactorAnalyzer:
         error_covs_dx: pd.DataFrame
             The derivative of the error covariance matrix.
         """
+        if not self.is_fitted:
+            return None
+
         loadings = self.loadings
         factor_covs = self.factor_covs
 
@@ -895,7 +921,13 @@ class ConfirmatoryFactorAnalyzer:
 
     def get_derivatives_implied_mu(self):
         """
-        Compute the derivatives for the implied means.
+        Compute the "derivatives" for the implied means.
+        Note that the derivatives of the implied means
+        will not correspond to the actual mean values
+        of the original data set, because that data could be
+        a covariance matrix, rather than the full data set.
+        Thus, we assume the mean values are zero and the
+        data are normally distributed.
 
         Returns
         -------
@@ -906,17 +938,27 @@ class ConfirmatoryFactorAnalyzer:
         error_covs_dx: pd.DataFrame
             The derivative of the error covariance means.
         """
-        alpha = np.zeros((self.n_factors, 1))
+        if not self.is_fitted:
+            return None
+
+        # just initializing some matrices that we'll
+        # use below to correct the shape of the loadings_dx
+        factors_zero = np.zeros((self.n_factors, 1))
         factors_diag = np.eye(self.n_factors)
 
         # the mean derivatives will just be zeros for both
-        # the error covariance and factor covariance matrices
+        # the error covariance and factor covariance matrices,
+        # since we don't have actual mean values (because users
+        # can simply pass the covariance matrix, if they want)
         error_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self.error_covs_free))),
                                      columns=self.error_covs_free)
         factor_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self.factor_covs_free))),
                                       columns=self.factor_covs_free)
 
-        loadings_dx = np.kron(factors_diag.dot(alpha).T, np.eye(self.n_variables))
+        # again, the implied means are just going to be diagonal matrices
+        # corresponding to the number of variables and factors; we don't
+        # have actual mean values that we're relying on
+        loadings_dx = np.kron(factors_diag.dot(factors_zero).T, np.eye(self.n_variables))
         loadings_dx = pd.DataFrame(loadings_dx)[self.loadings_free].copy()
 
         return (loadings_dx,
@@ -926,14 +968,14 @@ class ConfirmatoryFactorAnalyzer:
     def get_standard_errors(self):
         """
         Get the standard errors from the implied
-        covariance matrix and means.
+        covariance matrix and implied means.
 
         Returns
         -------
         standard_errors : pd.DataFrame
             The standard errors.
         """
-        if self.n_obs is None:
+        if not self.is_fitted or self.n_obs is None:
             return None
 
         (loadings_dx,
@@ -945,13 +987,17 @@ class ConfirmatoryFactorAnalyzer:
          error_cov_dx_mu) = self.get_derivatives_implied_mu()
 
         # combine all of our covariance and mean derivatives; below we will
-        # merge all of these together in a single giant matrix
+        # merge all of these together in a single matrix, delta, to use the delta
+        # rule (basically, using the gradients to calculate the information)
         loadings_dx = loadings_dx_mu.append(loadings_dx, ignore_index=True)
         factor_covs_dx = factor_covs_dx_mu.append(factor_covs_dx, ignore_index=True)
         error_cov_dx = error_cov_dx_mu.append(error_cov_dx, ignore_index=True)
 
-        # we also want to calculate the derivative for additional free parameters, nu
-        nu_dx = np.zeros((loadings_dx.shape[0], self.n_variables))
+        # we also want to calculate the derivative for additional free mean structure
+        # parameters, nu, and make this a data frame so it can be easily concatenated
+        # with the others. we probably don't actually need this, but we'll leave it for
+        # now, in case we want to do anything with this at some point in the future
+        nu_dx = np.zeros((loadings_dx.shape[0], self.n_variables), dtype=float)
         nu_dx[:self.n_variables, :self.n_variables] = np.eye(self.n_variables)
         nu_dx = pd.DataFrame(nu_dx)
 
@@ -960,15 +1006,18 @@ class ConfirmatoryFactorAnalyzer:
         sigma_inv = np.linalg.inv(sigma)
         sigma_inv_kron = pd.DataFrame(np.kron(sigma_inv, sigma_inv)).values
 
+        # we get the fisher information matrix for H1, which is the unrestricted
+        # model information; we'll use this with the deltas to calculate the full
+        # (inverted) information matrix below, and then invert the whole thing
         h1_information = 0.5 * duplication_matrix_pre_post(sigma_inv_kron)
-        h1_information = pd.DataFrame(block_diag(sigma_inv, h1_information))
+        h1_information = block_diag(sigma_inv, h1_information)
 
         # we concatenate all the deltas
         delta = pd.concat([loadings_dx, error_cov_dx, factor_covs_dx, nu_dx], axis=1)
         delta.columns = list(range(delta.shape[1]))
 
         # calculate the fisher information matrix
-        information = pd.DataFrame(delta.T.dot(h1_information).dot(delta))
+        information = delta.T.dot(h1_information).dot(delta)
         information = (1 / self.n_obs) * np.linalg.inv(information)
 
-        return np.sqrt(np.diag(information))
+        return pd.DataFrame(np.sqrt(np.diag(information)))

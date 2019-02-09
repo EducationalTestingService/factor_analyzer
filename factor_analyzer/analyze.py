@@ -2,7 +2,6 @@
 Factor analysis command line script.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 12/13/2017
 :organization: ETS
 """
