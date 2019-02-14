@@ -18,5 +18,5 @@ from .utils import (fill_lower_diag,
                     duplication_matrix,
                     duplication_matrix_pre_post,
                     commutation_matrix,
-                    get_symmetric_lower_idx,
-                    get_symmetric_upper_idx)
+                    get_symmetric_lower_idxs,
+                    get_symmetric_upper_idxs)

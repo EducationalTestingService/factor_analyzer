@@ -10,6 +10,26 @@ import numpy as np
 import pandas as pd
 
 
+def unique_elements(seq):
+    """
+    Get the first unique instance of every
+    element of the list, while maintaining
+    the original order of those instances.
+
+    Parameters
+    ----------
+    seq : list-like
+        The list of elements.
+
+    Returns
+    -------
+    seq : list
+        The updated list of elements.
+    """
+    seen = set()
+    return [x for x in seq if not (x in seen or seen.add(x))]
+
+
 def fill_lower_diag(x):
     """
     Fill the lower diagonal of a square matrix,
@@ -70,6 +90,84 @@ def merge_variance_covariance(variances, covariances=None):
         variance_covariance += variance_covariance.T
     np.fill_diagonal(variance_covariance, variances)
     return variance_covariance
+
+
+def get_first_idxs_from_values(x, eq=1, use_columns=True):
+    """
+    Get the fixed index
+
+    Parameters
+    ----------
+    x : np.array
+        The input matrix.
+    eq : str or int, optional
+        The given value to find.
+        Defaults to 1.
+    use_columns : bool, optional
+        Whether to get the first indexes using
+        The columns. If False, then use the rows
+        instead.
+        Defaults to True
+
+    Returns
+    -------
+    row_idx : list
+        A list of row indexes.
+    col_idx : list
+        A list of column indexes.
+    """
+    x = np.array(x)
+    if use_columns:
+        n = x.shape[1]
+        row_idx = [np.where(x[:, i] == eq)[0][0] for i in range(n)]
+        col_idx = list(range(n))
+    else:
+        n = x.shape[0]
+        col_idx = [np.where(x[i, :] == eq)[0][0] for i in range(n)]
+        row_idx = list(range(n))
+    return row_idx, col_idx
+
+
+def get_first_idxs_from_names(x, names, use_columns=True):
+    """
+    Get the fixed index
+
+    Parameters
+    ----------
+    x : pd.DataFrame
+        The input matrix.
+    names : list of lists
+
+    use_columns : bool, optional
+        Whether to get the first indexes using
+        The columns. If False, then use the rows
+        instead.
+        Defaults to True
+
+    Returns
+    -------
+    row_idx : list
+        A list of row indexes.
+    col_idx : list
+        A list of column indexes.
+
+    Raises
+    ------
+    TypeError
+        If x is not pd.DataFrame
+    """
+    if not isinstance(x, pd.DataFrame):
+        raise TypeError('`x` must be pd.DataFrame, not {}.'.format(type(x)))
+
+    first_names = [name[0] for name in names]
+
+    if use_columns:
+        row_idx = [x.index.get_loc(name) for name in first_names]
+        col_idx = list(range(x.shape[1]))
+    else:
+        col_idx = [x.T.index.get_loc(name) for name in first_names]
+        row_idx = list(range(x.shape[1]))
+    return row_idx, col_idx
 
 
 def get_free_parameter_idxs(x, eq='X'):
@@ -160,8 +258,8 @@ def duplication_matrix_pre_post(x):
     n2 = x.shape[1]
     n = int(np.sqrt(n2))
 
-    idx1 = get_symmetric_lower_idx(n)
-    idx2 = get_symmetric_upper_idx(n)
+    idx1 = get_symmetric_lower_idxs(n)
+    idx2 = get_symmetric_upper_idxs(n)
 
     out = x[idx1, :] + x[idx2, :]
     u = np.where([i in idx2 for i in idx1])[0]
@@ -198,7 +296,7 @@ def commutation_matrix(p, q):
     return identity.take(indices.ravel(), axis=0)
 
 
-def get_symmetric_lower_idx(n=1, diag=True):
+def get_symmetric_lower_idxs(n=1, diag=True):
     """
     Get the indexes for the lower triangle of
     a symmetric matrix.
@@ -223,7 +321,7 @@ def get_symmetric_lower_idx(n=1, diag=True):
     return np.where((cols > rows).T.flatten())[0]
 
 
-def get_symmetric_upper_idx(n=1, diag=True):
+def get_symmetric_upper_idxs(n=1, diag=True):
     """
     Get the indexes for the upper triangle of
     a symmetric matrix.
