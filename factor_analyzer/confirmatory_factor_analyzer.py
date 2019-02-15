@@ -113,7 +113,7 @@ class ModelParser:
 
         Returns
         -------
-        loadings : pd.DataFrame
+        loadings : np.array
             The updated loadings pattern matrix.
         variable_names : list
             The names of the variables.
@@ -184,11 +184,11 @@ class ModelParser:
             equal to `n_variables`.
         """
         if error_vars is not None:
-            error_vars = np.array(error_vars, dtype=float).reshape(n_variables, 1)
             error_msg = ('The length of `error_vars` must equal '
                          'the number of variables in your data set '
                          '{} != {}'.format(len(error_vars), n_variables))
             assert len(error_vars) == n_variables, error_msg
+            error_vars = np.array(error_vars, dtype=float).reshape(n_variables, 1)
         else:
             error_vars = np.full((n_variables, 1), np.nan)
 
@@ -218,11 +218,11 @@ class ModelParser:
             equal to `n_factors`.
         """
         if factor_vars is not None:
-            factor_vars = np.array(factor_vars, dtype=float).reshape(n_factors, 1)
             error_msg = ('The length of `factor_vars` must equal '
                          'the number of factors in your loading matrix '
                          '{} != {}'.format(len(factor_vars), n_factors))
             assert len(factor_vars) == n_factors, error_msg
+            factor_vars = np.array(factor_vars, dtype=float).reshape(n_factors, 1)
         else:
             factor_vars = np.full((n_factors, 1), np.nan)
 
@@ -253,8 +253,8 @@ class ModelParser:
             If the length of `factor_covs` is not
             equal to `n_lower_diag`.
         """
-        n_lower_diag = np.tril(np.ones((n_factors, n_factors)), -1)
-        n_lower_diag = n_lower_diag[n_lower_diag != 0].flatten().shape[0]
+        factor_covs_idxs = get_symmetric_lower_idxs(n_factors, diag=False)
+        n_lower_diag = factor_covs_idxs.shape[0]
         if factor_covs is not None:
             factor_covs = np.array(factor_covs, dtype=float)
 
@@ -264,11 +264,12 @@ class ModelParser:
             # and (2) to make sure that we only keep the lower
             # triangle, and flatten it to a 1d array.
             if len(factor_covs.shape) > 1:
-                (factor_covs_rows,
-                 factor_covs_cols) = factor_covs.shape
-                if factor_covs_rows == factor_covs_cols:
-                    factor_covs = np.tril(factor_covs, -1)
-                    factor_covs = factor_covs[factor_covs != 0].flatten()
+                error_msg = ("The `factor_cov` rows must equal the "
+                             "number of columns: {} != {}.".format(factor_covs.shape[0],
+                                                                   factor_covs.shape[1]))
+                assert factor_covs.shape[0] == factor_covs.shape[1], error_msg
+                factor_covs = factor_covs.flatten(order='F')[factor_covs_idxs]
+                factor_covs = factor_covs.reshape((n_lower_diag, 1), order='F')
 
             error_msg = ('The length of `factor_covs` must equal '
                          'the lower diagonal of the factor covariance matrix '
@@ -452,7 +453,7 @@ class ConfirmatoryFactorAnalyzer:
     """
 
     def __init__(self,
-                 log_warnings=False):
+                 log_warnings=True):
 
         self.log_warnings = log_warnings
 
@@ -631,13 +632,20 @@ class ConfirmatoryFactorAnalyzer:
         # this should yield the same coefficient estimates, but value of the objective
         # will most likely be different, and AIC and BIC may be wrong
         if self.n_obs is None:
-            error = (np.log(np.linalg.det(sigma_theta)) +
-                     np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
-                              np.log(np.linalg.det(cov)) - self.n_variables))
+            with np.errstate(invalid='ignore'):
+                error = (np.log(np.linalg.det(sigma_theta)) +
+                         np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
+                                  np.log(np.linalg.det(cov)) - self.n_variables))
         else:
-            error = -(((-self.n_obs * self.n_variables / 2) * np.log(2 * np.pi)) -
-                      (self.n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
-                                          np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
+            with np.errstate(invalid='ignore'):
+                error = -(((-self.n_obs * self.n_variables / 2) * np.log(2 * np.pi)) -
+                          (self.n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
+                                              np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
+
+            # make sure the error is greater than or
+            # equal to zero before we return it; we
+            # do not do this for the Bollen approach
+            error = 0.0 if error < 0.0 else error
 
         return error
 
@@ -770,14 +778,15 @@ class ConfirmatoryFactorAnalyzer:
             n_obs = data.shape[0] if n_obs is None else n_obs
             data = data.cov() * ((n_obs - 1) / n_obs)
         else:
+            error_msg = ('If `is_cov=True`, then the rows and column in the data '
+                         'set must be equal, and must equal the number of variables '
+                         'in your model.')
+            assert data.shape[0] == data.shape[1] == n_variables, error_msg
+            # make sure the columns and indexes are in the proper order,
+            # and set `used_bollen` to true; then, log the warning if `log_warnings=True`
+            data = data.loc[variable_names, variable_names].copy()
+
             if n_obs is None:
-                error_msg = ('If `is_cov=True`, then the rows and column in the data '
-                             'set must be equal, and must equal the number of variables '
-                             'in your model.')
-                assert data.shape[0] == data.shape[1] == n_variables, error_msg
-                # make sure the columns and indexes are in the proper order,
-                # and set `used_bollen` to true; then, log the warning if `log_warnings=True`
-                data = data.loc[variable_names, variable_names].copy()
                 self.used_bollen = True
                 if self.log_warnings:
                     logging.warning("You have passed a covariance matrix (`is_cov=True`) "
@@ -801,26 +810,29 @@ class ConfirmatoryFactorAnalyzer:
         self._fix_first_row_idx = fix_first_row_idx
         self._fix_first_col_idx = fix_first_col_idx
 
-        # we want to figure out which values in the matrices
-        # are actually free to vary, and get their indexes;
-        # also, if we set `fix_first=False`, then we need to
-        # force the factor variances to 1, even if that wasn't specified
+        # if we set `fix_first=False`, then we need to do two things (1)
+        # bound the factor covariances between 0 and 1, and (2) fix the
+        # factor variances to 1; if the latter is not specified in the model
+        # already, for the factor variances to 1 and warn the user
         loadings_free = loadings.copy()
         if fix_first:
-            loadings_free[fix_first_row_idx,
-                          fix_first_col_idx] = 0
+            loadings_free[fix_first_row_idx, fix_first_col_idx] = 0
+            factor_covs_bounds = (None, None)
         else:
+            factor_covs_bounds = (0, 1)
             if not all(factor_vars == 1):
-                logging.warning("You have set `fix_fist=False`, so all "
-                                "`factor_vars` will be forced to equal to 1.")
+                if self.log_warnings:
+                    logging.warning("You have set `fix_first=False`, but have not set all "
+                                    "`factor_vars` equal to 1. All `factor_vars` will be "
+                                    "forced to 1.")
                 factor_vars = np.ones((self.n_factors, 1))
 
         loadings_free = get_free_parameter_idxs(loadings_free, eq=1)
         error_covs_free = get_free_parameter_idxs(merge_variance_covariance(error_vars))
         factor_covs_free = get_symmetric_lower_idxs(n_factors, fix_first)
 
-        # we make all of these instance-level variables,
-        # so that we can reference them again later
+        # we make all of these instance-level hidden variables, so that
+        # we can reference them again later when calculating the standard errors
         self._loadings_free = loadings_free
         self._error_covs_free = error_covs_free
         self._factor_covs_free = factor_covs_free
@@ -850,16 +862,14 @@ class ConfirmatoryFactorAnalyzer:
                           n_lower_diag)
 
         # if the bounds argument is None, then we initialized the
-        # boundaries to (None, None), including the loading matrix;
+        # boundaries to (None, None) for everything except factor covariances;
         # at some point in the future, we may update this to place limits
-        # on the loading matrix boundaries; however, it does not appear that
-        # lavaan and MPlus do so at this point, so we will leave them unbounded
+        # on the loading matrix boundaries, too, but the case in R and SAS
         if bounds is None:
-            bounds = [(None, None) for _ in range(loading_init.shape[0] *
-                                                  loading_init.shape[1])]
-            bounds += [(None, None) for _ in range(error_vars_init.shape[0] +
-                                                   factor_vars_init.shape[0] +
-                                                   factor_covs_init.shape[0])]
+            bounds = [(None, None) for _ in range(loading_init.shape[0] * loading_init.shape[1])]
+            bounds += [(None, None) for _ in range(error_vars_init.shape[0])]
+            bounds += [(None, None) for _ in range(factor_vars_init.shape[0])]
+            bounds += [factor_covs_bounds for _ in range(factor_covs_init.shape[0])]
 
         error_msg = ('The length of `bounds` must equal the length of your '
                      'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))

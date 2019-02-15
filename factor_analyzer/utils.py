@@ -52,6 +52,7 @@ def fill_lower_diag(x):
     [1] https://stackoverflow.com/questions/51439271/
         convert-1d-array-to-lower-triangular-matrix
     """
+    x = np.array(x)
     x = x if len(x.shape) == 1 else np.squeeze(x, axis=1)
     n = int(np.sqrt(len(x) * 2)) + 1
     out = np.zeros((n, n), dtype=float)
@@ -80,12 +81,14 @@ def merge_variance_covariance(variances, covariances=None):
     variance_covariance : np.array
         The variance-covariance matrix.
     """
+    variances = np.array(variances)
     variances = (variances if len(variances.shape) == 1
                  else np.squeeze(variances, axis=1))
     if covariances is None:
         variance_covariance = np.zeros((variances.shape[0],
                                         variances.shape[0]))
     else:
+        covariances = np.array(covariances)
         variance_covariance = fill_lower_diag(covariances)
         variance_covariance += variance_covariance.T
     np.fill_diagonal(variance_covariance, variances)
@@ -125,48 +128,6 @@ def get_first_idxs_from_values(x, eq=1, use_columns=True):
         n = x.shape[0]
         col_idx = [np.where(x[i, :] == eq)[0][0] for i in range(n)]
         row_idx = list(range(n))
-    return row_idx, col_idx
-
-
-def get_first_idxs_from_names(x, names, use_columns=True):
-    """
-    Get the fixed index
-
-    Parameters
-    ----------
-    x : pd.DataFrame
-        The input matrix.
-    names : list of lists
-
-    use_columns : bool, optional
-        Whether to get the first indexes using
-        The columns. If False, then use the rows
-        instead.
-        Defaults to True
-
-    Returns
-    -------
-    row_idx : list
-        A list of row indexes.
-    col_idx : list
-        A list of column indexes.
-
-    Raises
-    ------
-    TypeError
-        If x is not pd.DataFrame
-    """
-    if not isinstance(x, pd.DataFrame):
-        raise TypeError('`x` must be pd.DataFrame, not {}.'.format(type(x)))
-
-    first_names = [name[0] for name in names]
-
-    if use_columns:
-        row_idx = [x.index.get_loc(name) for name in first_names]
-        col_idx = list(range(x.shape[1]))
-    else:
-        col_idx = [x.T.index.get_loc(name) for name in first_names]
-        row_idx = list(range(x.shape[1]))
     return row_idx, col_idx
 
 

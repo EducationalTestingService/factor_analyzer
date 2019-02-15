@@ -392,6 +392,8 @@ def calculate_py_output_cfa(json_name,
                             fix_first=True,
                             data_dir=None,
                             json_dir=None,
+                            maxiter=200,
+                            n_obs=None,
                             **kwargs):
 
     if data_dir is None:
@@ -402,19 +404,22 @@ def calculate_py_output_cfa(json_name,
     filename = join(data_dir, data_name + '.csv')
     jsonname = join(json_dir, json_name + '.json')
     data = pd.read_csv(filename, **kwargs)
-    n_obs = data.shape[0]
+
+    if n_obs is None and not is_cov:
+        n_obs = data.shape[0]
 
     with open(jsonname) as model_file:
         model = json.load(model_file)
 
     if is_cov:
-        data = data.cov() * ((n_obs - 1) / n_obs)
+        data = data * ((n_obs - 1) / n_obs)
 
     cfa = ConfirmatoryFactorAnalyzer()
     cfa.analyze(data, model,
                 n_obs=n_obs,
                 is_cov=is_cov,
                 fix_first=fix_first,
+                maxiter=maxiter,
                 disp=False)
 
     (loadingsse,
@@ -434,11 +439,14 @@ def check_cfa(json_name_input,
               data_name_expected=None,
               is_cov=False,
               fix_first=True,
+              maxiter=200,
+              n_obs=None,
               rel_tol=0,
               abs_tol=0,
               data_dir=None,
               json_dir=None,
-              expected_dir=None):
+              expected_dir=None,
+              **kwargs):
 
     if data_name_expected is None:
         data_name_expected = json_name_input
@@ -451,9 +459,12 @@ def check_cfa(json_name_input,
      factors) = calculate_py_output_cfa(json_name_input,
                                         data_name_input,
                                         is_cov=is_cov,
+                                        n_obs=n_obs,
+                                        maxiter=maxiter,
                                         fix_first=fix_first,
                                         data_dir=data_dir,
-                                        json_dir=json_dir)
+                                        json_dir=json_dir,
+                                        **kwargs)
 
     outputs_r = collect_r_output(data_name_expected,
                                  factors,
