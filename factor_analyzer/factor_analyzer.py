@@ -207,7 +207,7 @@ class FactorAnalyzer:
 
     Parameters
     ----------
-    log_warnings : bool
+    log_warnings : bool, optional
         Whether to log warnings, such as failure to
         converge.
         Defaults to False.
