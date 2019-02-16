@@ -31,7 +31,7 @@ POSSIBLE_MODEL_KEYS = ['loadings',
 class ModelParser:
     """
     This is a class to parse the confirmatory
-    factor analysis model into a format. usable
+    factor analysis model into a format usable
     by `ConfirmatoryFactorAnalyzer`.
 
     The model specifies the factor-variable relationships,
@@ -42,9 +42,9 @@ class ModelParser:
     --------
     >>> from factor_analyzer import ModelParser
     >>> model = {'loadings': {'F1': ['X1', 'X2', 'X3'], 'F2': ['X4', 'X5', 'X6']},
-                 'factor_covs': [0.05],
-                 'factor_vars': [0.5, 0.5],
-                 'error_vars': [1] * 6}
+                 'factor_covs': [[1, 0.05], [0.05, 1]],
+                 'factor_vars': [1, 1],
+                 'error_vars': [1, 1, 1, 1, 1, 1]}
     >>> ModelParser().parse(model)
         (array([[1, 0],
                 [1, 0],
@@ -78,27 +78,6 @@ class ModelParser:
          2,
          6,
          1)
-
-    >>> import pandas as pd
-    >>> from factor_analyzer import ModelParser
-    >>> loadings = pd.DataFrame({'F1': [1, 1, 1, 0, 0, 0], 'F2': [0, 0, 0, 1, 1, 1],
-                                index='X1', 'X2', 'X3', 'X4', 'X5', 'X6']})
-    >>> model = {'loadings': loadings}
-    >>> ModelParser().parse(model)
-        (array([[1, 0],
-                [1, 0],
-                [1, 0],
-                [0, 1],
-                [0, 1],
-                [0, 1]]),
-         array([nan, nan, nan, nan, nan, nan]),
-         array([nan, nan]),
-         array([nan]),
-         ['X1', 'X2', 'X3', 'X4', 'X5', 'X6'],
-         ['F1', 'F2'],
-         2,
-         6,
-         1)
     """
 
     @staticmethod
@@ -110,6 +89,9 @@ class ModelParser:
         ----------
         loadings : dict
             The loadings pattern from the model.
+            The keys should be lists of strings
+            with the variable names. The values
+            should be the names of factors.
 
         Returns
         -------
@@ -322,6 +304,8 @@ class ModelParser:
 
                     factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
                     ```
+                    Alternatively, a list of lists or np.array
+                    with the full covariance matrix.
                 - factor_vars : list or None, optional
                     A list of factor variances. If None, no
                     factor variance constraints will be imposed on the
@@ -396,6 +380,13 @@ class ConfirmatoryFactorAnalyzer:
     A ConfirmatoryFactorAnalyzer class, which fits a
     confirmatory factor analysis model using maximum likelihood.
 
+    Parameters
+    ----------
+    log_warnings : bool, optional
+        Whether to log warnings, such as failure to
+        converge.
+        Defaults to False.
+
     Attributes
     ----------
     loadings : pd.DataFrame or None
@@ -453,7 +444,7 @@ class ConfirmatoryFactorAnalyzer:
     """
 
     def __init__(self,
-                 log_warnings=True):
+                 log_warnings=False):
 
         self.log_warnings = log_warnings
 
@@ -701,6 +692,7 @@ class ConfirmatoryFactorAnalyzer:
 
                     factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
                     ```
+                    Alternatively, the full covariance matrix.
                 - factor_vars : list or None, optional
                     A list of factor variances. If None, no
                     factor variance constraints will be imposed on the
@@ -821,11 +813,11 @@ class ConfirmatoryFactorAnalyzer:
         else:
             factor_covs_bounds = (0, 1)
             if not all(factor_vars == 1):
+                factor_vars = np.ones((self.n_factors, 1))
                 if self.log_warnings:
                     logging.warning("You have set `fix_first=False`, but have not set all "
                                     "`factor_vars` equal to 1. All `factor_vars` will be "
                                     "forced to 1.")
-                factor_vars = np.ones((self.n_factors, 1))
 
         loadings_free = get_free_parameter_idxs(loadings_free, eq=1)
         error_covs_free = get_free_parameter_idxs(merge_variance_covariance(error_vars))
@@ -950,7 +942,6 @@ class ConfirmatoryFactorAnalyzer:
 
         loadings = self.loadings
         factor_covs = self.factor_covs
-        # np.fill_diagonal(factor_covs.values, np.ones(self.n_factors))
 
         sym_lower_var_idx = get_symmetric_lower_idxs(self.n_variables)
         sym_upper_fac_idx = get_symmetric_upper_idxs(self.n_factors, diag=False)
