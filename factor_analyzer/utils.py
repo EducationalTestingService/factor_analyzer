@@ -240,7 +240,7 @@ def commutation_matrix(p, q):
     ----------
     p : int
         The number of rows.
-    q : np.array
+    q : int
         The number of columns.
 
     Returns
