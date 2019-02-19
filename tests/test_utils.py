@@ -1,5 +1,11 @@
 """
+Tests utilities.
+
+:author: Jeremy Biggs (jbiggs@ets.org)
+:date: 02/15/2019
+:organization: ETS
 """
+
 import numpy as np
 import pandas as pd
 from factor_analyzer.utils import (duplication_matrix,

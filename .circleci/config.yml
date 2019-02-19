@@ -12,11 +12,12 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "conda_requirements.txt" }}
-          - v1-dependencies-
+          - deps
 
       - run: rm -rf ~/repo/artifacts
       - run: mkdir ~/repo/artifacts
+      - run: pwd
+      - run: ls
       - run:
           name: Install miniconda and dependencies
           command: |
@@ -28,13 +29,14 @@ jobs:
 
       - save_cache:
           paths:
-            - ~/repo
-          key: v1-dependencies-{{ checksum "conda_requirements.txt" }}
+            - "~/miniconda3/pkgs"
+          key: deps
 
       # install factor analyzer
       - run:
           name: Install factor analyzer
-          command: ~/miniconda3/bin/pip install -e .
+          command: |
+            ~/miniconda3/bin/pip install -e .
 
       # run all of the tests
       - run:
