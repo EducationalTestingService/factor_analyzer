@@ -175,7 +175,6 @@ def normalize(data, absolute=False):
         The normalized data frame.
     """
     # check for possible index column
-
     # if there is an unnamed column, we want to make it the index
     possible_index = [col for col in data.columns if 'Unnamed' in col]
 
@@ -201,7 +200,7 @@ def normalize(data, absolute=False):
 
 
 def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
-                normalize=True, absolute=False):
+                with_normalize=True, absolute=False):
     """
     Check to make sure all values in two data frames
     are close. Returns the proportion that match.
@@ -228,7 +227,7 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
     check : float
         The proportion that match.
     """
-    if normalize:
+    if with_normalize:
         data1 = normalize(data1, absolute)
         data2 = normalize(data2, absolute)
 
@@ -486,4 +485,4 @@ def check_cfa(json_name_input,
         yield check_close(data1, data2,
                           rel_tol=rel_tol,
                           abs_tol=abs_tol,
-                          normalize=False)
+                          with_normalize=False)
