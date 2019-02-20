@@ -860,15 +860,10 @@ class ConfirmatoryFactorAnalyzer:
         # boundaries to (None, None) for everything except factor covariances;
         # at some point in the future, we may update this to place limits
         # on the loading matrix boundaries, too, but the case in R and SAS
-        if bounds is None:
-            bounds = [(None, None) for _ in range(loading_init.size +
-                                                  error_vars_init.shape[0] +
-                                                  factor_vars_init.shape[0] +
-                                                  factor_covs_init.shape[0])]
-
-        error_msg = ('The length of `bounds` must equal the length of your '
+        if bounds is not None:
+            error_msg = ('The length of `bounds` must equal the length of your '
                      'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
-        assert len(bounds) == len(x0), error_msg
+            assert len(bounds) == len(x0), error_msg
 
         # fit the actual model using L-BFGS algorithm;
         # the constraints are set inside the objective function,
@@ -896,6 +891,8 @@ class ConfirmatoryFactorAnalyzer:
         factor_vars_final = factor_vars if is_factor_vars_fixed else factor_vars_res
         factor_covs_final = merge_variance_covariance(factor_vars_final, factor_covs_final)
 
+        # if we aren't fixing the first variable to 1, then we need to make sure
+        # to convert the covariance matrix into a correlation matrix
         if not fix_first:
             factor_covs_final = covariance_to_correlation(factor_covs_final)
 
