@@ -12,7 +12,8 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.linalg import block_diag
 
-from factor_analyzer.utils import (commutation_matrix,
+from factor_analyzer.utils import (covariance_to_correlation,
+                                   commutation_matrix,
                                    duplication_matrix_pre_post,
                                    get_first_idxs_from_values,
                                    get_free_parameter_idxs,
@@ -595,25 +596,30 @@ class ConfirmatoryFactorAnalyzer:
          factor_vars_init,
          factor_covs_init) = self.split(x0, self.n_factors, self.n_variables, self.n_lower_diag)
 
-        # if `fix_first` is True, then we fix the first variable
-        # that loads on each factor to 1; otherwise, we let is vary freely
-        if self.fix_first:
-            loadings_init[self._fix_first_row_idx,
-                          self._fix_first_col_idx] = 1
-
-        # set the loadings to zero where applicable
-        loadings_init[np.where(loadings == 0)] = 0
-
         # if any constraints were set, fix these
         factor_vars_init[~pd.isna(factor_vars)] = factor_vars[~pd.isna(factor_vars)]
         factor_covs_init[~pd.isna(factor_covs)] = factor_covs[~pd.isna(factor_covs)]
         error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
+
+        # set the loadings to zero where applicable
+        loadings_init[np.where(loadings == 0)] = 0
 
         # combine factor variances and covariances into a single matrix
         factor_varcov_init = merge_variance_covariance(factor_vars_init, factor_covs_init)
 
         # make the error variance into a variance-covariance matrix
         error_varcov_init = merge_variance_covariance(error_vars_init)
+
+        # if `fix_first` is True, then we fix the first variable
+        # that loads on each factor to 1; otherwise, we let is vary freely
+        if self.fix_first:
+            loadings_init[self._fix_first_row_idx,
+                          self._fix_first_col_idx] = 1
+
+        # if `fix_first` is False, then standardize the factor
+        # covariance matrix to the correlation matrix
+        if not self.fix_first:
+            factor_varcov_init = covariance_to_correlation(factor_varcov_init)
 
         # calculate sigma-theta, needed for the objective function
         sigma_theta = loadings_init.dot(factor_varcov_init) \
@@ -809,11 +815,8 @@ class ConfirmatoryFactorAnalyzer:
         loadings_free = loadings.copy()
         if fix_first:
             loadings_free[fix_first_row_idx, fix_first_col_idx] = 0
-            factor_covs_bounds = (None, None)
         else:
-            factor_covs_bounds = (0, 1)
             if not all(factor_vars == 1):
-                factor_vars = np.ones((self.n_factors, 1))
                 if self.log_warnings:
                     logging.warning("You have set `fix_first=False`, but have not set all "
                                     "`factor_vars` equal to 1. All `factor_vars` will be "
@@ -841,7 +844,7 @@ class ConfirmatoryFactorAnalyzer:
         # lower than the expected variances, and the loadings to 1 or 0
         loading_init = loadings.copy()
         error_vars_init = np.full((error_vars.shape[0], 1), 0.5)
-        factor_vars_init = np.full((factor_vars.shape[0], 1), 0.5)
+        factor_vars_init = np.full((factor_vars.shape[0], 1), 1)
         factor_covs_init = np.full((factor_covs.shape[0], 1), 0.05)
 
         # we merge all of the arrays into a single 1d vector
@@ -858,10 +861,10 @@ class ConfirmatoryFactorAnalyzer:
         # at some point in the future, we may update this to place limits
         # on the loading matrix boundaries, too, but the case in R and SAS
         if bounds is None:
-            bounds = [(None, None) for _ in range(loading_init.shape[0] * loading_init.shape[1])]
-            bounds += [(None, None) for _ in range(error_vars_init.shape[0])]
-            bounds += [(None, None) for _ in range(factor_vars_init.shape[0])]
-            bounds += [factor_covs_bounds for _ in range(factor_covs_init.shape[0])]
+            bounds = [(None, None) for _ in range(loading_init.size +
+                                                  error_vars_init.shape[0] +
+                                                  factor_vars_init.shape[0] +
+                                                  factor_covs_init.shape[0])]
 
         error_msg = ('The length of `bounds` must equal the length of your '
                      'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
@@ -892,6 +895,9 @@ class ConfirmatoryFactorAnalyzer:
         factor_covs_final = factor_covs if is_factor_covs_fixed else factor_covs_res
         factor_vars_final = factor_vars if is_factor_vars_fixed else factor_vars_res
         factor_covs_final = merge_variance_covariance(factor_vars_final, factor_covs_final)
+
+        if not fix_first:
+            factor_covs_final = covariance_to_correlation(factor_covs_final)
 
         # we also check to make see if the error variances were fixed
         errror_vars_final = error_vars if is_error_vars_fixed else error_vars_res

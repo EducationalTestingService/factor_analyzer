@@ -16,8 +16,6 @@ jobs:
 
       - run: rm -rf ~/repo/artifacts
       - run: mkdir ~/repo/artifacts
-      - run: pwd
-      - run: ls
       - run:
           name: Install miniconda and dependencies
           command: |

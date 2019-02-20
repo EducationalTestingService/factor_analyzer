@@ -8,7 +8,8 @@ Tests utilities.
 
 import numpy as np
 import pandas as pd
-from factor_analyzer.utils import (duplication_matrix,
+from factor_analyzer.utils import (covariance_to_correlation,
+                                   duplication_matrix,
                                    duplication_matrix_pre_post,
                                    commutation_matrix,
                                    fill_lower_diag,
@@ -17,11 +18,12 @@ from factor_analyzer.utils import (duplication_matrix,
                                    get_symmetric_lower_idxs,
                                    get_symmetric_upper_idxs,
                                    merge_variance_covariance,
+                                   partial_correlations,
                                    unique_elements)
 
-from nose.tools import eq_
+from nose.tools import eq_, raises
 from numpy.testing import assert_array_equal
-from pandas.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_almost_equal
 
 
 def test_unique_elements():
@@ -173,3 +175,81 @@ def test_get_symmetric_upper_idxs_no_diag():
     output = get_symmetric_upper_idxs(5, diag=False)
 
     assert_array_equal(output, expected)
+
+
+def test_covariance_to_correlation():
+
+    path = 'tests/data/test02.csv'
+    data = pd.read_csv(path)
+
+    expected_corr = data.corr().values
+
+    corr = covariance_to_correlation(data.cov().values)
+
+    assert_almost_equal(corr, expected_corr)
+
+
+@raises(ValueError)
+def test_covariance_to_correlation_value_error():
+
+    covariance_to_correlation(np.array([[23, 12, 23],
+                                        [42, 25, 21]]))
+
+
+def test_partial_correlations():
+
+    data = pd.DataFrame([[12, 14, 15],
+                         [24, 12, 52],
+                         [35, 12, 41],
+                         [23, 12, 42]])
+
+    expected = [[1.0, -0.730955, -0.50616],
+                [-0.730955, 1.0, -0.928701],
+                [-0.50616, -0.928701, 1.0]]
+
+    expected = pd.DataFrame(expected,
+                            columns=[0, 1, 2],
+                            index=[0, 1, 2])
+
+    result = partial_correlations(data)
+    assert_almost_equal(result, expected)
+
+
+def test_partial_correlations_num_columns_greater():
+
+    # columns greater than rows
+    data = pd.DataFrame([[23, 12, 23],
+                         [42, 25, 21]])
+
+    empty_array = np.empty((3, 3))
+    empty_array[:] = np.nan
+    np.fill_diagonal(empty_array, 1.0)
+
+    expected = pd.DataFrame(empty_array,
+                            columns=[0, 1, 2],
+                            index=[0, 1, 2])
+
+    result = partial_correlations(data)
+    assert_almost_equal(result, expected)
+
+
+def test_partial_correlations_catch_linalgerror():
+
+    # Covariance matrix that will be singular
+    data = pd.DataFrame([[10, 10, 10, 10],
+                         [12, 12, 12, 12],
+                         [15, 15, 15, 15],
+                         [20, 20, 20, 20],
+                         [11, 11, 11, 11]])
+
+    empty_array = np.empty((4, 4))
+    empty_array[:] = np.nan
+    np.fill_diagonal(empty_array, 1.0)
+
+    expected = pd.DataFrame(empty_array,
+                            columns=[0, 1, 2, 3],
+                            index=[0, 1, 2, 3])
+
+    result = partial_correlations(data)
+    assert_almost_equal(result, expected)
+

@@ -10,6 +10,84 @@ import numpy as np
 import pandas as pd
 
 
+def covariance_to_correlation(m):
+    """
+    This is a port of the R `cov2cor` function.
+
+    Parameters
+    ----------
+    m : numpy array
+        The covariance matrix.
+
+    Returns
+    -------
+    retval : numpy array
+        The cross-correlation matrix.
+
+    Raises
+    ------
+    ValueError
+        If the input matrix is not square.
+    """
+
+    # make sure the matrix is square
+    numrows, numcols = m.shape
+    if not numrows == numcols:
+        raise ValueError('Input matrix must be square')
+
+    Is = np.sqrt(1 / np.diag(m))
+    retval = Is * m * np.repeat(Is, numrows).reshape(numrows, numrows)
+    np.fill_diagonal(retval, 1.0)
+    return retval
+
+
+def partial_correlations(data):
+    """
+    This is a python port of the `pcor` function implemented in
+    the `ppcor` R package, which computes partial correlations
+    of each pair of variables in the given data frame `data`,
+    excluding all other variables.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Data frame containing the feature values.
+
+    Returns
+    -------
+    df_pcor : pd.DataFrame
+        Data frame containing the partial correlations of of each
+        pair of variables in the given data frame `df`,
+        excluding all other variables.
+    """
+    numrows, numcols = data.shape
+    df_cov = data.cov()
+    columns = df_cov.columns
+
+    # return a matrix of nans if the number of columns is
+    # greater than the number of rows. When the ncol == nrows
+    # we get the degenerate matrix with 1 only. It is not meaningful
+    # to compute partial correlations when ncol > nrows.
+
+    # create empty array for when we cannot compute the
+    # matrix inversion
+    empty_array = np.empty((len(columns), len(columns)))
+    empty_array[:] = np.nan
+    if numcols > numrows:
+        icvx = empty_array
+    else:
+        # we also return nans if there is singularity in the data
+        # (e.g. all human scores are the same)
+        try:
+            icvx = np.linalg.inv(df_cov)
+        except np.linalg.LinAlgError:
+            icvx = empty_array
+    pcor = -1 * covariance_to_correlation(icvx)
+    np.fill_diagonal(pcor, 1.0)
+    df_pcor = pd.DataFrame(pcor, columns=columns, index=columns)
+    return df_pcor
+
+
 def unique_elements(seq):
     """
     Get the first unique instance of every
