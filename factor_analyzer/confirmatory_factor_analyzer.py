@@ -618,7 +618,7 @@ class ConfirmatoryFactorAnalyzer:
 
         # if `fix_first` is False, then standardize the factor
         # covariance matrix to the correlation matrix
-        if not self.fix_first:
+        else:
             factor_varcov_init = covariance_to_correlation(factor_varcov_init)
 
         # calculate sigma-theta, needed for the objective function
@@ -791,7 +791,7 @@ class ConfirmatoryFactorAnalyzer:
                                     "but you have not specified the number of observations "
                                     "(`n_obs=None`). Therefore, a reduced version of the "
                                     "objective function will be used (Bollen, 1989 p.107). "
-                                    "The AIC and BIC metrics may not be correct.")
+                                    "The AIC, BIC, and standard errors may not be correct.")
 
         # we set a bunch of instance-level variables that will be
         # referenced primarily by the objective function
@@ -862,7 +862,7 @@ class ConfirmatoryFactorAnalyzer:
         # on the loading matrix boundaries, too, but the case in R and SAS
         if bounds is not None:
             error_msg = ('The length of `bounds` must equal the length of your '
-                     'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
+                         'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
             assert len(bounds) == len(x0), error_msg
 
         # fit the actual model using L-BFGS algorithm;
