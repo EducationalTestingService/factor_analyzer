@@ -201,12 +201,13 @@ class TestFactorAnalyzer:
     @raises(ValueError)
     def test_analyze_infinite(self):
 
-        data = pd.DataFrame({'A': [2, 4, 5, 6, 8, 9],
-                             'B': [4, 8, float('inf'), 10, 16, 18],
-                             'C': [6, 12, 15, 12, 26, 27]})
+        data = pd.DataFrame({'A': [1.0, 0.4, 0.5],
+                             'B': [0.4, 1.0, float('inf')],
+                             'C': [0.5, float('inf'), 1.0]},
+                            index=['A', 'B', 'C'])
 
         fa = FactorAnalyzer()
-        fa.analyze(data, 1, impute='drop')
+        fa.analyze(data, 1, impute='drop', use_corr_matrix=True)
 
     def test_remove_all_columns(self):
         # test that columns with string values are removed.
