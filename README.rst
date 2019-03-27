@@ -29,22 +29,26 @@ Exploratory factor analysis (EFA) is a statistical technique used to
 identify latent relationships among sets of observed variables in a
 dataset. In particular, EFA seeks to model a large set of observed
 variables as linear combinations of some smaller set of unobserved,
-latent factors.
+latent factors. The matrix of weights, or factor loadings, generated
+from an EFA model describes the underlying relationships between each
+variable and the latent factors.
 
-The matrix of weights, or factor loadings, generated from an EFA model
-describes the underlying relationships between each variable and the
-latent factors. Typically, a number of factors (K) is selected such that
-it is substantially smaller than the number of variables. The factor
-analysis model can be estimated using a variety of standard estimation
-methods, including but not limited to OLS, minres, or MLE.
+Confirmatory factor analysis (CFA), a closely associated technique, is
+used to test an a priori hypothesis about latent relationships among sets
+of observed variables. In CFA, the researcher specifies the expected pattern
+of factor loadings, and other possible constraints on the model.
+
+Typically, a number of factors (K) in an EFA or CFA model is selected
+such that it is substantially smaller than the number of variables. The
+factor analysis model can be estimated using a variety of standard
+estimation methods, including but not limited to OLS, minres, or MLE.
 
 Factor loadings are similar to standardized regression coefficients, and
 variables with higher loadings on a particular factor can be interpreted
-as explaining a larger proportion of the variation in that factor. In
-many cases, factor loading matrices are rotated after the factor
-analysis model is estimated in order to produce a simpler, more
-interpretable structure to identify which variables are loading on a
-particular factor.
+as explaining a larger proportion of the variation in that factor. In the
+case of EFA, factor loading matrices are usually rotated after the factor
+analysis model is estimated in order to produce a simpler, more interpretable
+structure to identify which variables are loading on a particular factor.
 
 Two common types of rotations are:
 
@@ -56,11 +60,12 @@ Two common types of rotations are:
    upon the varimax rotation, but ultimately allows factors to become
    correlated.
 
-This package includes a stand-alone Python module with a ``FactorAnalyzer``
-class. The class includes an ``analyze()`` method that allows users to perform
-factor analysis using either minres or MLE, with optional rotations on the factor
-loading matrices. The package also offers a stand-alone ``Rotator`` class to
-perform common rotations on an unrotated loading matrix.
+This package includes a ``factor_analyzer`` module with a stand-alone
+``FactorAnalyzer``class. The class includes an ``analyze()`` method that
+allows users to perform factor analysis using either minres or MLE, with
+optional rotations on the factor loading matrices. The package also offers
+a stand-alone ``Rotator`` class to perform common rotations on an unrotated
+loading matrix.
 
 The following rotations options are available in both ``FactorAnalyzer``
 and ``Rotator``:
@@ -73,8 +78,17 @@ and ``Rotator``:
     (f) quartimax (orthogonal rotation)
     (g) equamax (orthogonal rotation)
 
-Example
--------
+In adddition, the package includes a ``confirmatory_factor_analyzer``
+module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
+class includes an ``analyze()`` method that allows users to perform
+confirmatory factor analysis using MLE. Performing CFA requires users
+to specify a model with the expected factor loading relationships and
+other constraints.
+
+Examples
+--------
+
+Exploratory factor analysis example.
 
 .. code:: python
 
@@ -122,6 +136,67 @@ Example
     SS Loadings     3.510189  1.283710  0.737395
     Proportion Var  0.351019  0.128371  0.073739
     Cumulative Var  0.351019  0.479390  0.553129
+
+Confirmatory factor analysis example.
+
+.. code:: python
+
+    In [1]: import pandas as pd
+
+    In [2]: from factor_analyzer import ConfirmatoryFactorAnalyzer
+
+    In [3]: data = pd.read_csv('tests/data/test12.csv')
+
+    In [4]: model = {'loadings': {"Verbal": ["english", "vocab", "socsci"],
+       ...:                       "Quant": ["socsci", "math", "natsci"]}}
+                        
+    In [6]: cfa.analyze(data, model, fix_first=False)
+
+    In [5]: cfa = ConfirmatoryFactorAnalyzer()
+
+    In [7]: cfa.loadings
+    Out[7]: 
+               Verbal     Quant
+    english  3.532436  0.000000
+    vocab    4.221969  0.000000
+    socsci   3.281362  1.099739
+    math     0.000000  4.888016
+    natsci   0.000000  4.850257
+
+    In [8]:  cfa.factor_covs
+    Out[8]: 
+              Verbal     Quant
+    Verbal  1.000000  0.833013
+    Quant   0.833013  1.000000
+
+    In [9]: cfa.error_vars
+    Out[9]: 
+                 evars
+    english   9.249541
+    vocab     5.044325
+    socsci    5.782677
+    math     15.519003
+    natsci    9.406164
+
+    In [10]: loadings_se, error_vars_se = cfa.get_standard_errors()
+
+    In [11]: loadings_se
+    Out[11]: 
+               Verbal     Quant
+    english  0.100785  0.000000
+    vocab    0.098195  0.000000
+    socsci   0.217784  0.216251
+    math     0.000000  0.138298
+    natsci   0.000000  0.123820
+
+    In [12]: error_vars_se
+    Out[12]: 
+             error_vars
+    english    0.385040
+    vocab      0.353237
+    socsci     0.307728
+    math       0.742082
+    natsci     0.600859
 
 Requirements
 ------------

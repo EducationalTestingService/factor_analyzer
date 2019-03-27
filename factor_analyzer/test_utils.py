@@ -2,24 +2,25 @@
 Testing utilities
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 05/21/2018
 :organization: ETS
 """
 
 import os
 import math
+import json
+
 import numpy as np
 import pandas as pd
-
 from os.path import join
 
-
+from factor_analyzer import ConfirmatoryFactorAnalyzer
 from factor_analyzer import FactorAnalyzer
 from factor_analyzer import Rotator
 
 
 DATA_DIR = os.path.join('tests', 'data')
+JSON_DIR = os.path.join('tests', 'model')
 EXPECTED_DIR = os.path.join('tests', 'expected')
 
 OUTPUT_TYPES = ['value',
@@ -101,7 +102,8 @@ def collect_r_output(test_name,
                      method,
                      rotation,
                      output_types=None,
-                     top_dir=None):
+                     top_dir=None,
+                     **kwargs):
     """
     Get the R output for the given scenario.
 
@@ -149,7 +151,7 @@ def collect_r_output(test_name,
 
         filename = os.path.join(top_dir, test_name, filename)
 
-        data = pd.read_csv(filename)
+        data = pd.read_csv(filename, **kwargs)
         output[output_type] = data
 
     return output
@@ -177,7 +179,6 @@ def normalize(data, absolute=False):
         The normalized data frame.
     """
     # check for possible index column
-
     # if there is an unnamed column, we want to make it the index
     possible_index = [col for col in data.columns if 'Unnamed' in col]
 
@@ -202,7 +203,8 @@ def normalize(data, absolute=False):
     return data.reset_index(drop=True)
 
 
-def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1, absolute=False):
+def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
+                with_normalize=True, absolute=False):
     """
     Check to make sure all values in two data frames
     are close. Returns the proportion that match.
@@ -229,8 +231,9 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1, absolute=False):
     check : float
         The proportion that match.
     """
-    data1 = normalize(data1, absolute)
-    data2 = normalize(data2, absolute)
+    if with_normalize:
+        data1 = normalize(data1, absolute)
+        data2 = normalize(data2, absolute)
 
     assert data1.shape == data2.shape
 
@@ -341,7 +344,6 @@ def check_rotation(test_name,
                    rotation,
                    rel_tol=0,
                    abs_tol=0.1):
-
     """
     Check the rotation results.
 
@@ -385,3 +387,106 @@ def check_rotation(test_name,
     data2 = normalize(expected_loading)
 
     return check_close(data1, data2, rel_tol, abs_tol)
+
+
+def calculate_py_output_cfa(json_name,
+                            data_name,
+                            is_cov=False,
+                            fix_first=True,
+                            data_dir=None,
+                            json_dir=None,
+                            maxiter=200,
+                            n_obs=None,
+                            **kwargs):
+
+    if data_dir is None:
+        data_dir = DATA_DIR
+    if json_dir is None:
+        json_dir = JSON_DIR
+
+    filename = join(data_dir, data_name + '.csv')
+    jsonname = join(json_dir, json_name + '.json')
+    data = pd.read_csv(filename, **kwargs)
+
+    if n_obs is None and not is_cov:
+        n_obs = data.shape[0]
+
+    with open(jsonname) as model_file:
+        model = json.load(model_file)
+
+    if is_cov:
+        data = data * ((n_obs - 1) / n_obs)
+
+    cfa = ConfirmatoryFactorAnalyzer()
+    cfa.analyze(data, model,
+                n_obs=n_obs,
+                is_cov=is_cov,
+                fix_first=fix_first,
+                maxiter=maxiter,
+                disp=False)
+
+    (loadingsse,
+     errorcovsse) = cfa.get_standard_errors()
+
+    outputs = {'errorvars': cfa.error_vars.copy(),
+               'errorvarsse': errorcovsse.copy(),
+               'factorcovs': cfa.factor_covs.copy(),
+               'loadings': cfa.loadings.copy(),
+               'loadingsse': loadingsse.copy()}
+
+    return outputs, cfa.n_factors
+
+
+def check_cfa(json_name_input,
+              data_name_input,
+              data_name_expected=None,
+              is_cov=False,
+              fix_first=True,
+              maxiter=200,
+              n_obs=None,
+              rel_tol=0,
+              abs_tol=0,
+              data_dir=None,
+              json_dir=None,
+              expected_dir=None,
+              **kwargs):
+
+    if data_name_expected is None:
+        data_name_expected = json_name_input
+
+    output_types = ['errorvars', 'errorvarsse',
+                    'factorcovs', 'loadings',
+                    'loadingsse']
+
+    (outputs_p,
+     factors) = calculate_py_output_cfa(json_name_input,
+                                        data_name_input,
+                                        is_cov=is_cov,
+                                        n_obs=n_obs,
+                                        maxiter=maxiter,
+                                        fix_first=fix_first,
+                                        data_dir=data_dir,
+                                        json_dir=json_dir,
+                                        **kwargs)
+
+    outputs_r = collect_r_output(data_name_expected,
+                                 factors,
+                                 'cfa',
+                                 'none',
+                                 output_types=output_types,
+                                 top_dir=expected_dir,
+                                 index_col=0)
+
+    for output_type in output_types:
+
+        data1 = outputs_r[output_type]
+        data2 = outputs_p[output_type]
+
+        print(output_type)
+        print(data1)
+        print(data2)
+
+        yield check_close(data1, data2,
+                          rel_tol=rel_tol,
+                          abs_tol=abs_tol,
+                          with_normalize=False)

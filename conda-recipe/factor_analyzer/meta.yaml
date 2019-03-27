@@ -1,5 +1,5 @@
 {% set name = "factor_analyzer" %}
-{% set version = "0.2.3" %}
+{% set version = "0.3.0" %}
 {% set file_ext = "tar.gz" %}
 {% set hash_type = "sha256" %}
 {% set hash_value = "94ea4c7d46e846cc7174787adce47156cf58dc257905c878edc5181b4fa300ed" %}
