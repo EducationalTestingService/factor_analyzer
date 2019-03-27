@@ -148,7 +148,14 @@ class FactorAnalyzer:
     rotation_matrix : np.array
         The rotation matrix, if a rotation
         has been performed.
-
+    structure : np.array or None
+        The structure loading matrix.
+        This only exists if the rotation
+        is promax.
+    psi : np.array or None
+        The factor correlations
+        matrix. This only exists
+        if the rotation is oblique.
     Notes
     -----
     This code was partly derived from the excellent R package
@@ -191,6 +198,9 @@ class FactorAnalyzer:
         self.corr = None
         self.loadings = None
         self.rotation_matrix = None
+
+        self._scale_mean = None
+        self._scale_std = None
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -510,7 +520,7 @@ class FactorAnalyzer:
                              'Check to make sure you do not have any '
                              'features with zero standard deviation.')
 
-        corr = corr.values
+        corr = corr.copy().values
 
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
@@ -569,7 +579,6 @@ class FactorAnalyzer:
                 normalize=True,
                 impute='median',
                 remove_non_numeric=True,
-                use_scaling=True,
                 use_corr_matrix=False,
                 **kwargs):
         """
@@ -627,11 +636,6 @@ class FactorAnalyzer:
         remove_non_numeric : bool, optional
             Remove any non-numeric data. If `use_corr_matrix` is True,
             no non-numeric data will be removed.
-            Defaults to True.
-        use_scaling : bool, optional
-            Whether to scale the data by subtracting out the mean
-            and dividing by the standard deviation. If `use_corr_matrix`
-            is True, scaling will not be performed.
             Defaults to True.
         use_corr_matrix : bool, optional
             Set to true if the `data` is the correlation
@@ -694,16 +698,11 @@ class FactorAnalyzer:
             self.corr = df.copy()
         else:
             self.corr = df.corr()
-
-        # scale the data, if it is not a correlation
-        # matrix and `use_scaling` is True
-        if use_scaling and not use_corr_matrix:
-            X = (df - df.mean(0)) / df.std(0)
-        else:
-            X = df.copy()
+            self._scale_mean = df.mean(0)
+            self._scale_std = df.std(0)
 
         # fit factor analysis model
-        loadings = self.fit_factor_analysis(X,
+        loadings = self.fit_factor_analysis(df.copy(),
                                             n_factors,
                                             use_smc,
                                             bounds,
@@ -805,7 +804,7 @@ class FactorAnalyzer:
         """
         if (self.corr is not None and self.loadings is not None):
 
-            corr = self.corr.values
+            corr = self.corr.copy().values
 
             e_values, _ = sp.linalg.eigh(corr)
             e_values = pd.DataFrame(e_values[::-1],
@@ -945,7 +944,10 @@ class FactorAnalyzer:
 
             return variance_info
 
-    def get_scores(self, data):
+    def get_scores(self,
+                   data,
+                   scale_mean=None,
+                   scale_std=None):
         """
         Get the factor scores, given the data.
 
@@ -953,11 +955,34 @@ class FactorAnalyzer:
         ----------
         data : pd.DataFrame
             The data to calculate factor scores.
+        scale_mean : float or None
+            The mean of the original
+            data set used to fit the
+            factor model. If None, attempt
+            to retrieve the mean from the
+            original `analyze()` method,
+            if it was saved.
+            Defaults to None.
+        scale_std : float or None
+            The standard deviation of the original
+            data set used to fit the
+            factor model. If None, attempt
+            to retrieve the standard deviation from the
+            original `analyze()` method,
+            if it was saved.
+            Defaults to None.
 
         Returns
         -------
         scores : pd.DataFrame
             The factor scores.
+
+        Raises
+        ------
+        ValueError
+            If either scale_std or scale_mean
+            is None, and the original mean or standard
+            deviation were not saved during fitting.
 
         Examples
         --------
@@ -977,11 +1002,38 @@ class FactorAnalyzer:
         if self.loadings is not None:
 
             df = data.copy()
-            corr = data.corr()
+            corr = self.corr.copy()
+
+            error_msg = ('The `{}` argument is None, but no scaled {} '
+                         'was saved when fitting your original factor '
+                         'model. This most likely because you used a '
+                         'correlation matrix, rather than the full data '
+                         'set. Please either pass a value for `{}` '
+                         'or re-fit your model using the full data set.')
+
+            # if no scaled mean is passed, use the mean from the
+            # original fitting procedure; otherwise, raise an error
+            if scale_mean is None and self._scale_mean is not None:
+                scale_mean = self._scale_mean
+            elif scale_mean is None and self._scale_mean is None:
+                raise ValueError(error_msg.format('scale_mean',
+                                                  'mean',
+                                                  'scale_mean'))
+
+            # if no scaled std is passed, use the std from the
+            # original fitting procedure; otherwise, raise an error
+            if scale_std is None and self._scale_std is not None:
+                scale_std = self._scale_std
+            elif scale_std is None and self._scale_std is None:
+                raise ValueError(error_msg.format('scale_std',
+                                                  'standard deviation',
+                                                  'scale_std'))
 
             # scale the data
-            X = (df - df.mean(0)) / df.std(0)
+            X = (df - scale_mean) / scale_std
 
+            # use the structure matrix, if it exists;
+            # otherwise, just use the loadings matrix
             if self.structure is not None:
                 structure = self.structure
             else:

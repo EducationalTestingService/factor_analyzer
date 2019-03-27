@@ -73,8 +73,12 @@ def calculate_py_output(test_name,
 
     if use_corr_matrix:
         X = data.corr()
+        scale_mean = data.mean(0)
+        scale_std = data.std(0)
     else:
         X = data.copy()
+        scale_mean = None
+        scale_std = None
 
     rotation = None if rotation == 'none' else rotation
     method = {'uls': 'minres'}.get(method, method)
@@ -90,7 +94,7 @@ def calculate_py_output(test_name,
             'loading': fa.loadings,
             'uniquenesses': fa.get_uniqueness(),
             'communalities': fa.get_communalities(),
-            'scores': fa.get_scores(data)}
+            'scores': fa.get_scores(data, scale_mean, scale_std)}
 
 
 def collect_r_output(test_name,

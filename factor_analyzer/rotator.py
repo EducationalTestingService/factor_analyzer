@@ -234,6 +234,10 @@ class Rotator:
         rotation_mtx : np.array
             The rotation matrix
             (n_factors, n_factors)
+        psi : np.array or None
+            The factor correlations
+            matrix. This only exists
+            if the rotation is oblique.
         """
         df = loadings.copy()
 
@@ -525,6 +529,10 @@ class Rotator:
         rotation_mtx : np.array
             The rotation matrix
             (n_factors, n_factors)
+        psi : np.array or None
+            The factor correlations
+            matrix. This only exists
+            if the rotation is oblique.
         """
         df = loadings.copy()
 
@@ -619,6 +627,10 @@ class Rotator:
         rotation_mtx : np.array
             The rotation matrix
             (n_factors, n_factors)
+        psi : np.array or None
+            The factor correlations
+            matrix. This only exists
+            if the rotation is oblique.
 
         Raises
         ------
