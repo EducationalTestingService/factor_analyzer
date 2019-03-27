@@ -2,7 +2,6 @@
 Tests for Rotator class
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 10/25/2017
 :organization: ETS
 """

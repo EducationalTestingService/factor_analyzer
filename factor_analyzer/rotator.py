@@ -3,7 +3,6 @@ Rotator class to perform various
 rotations of factor loading matrices.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-
 :date: 05/21/2018
 :organization: ETS
 """
