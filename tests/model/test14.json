@@ -1,0 +1,6 @@
+{"PURP": ["atmi01", "atmi07", "atmi13", "atmi19", "atmi25_r", "atmi31"],
+ "MEET": ["atmi02_r", "atmi08_r", "atmi14_r", "atmi20_r", "atmi26", "atmi32"],
+ "MECH": ["atmi03", "atmi09", "atmi15", "atmi21_r", "atmi27", "atmi33"],
+ "COPE": ["atmi04_r", "atmi10_r", "atmi16_r", "atmi22_r", "atmi28_r", "atmi34_r"],
+ "PLAN": ["atmi05_r", "atmi11_r", "atmi17_r", "atmi23_r", "atmi29_r", "atmi35_r"],
+ "ORG":  ["atmi06", "atmi12", "atmi18", "atmi24_r", "atmi30", "atmi36"]}

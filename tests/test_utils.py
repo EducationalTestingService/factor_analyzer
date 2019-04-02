@@ -23,7 +23,7 @@ from factor_analyzer.utils import (covariance_to_correlation,
 
 from nose.tools import eq_, raises
 from numpy.testing import assert_array_equal
-from pandas.util.testing import assert_frame_equal, assert_almost_equal
+from pandas.util.testing import assert_almost_equal
 
 
 def test_unique_elements():
@@ -48,7 +48,7 @@ def test_merge_variance_covariance_no_covariance():
 
     expected = np.eye(4)
 
-    x = [1, 1, 1, 1]
+    x = np.array([1, 1, 1, 1])
 
     output = merge_variance_covariance(x)
     assert_array_equal(output, expected)
@@ -61,8 +61,8 @@ def test_merge_variance_covariance():
                 [.45, .35, 1]]
     expected = np.array(expected)
 
-    x = [1, 1, 1]
-    y = [.25, .45, .35]
+    x = np.array([1, 1, 1])
+    y = np.array([.25, .45, .35])
 
     output = merge_variance_covariance(x, y)
     assert_array_equal(output, expected)
@@ -87,7 +87,7 @@ def test_get_free_parameter_idxs():
 
     expected = np.array([0, 3, 4, 8])
 
-    output = get_free_parameter_idxs(x)
+    output = get_free_parameter_idxs(x, eq=-1)
     assert_array_equal(output, expected)
 
 
@@ -122,7 +122,7 @@ def test_duplication_matrix_pre_post():
 
     output = duplication_matrix_pre_post(x)
 
-    assert_frame_equal(output, expected)
+    assert_array_equal(output, expected.values)
 
 
 def test_commutation_matrix():
@@ -212,7 +212,7 @@ def test_partial_correlations():
                             index=[0, 1, 2])
 
     result = partial_correlations(data)
-    assert_almost_equal(result, expected)
+    assert_almost_equal(result, expected.values)
 
 
 def test_partial_correlations_num_columns_greater():
@@ -230,7 +230,7 @@ def test_partial_correlations_num_columns_greater():
                             index=[0, 1, 2])
 
     result = partial_correlations(data)
-    assert_almost_equal(result, expected)
+    assert_almost_equal(result, expected.values)
 
 
 def test_partial_correlations_catch_linalgerror():
@@ -251,5 +251,4 @@ def test_partial_correlations_catch_linalgerror():
                             index=[0, 1, 2, 3])
 
     result = partial_correlations(data)
-    assert_almost_equal(result, expected)
-
+    assert_almost_equal(result, expected.values)
