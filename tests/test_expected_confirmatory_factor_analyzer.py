@@ -36,7 +36,7 @@ def test_12_cfa():
 
     for check in check_cfa(json_name_input,
                            data_name_input,
-                           rel_tol=0.1):
+                           abs_tol=0.05):
         assert check >= THRESHOLD
 
 
