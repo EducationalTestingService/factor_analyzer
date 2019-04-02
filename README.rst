@@ -12,10 +12,12 @@ FactorAnalyzer
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
 
-This is a Python module to perform exploratory factor analysis, with several
-optional rotations. Estimation can be performed using a minimum residual
-(minres) solution (identitical to unweighted least squares), or maximum
-likelihood estimation (MLE).
+This is a Python module to perform confirmatory and exploratory and factor
+analysis, with several optional rotations. With exploratory factor analysis,
+estimation can be performed using a minimum residual (minres) solution
+(identitical to unweighted least squares), or maximum likelihood estimation (MLE).
+Confirmatory factor analysis can only be performed using a MLE solution.
+This code is fully compatible with ``sklearn``.
 
 Portions of this code are ported from the excellent R library ``psych``.
 
@@ -61,7 +63,7 @@ Two common types of rotations are:
    correlated.
 
 This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer``class. The class includes an ``analyze()`` method that
+``FactorAnalyzer``class. The class includes an ``fit()`` method that
 allows users to perform factor analysis using either minres or MLE, with
 optional rotations on the factor loading matrices. The package also offers
 a stand-alone ``Rotator`` class to perform common rotations on an unrotated
@@ -80,10 +82,10 @@ and ``Rotator``:
 
 In adddition, the package includes a ``confirmatory_factor_analyzer``
 module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
-class includes an ``analyze()`` method that allows users to perform
+class includes an ``fit()`` method that allows users to perform
 confirmatory factor analysis using MLE. Performing CFA requires users
-to specify a model with the expected factor loading relationships and
-other constraints.
+to specify a model with the expected factor loading relationships. This
+can be done using the ``ModelSpecificationParser`` class.
 
 Examples
 --------
@@ -92,111 +94,73 @@ Exploratory factor analysis example.
 
 .. code:: python
 
-    In [1]: import pandas as pd
-
-    In [2]: from factor_analyzer import FactorAnalyzer
-
-    In [3]: df_features = pd.read_csv('test02.csv')
-
-    In [4]: fa = FactorAnalyzer()
-
-    In [5]: fa.analyze(df_features, 3, rotation=None)
-
-    In [6]: fa.loadings
-    Out[6]: 
-               Factor1   Factor2   Factor3
-    sex      -0.129912 -0.163982  0.738235
-    zygosity  0.038996 -0.046584  0.011503
-    moed      0.348741 -0.614523 -0.072557
-    faed      0.453180 -0.719267 -0.075465
-    faminc    0.366888 -0.443773 -0.017371
-    english   0.741414  0.150082  0.299775
-    math      0.741675  0.161230 -0.207445
-    socsci    0.829102  0.205194  0.049308
-    natsci    0.760418  0.237687 -0.120686
-    vocab     0.815334  0.124947  0.176397
-
-    In [7]: fa.get_uniqueness()
-    Out[7]: 
-              Uniqueness
-    sex         0.411242
-    zygosity    0.996177
-    moed        0.495476
-    faed        0.271588
-    faminc      0.668157
-    english     0.337916
-    math        0.380890
-    socsci      0.268054
-    natsci      0.350704
-    vocab       0.288503
-
-    In [8]: fa.get_factor_variance()
-    Out[8]: 
-                     Factor1   Factor2   Factor3
-    SS Loadings     3.510189  1.283710  0.737395
-    Proportion Var  0.351019  0.128371  0.073739
-    Cumulative Var  0.351019  0.479390  0.553129
+    >>> import pandas as pd
+    >>> from factor_analyzer import FactorAnalyzer
+    >>> df_features = pd.read_csv('tests/data/test02.csv')
+    >>> fa = FactorAnalyzer(rotation=None)
+    >>> fa.fit(df_features)
+    FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+            method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+            use_smc=True)
+    >>> fa.loadings_
+    array([[-0.12991218,  0.16398154,  0.73823498],
+           [ 0.03899558,  0.04658425,  0.01150343],
+           [ 0.34874135,  0.61452341, -0.07255667],
+           [ 0.45318006,  0.71926681, -0.07546472],
+           [ 0.36688794,  0.44377343, -0.01737067],
+           [ 0.74141382, -0.15008235,  0.29977512],
+           [ 0.741675  , -0.16123009, -0.20744495],
+           [ 0.82910167, -0.20519428,  0.04930817],
+           [ 0.76041819, -0.23768727, -0.1206858 ],
+           [ 0.81533404, -0.12494695,  0.17639683]])
+    >>> fa.get_communalities()
+    array([0.588758  , 0.00382308, 0.50452402, 0.72841183, 0.33184336,
+           0.66208428, 0.61911036, 0.73194557, 0.64929612, 0.71149718])
 
 Confirmatory factor analysis example.
 
 .. code:: python
 
-    In [1]: import pandas as pd
-
-    In [2]: from factor_analyzer import ConfirmatoryFactorAnalyzer
-
-    In [3]: data = pd.read_csv('tests/data/test12.csv')
-
-    In [4]: model = {'loadings': {"Verbal": ["english", "vocab", "socsci"],
-       ...:                       "Quant": ["socsci", "math", "natsci"]}}
-                        
-    In [6]: cfa.analyze(data, model, fix_first=False)
-
-    In [5]: cfa = ConfirmatoryFactorAnalyzer()
-
-    In [7]: cfa.loadings
-    Out[7]: 
-               Verbal     Quant
-    english  3.532436  0.000000
-    vocab    4.221969  0.000000
-    socsci   3.281362  1.099739
-    math     0.000000  4.888016
-    natsci   0.000000  4.850257
-
-    In [8]:  cfa.factor_covs
-    Out[8]: 
-              Verbal     Quant
-    Verbal  1.000000  0.833013
-    Quant   0.833013  1.000000
-
-    In [9]: cfa.error_vars
-    Out[9]: 
-                 evars
-    english   9.249541
-    vocab     5.044325
-    socsci    5.782677
-    math     15.519003
-    natsci    9.406164
-
-    In [10]: loadings_se, error_vars_se = cfa.get_standard_errors()
-
-    In [11]: loadings_se
-    Out[11]: 
-               Verbal     Quant
-    english  0.100785  0.000000
-    vocab    0.098195  0.000000
-    socsci   0.217784  0.216251
-    math     0.000000  0.138298
-    natsci   0.000000  0.123820
-
-    In [12]: error_vars_se
-    Out[12]: 
-             error_vars
-    english    0.385040
-    vocab      0.353237
-    socsci     0.307728
-    math       0.742082
-    natsci     0.600859
+    >>> import pandas as pd
+    >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+    ...                              ModelSpecificationParser)
+    >>> X = pd.read_csv('tests/data/test11.csv')
+    >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+    ...               "F2": ["V5", "V6", "V7", "V8"]}
+    >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+    >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+    >>> cfa.fit(X.values)
+    >>> cfa.loadings_
+    array([[0.99131285, 0.        ],
+           [0.46074919, 0.        ],
+           [0.3502267 , 0.        ],
+           [0.58331488, 0.        ],
+           [0.        , 0.98621042],
+           [0.        , 0.73389239],
+           [0.        , 0.37602988],
+           [0.        , 0.50049507]])
+    >>> cfa.factor_varcovs_
+    array([[1.        , 0.17385704],
+           [0.17385704, 1.        ]])
+    >>> cfa.get_standard_errors()
+    (array([[0.06779949, 0.        ],
+           [0.04369956, 0.        ],
+           [0.04153113, 0.        ],
+           [0.04766645, 0.        ],
+           [0.        , 0.06025341],
+           [0.        , 0.04913149],
+           [0.        , 0.0406604 ],
+           [0.        , 0.04351208]]),
+     array([0.11929873, 0.05043616, 0.04645803, 0.05803088,
+            0.10176889, 0.06607524, 0.04742321, 0.05373646]))
+    >>> cfa.transform(X.values)
+    array([[-0.46852166, -1.08708035],
+           [ 2.59025301,  1.20227783],
+           [-0.47215977,  2.65697245],
+           ...,
+           [-1.5930886 , -0.91804114],
+           [ 0.19430887,  0.88174818],
+           [-0.27863554, -0.7695101 ]])
 
 Requirements
 ------------
@@ -205,6 +169,7 @@ Requirements
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``
+-  ``scikit-learn==0.20.1``
 
 Contributing
 ------------

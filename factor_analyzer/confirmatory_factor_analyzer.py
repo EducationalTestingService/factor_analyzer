@@ -33,7 +33,8 @@ from factor_analyzer.utils import (cov,
 class ModelSpecification:
     """
     A class to encapsulate the model specification
-    for CFA.
+    for CFA. This class contains a number of specification
+    properties that are used in the CFA procedure.
 
     Parameters
     ----------
@@ -157,13 +158,18 @@ class ModelSpecification:
 class ModelSpecificationParser:
     """
     A class to generate the model specification for CFA.
+    This class includes two static methods to generate the
+    ``ModelSpecification`` object from either a dictionary
+    or a numpy array.
     """
 
     @staticmethod
     def parse_model_specification_from_dict(X, specification=None):
         """
         Generate the model specification from a
-        dictionary.
+        dictionary. The keys in the dictionary
+        should be the factor names, and the values
+        should be the feature names.
 
         Parameters
         ----------
@@ -205,8 +211,7 @@ class ModelSpecificationParser:
                 loadings_for_factor = pd.Series(variable_names).isin(specification[factor])
                 loadings_for_factor = loadings_for_factor.astype(int)
                 loadings_new[factor] = loadings_for_factor
-            loadings = pd.DataFrame(loadings_new)
-            loadings = loadings.values
+            loadings = pd.DataFrame(loadings_new).values
             n_variables, n_factors = loadings.shape
         else:
             raise ValueError('The model `specification` must be either a dict '
@@ -220,7 +225,9 @@ class ModelSpecificationParser:
     def parse_model_specification_from_array(X, specification=None):
         """
         Generate the model specification from
-        an array.
+        an array. The columns should correspond to
+        the factors, and the rows should correspond to
+        the variables.
 
         Parameters
         ----------
