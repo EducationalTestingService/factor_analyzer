@@ -5,474 +5,433 @@ Confirmatory factor analysis using ML.
 :date: 2/05/2019
 :organization: ETS
 """
-import logging
+
 import pandas as pd
 import numpy as np
+import warnings
 
+from copy import deepcopy
 from scipy.optimize import minimize
 from scipy.linalg import block_diag
 
-from factor_analyzer.utils import (covariance_to_correlation,
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils import check_array
+from sklearn.utils.validation import check_is_fitted
+
+from factor_analyzer.utils import (cov,
+                                   covariance_to_correlation,
                                    commutation_matrix,
                                    duplication_matrix_pre_post,
-                                   get_first_idxs_from_values,
                                    get_free_parameter_idxs,
                                    get_symmetric_lower_idxs,
                                    get_symmetric_upper_idxs,
+                                   impute_values,
                                    unique_elements,
                                    merge_variance_covariance)
 
 
-POSSIBLE_MODEL_KEYS = ['loadings',
-                       'errors_vars',
-                       'factor_vars',
-                       'factor_covs']
-
-
-class ModelParser:
+class ModelSpecification:
     """
-    This is a class to parse the confirmatory
-    factor analysis model into a format usable
-    by `ConfirmatoryFactorAnalyzer`.
+    A class to encapsulate the model specification
+    for CFA.
 
-    The model specifies the factor-variable relationships,
-    as well as the variances and covariances of the factors
-    and the error variances of the observed variables.
+    Parameters
+    ----------
+    loadings : array-like
+        The factor loadings specification.
+    error_vars : array-like
+        The error variance specification
+    factor_covs : array-like
+        The factor covariance specification.
 
-    Examples
-    --------
-    >>> from factor_analyzer import ModelParser
-    >>> model = {'loadings': {'F1': ['X1', 'X2', 'X3'], 'F2': ['X4', 'X5', 'X6']},
-                 'factor_covs': [[1, 0.05], [0.05, 1]],
-                 'factor_vars': [1, 1],
-                 'error_vars': [1, 1, 1, 1, 1, 1]}
-    >>> ModelParser().parse(model)
-        (array([[1, 0],
-                [1, 0],
-                [1, 0],
-                [0, 1],
-                [0, 1],
-                [0, 1]]),
-         array([1, 1, 1, 1, 1, 1]),
-         array([0.5, 0.5]),
-         array([0.05]),
-         ['X1', 'X2', 'X3', 'X4', 'X5', 'X6'],
-         ['F1', 'F2'],
-         2,
-         6,
-         1)
-
-    >>> from factor_analyzer import ModelParser
-    >>> model = {'loadings': {'F1': ['X1', 'X2', 'X3'], 'F2': ['X4', 'X5', 'X6']}}
-    >>> ModelParser().parse(model)
-        (array([[1, 0],
-                [1, 0],
-                [1, 0],
-                [0, 1],
-                [0, 1],
-                [0, 1]]),
-         array([nan, nan, nan, nan, nan, nan]),
-         array([nan, nan]),
-         array([nan]),
-         ['X1', 'X2', 'X3', 'X4', 'X5', 'X6'],
-         ['F1', 'F2'],
-         2,
-         6,
-         1)
+    Attributes
+    ----------
+    loadings : numpy array
+        The factor loadings specification.
+    error_vars : numpy array
+        The error variance specification
+    factor_covs : numpy array
+        The factor covariance specification.
+    n_factors : int
+        The number of factors.
+    n_variables : int
+        The number of variables.
+    n_lower_diag :int
+        The number of elements in the `factor_covs`
+        array, which is equal to the lower diagonal
+        of the factor covariance matrix.
+    loadings_free : numpy array
+        The indexes of "free" factor loading parameters.
+    error_vars_free : numpy array
+        The indexes of "free" error variance parameters.
+    factor_covs_free : numpy array
+        The indexes of "free" factor covariance parameters.
     """
 
-    @staticmethod
-    def parse_loadings(loadings):
-        """
-        Parse the loadings pattern from the model.
+    def __init__(self,
+                 loadings,
+                 n_factors,
+                 n_variables):
 
-        Parameters
-        ----------
-        loadings : dict
-            The loadings pattern from the model.
-            The keys should be lists of strings
-            with the variable names. The values
-            should be the names of factors.
+        assert isinstance(loadings, np.ndarray)
+        assert loadings.shape[0] == n_variables
+        assert loadings.shape[1] == n_factors
+
+        self._loadings = loadings
+        self._n_factors = n_factors
+        self._n_variables = n_variables
+
+        self._n_lower_diag = get_symmetric_lower_idxs(n_factors, False).shape[0]
+
+        self._error_vars = np.full((n_variables, 1), np.nan)
+        self._factor_covs = np.full((n_factors, n_factors), np.nan)
+
+        self._loadings_free = get_free_parameter_idxs(loadings, eq=1)
+        self._error_vars_free = merge_variance_covariance(self._error_vars)
+        self._error_vars_free = get_free_parameter_idxs(self._error_vars_free, eq=-1)
+        self._factor_covs_free = get_symmetric_lower_idxs(n_factors, False)
+
+    def __str__(self):
+        return '<ModelSpecification object at {}>'.format(hex(id(self)))
+
+    def copy(self):
+        return deepcopy(self)
+
+    @property
+    def loadings(self):
+        return self._loadings.copy()
+
+    @property
+    def error_vars(self):
+        return self._error_vars.copy()
+
+    @property
+    def factor_covs(self):
+        return self._factor_covs.copy()
+
+    @property
+    def loadings_free(self):
+        return self._loadings_free.copy()
+
+    @property
+    def error_vars_free(self):
+        return self._error_vars_free.copy()
+
+    @property
+    def factor_covs_free(self):
+        return self._factor_covs_free.copy()
+
+    @property
+    def n_variables(self):
+        return self._n_variables
+
+    @property
+    def n_factors(self):
+        return self._n_factors
+
+    @property
+    def n_lower_diag(self):
+        return self._n_lower_diag
+
+    def get_model_specification_as_dict(self):
+        """
+        Get the model specification as a dictionary.
 
         Returns
         -------
-        loadings : np.array
-            The updated loadings pattern matrix.
-        variable_names : list
-            The names of the variables.
-        factor_names : list
-            The names of the factors.
-        n_variables : int
-            The number of variables.
-        n_factors : int
-            The number of factors.
-
-        Raises
-        ------
-        TypeError
-            If `loadings` is not a dict object.
+        model_specification : dict
+            The model specification parameters,
+            as a dictionary.
         """
-        if not isinstance(loadings, dict):
-            raise TypeError('The `loadings` must be a dict '
-                            'object, not {}.'.format(type(loadings)))
+        return {'loadings': self._loadings.copy(),
+                'error_vars': self._error_vars.copy(),
+                'factor_covs': self._factor_covs.copy(),
+                'loadings_free': self._loadings_free.copy(),
+                'error_vars_free': self._error_vars_free.copy(),
+                'factor_covs_free': self._factor_covs_free.copy(),
+                'n_variables': self._n_variables,
+                'n_factors': self._n_factors,
+                'n_lower_diag': self._n_lower_diag}
 
-        # first, we extract all of the
-        # unique names, while trying to maintain the original
-        # in case `fix_first=True`. second, we loop through the
-        # factors and create indicator series, and group all of
-        # these back into a final data frame
-        factor_names = list(loadings)
-        variable_names = unique_elements([v for f in loadings.values() for v in f])
 
-        loadings_new = {}
-        for factor in factor_names:
-            loadings_for_factor = pd.Series(variable_names).isin(loadings[factor])
-            loadings_for_factor = loadings_for_factor.astype(int)
-            loadings_new[factor] = loadings_for_factor
-        loadings = pd.DataFrame(loadings_new)
-        loadings.index = variable_names
-
-        # we also want the number of factors
-        # and the number of variables
-        n_factors = len(factor_names)
-        n_variables = len(variable_names)
-
-        return (loadings.values,
-                variable_names,
-                factor_names,
-                n_variables,
-                n_factors)
+class ModelSpecificationParser:
+    """
+    A class to generate the model specification for CFA.
+    """
 
     @staticmethod
-    def parse_error_vars(error_vars, n_variables):
+    def parse_model_specification_from_dict(X, specification=None):
         """
-        Parse the error variance pattern from the model.
+        Generate the model specification from a
+        dictionary.
 
         Parameters
         ----------
-        error_vars : pd.DataFrame or np.array or None
-            The error variance pattern from the model.
-        n_variables : int
-            The number of variables.
+        X : array-like
+            The data set that will be used for CFA.
+        specification : dict or None
+            A dictionary with the loading details. If None, the matrix will
+            be created assuming all variables load on all factors.
+            Defaults to None.
 
         Returns
         -------
-        error_vars : np.array
-            The updated error variance pattern matrix.
+        ModelSpecification
+            A model specification object
 
         Raises
         ------
-        AssertionError
-            If the length of `error_vars` is not
-            equal to `n_variables`.
+        ValueError
+            If `specification` is not in the expected format.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+        ...               "F2": ["V5", "V6", "V7", "V8"]}
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
         """
-        if error_vars is not None:
-            error_msg = ('The length of `error_vars` must equal '
-                         'the number of variables in your data set '
-                         '{} != {}'.format(len(error_vars), n_variables))
-            assert len(error_vars) == n_variables, error_msg
-            error_vars = np.array(error_vars, dtype=float).reshape(n_variables, 1)
+        if specification is None:
+            n_variables, n_factors = X.shape[1], X.shape[1]
+            loadings = np.ones((n_factors, n_factors), dtype=int)
+        elif isinstance(specification, dict):
+            factor_names = list(specification)
+            variable_names = unique_elements([v for f in specification.values() for v in f])
+            loadings_new = {}
+            for factor in factor_names:
+                loadings_for_factor = pd.Series(variable_names).isin(specification[factor])
+                loadings_for_factor = loadings_for_factor.astype(int)
+                loadings_new[factor] = loadings_for_factor
+            loadings = pd.DataFrame(loadings_new)
+            loadings = loadings.values
+            n_variables, n_factors = loadings.shape
         else:
-            error_vars = np.full((n_variables, 1), np.nan)
+            raise ValueError('The model `specification` must be either a dict '
+                             'or None, not {}'.format(type(specification)))
 
-        return error_vars
-
-    @staticmethod
-    def parse_factor_vars(factor_vars, n_factors):
-        """
-        Parse the factor variance pattern from the model.
-
-        Parameters
-        ----------
-        factor_vars : pd.DataFrame or np.array or None
-            The factor variance pattern from the model.
-        n_factors : int
-            The number of factors.
-
-        Returns
-        -------
-        factor_vars : np.array
-            The updated factor variance pattern matrix.
-
-        Raises
-        ------
-        AssertionError
-            If the length of `factor_vars` is not
-            equal to `n_factors`.
-        """
-        if factor_vars is not None:
-            error_msg = ('The length of `factor_vars` must equal '
-                         'the number of factors in your loading matrix '
-                         '{} != {}'.format(len(factor_vars), n_factors))
-            assert len(factor_vars) == n_factors, error_msg
-            factor_vars = np.array(factor_vars, dtype=float).reshape(n_factors, 1)
-        else:
-            factor_vars = np.full((n_factors, 1), np.nan)
-
-        return factor_vars
+        return ModelSpecification(**{'loadings': loadings,
+                                     'n_variables': n_variables,
+                                     'n_factors': n_factors})
 
     @staticmethod
-    def parse_factor_covs(factor_covs, n_factors):
+    def parse_model_specification_from_array(X, specification=None):
         """
-        Parse the factor covariance pattern from the model.
+        Generate the model specification from
+        an array.
 
         Parameters
         ----------
-        factor_covs : pd.DataFrame or np.array or None
-            The factor covariance pattern from the model.
-        n_factors : int
-            The number of factors.
+        X : array-like
+            The data set that will be used for CFA.
+        specification : array-like or None
+            An array with the loading details. If None, the matrix will
+            be created assuming all variables load on all factors.
+            Defaults to None.
 
         Returns
         -------
-        factor_covs : np.array
-            The updated factor covariance pattern matrix.
-        n_lower_diag : int
-            The number of elements in the lower diagonal.
+        ModelSpecification
+            A model specification object
 
         Raises
         ------
-        AssertionError
-            If the length of `factor_covs` is not
-            equal to `n_lower_diag`.
+        ValueError
+            If `specification` is not in the expected format.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_array = np.array([[1, 1, 1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 1, 1, 1]])
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_array(X,
+        ...                                                                            model_array)
         """
-        factor_covs_idxs = get_symmetric_lower_idxs(n_factors, diag=False)
-        n_lower_diag = factor_covs_idxs.shape[0]
-        if factor_covs is not None:
-            factor_covs = np.array(factor_covs, dtype=float)
-
-            # if the array has more than one dimension,
-            # then we assume it's the full covariance matrix,
-            # and check (1) to make sure it's a square matrix,
-            # and (2) to make sure that we only keep the lower
-            # triangle, and flatten it to a 1d array.
-            if len(factor_covs.shape) > 1:
-                error_msg = ("The `factor_cov` rows must equal the "
-                             "number of columns: {} != {}.".format(factor_covs.shape[0],
-                                                                   factor_covs.shape[1]))
-                assert factor_covs.shape[0] == factor_covs.shape[1], error_msg
-                factor_covs = factor_covs.flatten(order='F')[factor_covs_idxs]
-                factor_covs = factor_covs.reshape((n_lower_diag, 1), order='F')
-
-            error_msg = ('The length of `factor_covs` must equal '
-                         'the lower diagonal of the factor covariance matrix '
-                         '{} != {}'.format(len(factor_covs), n_lower_diag))
-            assert len(factor_covs) == n_lower_diag, error_msg
-
+        if specification is None:
+            n_variables, n_factors = X.shape[1], X.shape[1]
+            loadings = np.ones((n_factors, n_factors), dtype=int)
+        elif isinstance(specification, (np.ndarray, pd.DataFrame)):
+                n_variables, n_factors = specification.shape
+                if isinstance(specification, pd.DataFrame):
+                    loadings = specification.values.copy()
+                else:
+                    loadings = specification.copy()
         else:
-            factor_covs = np.full((n_lower_diag, 1), np.nan)
+            raise ValueError('The model `specification` must be either a numpy array '
+                             'or None, not {}'.format(type(specification)))
 
-        return factor_covs, n_lower_diag
-
-    def parse(self, model):
-        """
-        Parse the model into a set of
-        arrays, variable and factor names,
-        and factor, variable, and lower diagonal
-        dimensions.
-
-        Parameters
-        ----------
-        model : dict
-            A dictionary specifying the model
-            inputs. In general, the `model`
-            can have the following keys:
-                - `loadings` : dict or pd.DataFrame
-                    A dictionary where the keys are factor names
-                    and the values are lists of variables that load
-                    on each of those factors. Alternatively, you can
-                    specify a data frame, where the columns are factor
-                    names, the index is variable names, and the values
-                    are 0s and 1s that indicates whether a variable
-                    loads on a particular factor.
-                - factor_covs : list or None, optional
-                    A list of factor covariances. If None, no
-                    covariance constraints will be imposed on the
-                    confirmatory factor analysis model. This list
-                    should be in the following format:
-                    ```
-                        x1        x2        x3        x4        x5
-                    ----------------------------------------------
-                    x1. 0.        0.        0.        0.        0.
-
-                    x2  c(x1,x2)  0.        0.        0.        0.
-
-                    x3  c(x1,x3)  c(x2,x3)  0.        0.        0.
-
-                    x4  c(x1,x4)  c(x2,x4)  c(x3,x4)  0.        0.
-
-                    x5  c(x1,x5)  c(x2,x5)  c(x3,x5)  c(x4,x5)  0.
-
-                    factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
-                    ```
-                    Alternatively, a list of lists or np.array
-                    with the full covariance matrix.
-                - factor_vars : list or None, optional
-                    A list of factor variances. If None, no
-                    factor variance constraints will be imposed on the
-                    confirmatory factor analysis model.
-                - error_vars : list or None, optional
-                    A list of error variances. If None, no
-                    error variance constraints will be imposed on the
-                    confirmatory factor analysis model.
-
-        Returns
-        -------
-        loadings : np.array
-            The updated loadings pattern matrix.
-        error_vars : np.array
-            The updated error variance pattern matrix.
-        factor_vars : np.array
-            The updated factor variance pattern matrix.
-        factor_covs : np.array
-            The updated factor covariance pattern matrix.
-        variable_names : list
-            The names of the variables.
-        factor_names : list
-            The names of the factors.
-        n_variables : int
-            The number of variables.
-        n_factors : int
-            The number of factors.
-        n_lower_diag : int
-            The number of elements in the lower diagonal.
-
-        Raises
-        ------
-        KeyError
-            if any key that are not allowed
-            are present in the model.
-        """
-        loadings = model['loadings']
-        error_vars = model.get('errors_vars')
-        factor_vars = model.get('factor_vars')
-        factor_covs = model.get('factor_covs')
-
-        if any(key not in POSSIBLE_MODEL_KEYS for key in model):
-            diff = list(set(model.keys()).difference(POSSIBLE_MODEL_KEYS))
-            raise KeyError('The following keys are not allowed: '
-                           '{}'.format(', '.join(diff)))
-
-        (loadings,
-         variable_names,
-         factor_names,
-         n_variables,
-         n_factors) = self.parse_loadings(loadings)
-
-        (factor_covs,
-         n_lower_diag) = self.parse_factor_covs(factor_covs, n_factors)
-
-        error_vars = self.parse_error_vars(error_vars, n_variables)
-        factor_vars = self.parse_factor_vars(factor_vars, n_factors)
-
-        return (loadings,
-                error_vars,
-                factor_vars,
-                factor_covs,
-                variable_names,
-                factor_names,
-                n_factors,
-                n_variables,
-                n_lower_diag)
+        return ModelSpecification(**{'loadings': loadings,
+                                     'n_variables': n_variables,
+                                     'n_factors': n_factors})
 
 
-class ConfirmatoryFactorAnalyzer:
+class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
     """
     A ConfirmatoryFactorAnalyzer class, which fits a
     confirmatory factor analysis model using maximum likelihood.
 
     Parameters
     ----------
-    log_warnings : bool, optional
-        Whether to log warnings, such as failure to
-        converge.
+    specification : ModelSpecificaition object or None, optional
+        A model specification. This must be an ModelSpecificaiton object
+        or None. If None, the ModelSpecification will be generated assuming
+        that n_factors == n_variables, and that all variables load on all
+        factors.
+        Defaults to None.
+    n_obs : int or None, optional
+        The number of observations in the original
+        data set. If this is not passed and `is_cov=True`,
+        then a reduced form of the objective function will
+        be used.
+        Defaults to None.
+    is_cov_matrix : bool, optional
+        Whether the input `data` is a
+        covariance matrix. If False,
+        assume it is the full data set
         Defaults to False.
+    bounds : list of tuples or None, optional
+        A list of minimum and maximum
+        boundaries for each element of the
+        input array. This must equal `x0`,
+        which is the input array from your
+        parsed and combined model specification.
+        The length is ((n_factors * n_variables) +
+        n_variables + n_factors + (((n_factors * n_factors) -
+        n_factors) // 2)
+        If None, noting will be bounded.
+        Defaults to None.
+    max_iter : int, optional
+        The maximum number of iterations
+        for the optimization routine.
+        Defaults to 200.
+    tol : float or None, optional
+        The tolerance for convergence.
+        Defaults to None.
+    disp : bool, optional
+        Whether to print the scipy
+        optimization fmin message to
+        standard output.
+        Defaults to True.
+
+    Raises
+    ------
+    ValueError
+        If is_cov_matrix is True, and n_obs
+        is not provided.
 
     Attributes
     ----------
-    loadings : pd.DataFrame or None
+    model : ModelSpecification
+        The model specification object.
+    loadings_ : numpy array
         The factor loadings matrix.
-    error_vars : pd.DataFrame or None
+    error_vars_ : numpy array
         The error variance matrix
-    factor_covs : pd.DataFrame or None
+    factor_varcovs_ : numpy array
         The factor covariance matrix.
-    is_fitted :bool
-        True if the model has been estimated.
-    used_bollen : bool
-        Whether a reduced form of the objective
-        was used used. This will only be true when `is_cov=True`
-        and `n_obs=None` (Bollen, 1989).
-    log_likelihood : float or None
+    log_likelihood_ : float
         The log likelihood from the optimization routine.
-    aic : float or None
+    aic_ : float
         The Akaike information criterion.
-    bic : float or None
+    bic_ : float
         The Bayesian information criterion.
-    n_obs : int or None
-        The number of observations in the original
-        data set.
-    n_factors : int or None
-        The number of factors in the CFA model.
-    n_variables : int or None
-        The number of variables in the CFA model.
-    n_lower_diag : int or None
-        The number of elements in the lower diagonal
-        of the factor covariance matrix.
-    factor_names : list or None
-        The names of all the factors.
-    variable_names : list or None
-        The names of all the variables.
-    fix_first : bool
-        Whether the first variable loading
-        on each factor is fixed to 1.
 
     Examples
     --------
     >>> import pandas as pd
-    >>> from factor_analyzer import ConfirmatoryFactorAnalyzer
-    >>> data = pd.read_csv('test10.csv')
-    >>> model = {'loadings': {'F1': ['X1', 'X2', 'X3'], 'F2': ['X4', 'X5', 'X6']}}
-    >>> cfa = ConfirmatoryFactorAnalyzer()
-    >>> cfa.analyze(data, model)
-    >>> cfa.loadings
-        F1          F2
-    X1  1.000000    0.000000
-    X2  0.464864    0.000000
-    X3  0.353236    0.000000
-    X4  0.000000    1.000000
-    X5  0.000000    0.744179
-    X6  0.000000    0.381194
+    >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+    ...                              ModelSpecificationParser)
+    >>> X = pd.read_csv('tests/data/test11.csv')
+    >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+    ...               "F2": ["V5", "V6", "V7", "V8"]}
+    >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+    >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+    >>> cfa.fit(X.values)
+    >>> cfa.loadings_
+    array([[0.99131285, 0.        ],
+           [0.46074919, 0.        ],
+           [0.3502267 , 0.        ],
+           [0.58331488, 0.        ],
+           [0.        , 0.98621042],
+           [0.        , 0.73389239],
+           [0.        , 0.37602988],
+           [0.        , 0.50049507]])
+    >>> cfa.factor_varcovs_
+    array([[1.        , 0.17385704],
+           [0.17385704, 1.        ]])
+    >>> cfa.get_standard_errors()
+    (array([[0.06779949, 0.        ],
+           [0.04369956, 0.        ],
+           [0.04153113, 0.        ],
+           [0.04766645, 0.        ],
+           [0.        , 0.06025341],
+           [0.        , 0.04913149],
+           [0.        , 0.0406604 ],
+           [0.        , 0.04351208]]),
+     array([0.11929873, 0.05043616, 0.04645803, 0.05803088,
+            0.10176889, 0.06607524, 0.04742321, 0.05373646]))
+    >>> cfa.transform(X.values)
+    array([[-0.46852166, -1.08708035],
+           [ 2.59025301,  1.20227783],
+           [-0.47215977,  2.65697245],
+           ...,
+           [-1.5930886 , -0.91804114],
+           [ 0.19430887,  0.88174818],
+           [-0.27863554, -0.7695101 ]])
     """
 
     def __init__(self,
-                 log_warnings=False):
+                 specification=None,
+                 n_obs=None,
+                 is_cov_matrix=False,
+                 bounds=None,
+                 max_iter=200,
+                 tol=None,
+                 impute='median',
+                 disp=True):
 
-        self.log_warnings = log_warnings
+        # if the input is going to be a covariance matrix, rather than
+        # the full data set, then users must pass the number of observations
+        if is_cov_matrix and n_obs is None:
+            raise ValueError('If `is_cov_matrix=True`, you must provide '
+                             'the number of observations, `n_obs`.')
 
-        self.is_fitted = False
-        self.using_bollen = False
-        self.loadings = None
-        self.error_vars = None
-        self.factor_covs = None
+        self.specification = specification
+        self.n_obs = n_obs
+        self.is_cov_matrix = is_cov_matrix
+        self.bounds = bounds
+        self.max_iter = max_iter
+        self.tol = tol
+        self.impute = impute
+        self.disp = disp
 
-        self.log_likelihood = None
-        self.aic = None
-        self.bic = None
+        self.cov_ = None
+        self.mean_ = None
+        self.loadings_ = None
+        self.error_vars_ = None
+        self.factor_varcovs_ = None
 
-        self.n_factors = None
-        self.n_variables = None
-        self.n_lower_diag = None
+        self.log_likelihood_ = None
+        self.aic_ = None
+        self.bic_ = None
 
-        self.fix_first = True
+        self._n_factors = None
+        self._n_variables = None
+        self._n_lower_diag = None
 
     @staticmethod
-    def combine(loadings,
-                error_vars,
-                factor_vars,
-                factor_covs,
-                n_factors,
-                n_variables,
-                n_lower_diag):
+    def _combine(loadings,
+                 error_vars,
+                 factor_vars,
+                 factor_covs,
+                 n_factors,
+                 n_variables,
+                 n_lower_diag):
         """
         Combine a set of multi-dimensional loading,
         error variance, factor variance, and factor
@@ -504,17 +463,14 @@ class ConfirmatoryFactorAnalyzer:
         array : np.arrays
             The combined (X, 1) array.
         """
-        loadings = np.array(loadings).reshape(n_factors * n_variables, 1, order='F')
-        error_vars = np.array(error_vars).reshape(n_variables, 1, order='F')
-        factor_vars = np.array(factor_vars).reshape(n_factors, 1, order='F')
-        factor_covs = np.array(factor_covs).reshape(n_lower_diag, 1, order='F')
-        return np.concatenate([loadings,
-                               error_vars,
-                               factor_vars,
-                               factor_covs])
+        loadings = loadings.reshape(n_factors * n_variables, 1, order='F')
+        error_vars = error_vars.reshape(n_variables, 1, order='F')
+        factor_vars = factor_vars.reshape(n_factors, 1, order='F')
+        factor_covs = factor_covs.reshape(n_lower_diag, 1, order='F')
+        return np.concatenate([loadings, error_vars, factor_vars, factor_covs])
 
     @staticmethod
-    def split(x, n_factors, n_variables, n_lower_diag):
+    def _split(x, n_factors, n_variables, n_lower_diag):
         """
         Given a one-dimensional array, split it
         into a set of multi-dimensional loading,
@@ -523,13 +479,13 @@ class ConfirmatoryFactorAnalyzer:
 
         Parameters
         ----------
-        x : np.array
+        x : array-like
             The combined (X, 1) array to split.
         n_factors : int
             The number of factors.
         n_variables : int
             The number of variables.
-        n_lower_diag :int
+        n_lower_diag : int
             The number of elements in the `factor_covs`
             array, which is equal to the lower.
 
@@ -544,7 +500,6 @@ class ConfirmatoryFactorAnalyzer:
         factor_covs : array-like (n_lower_diag * 1)
             The factor covariance array
         """
-        x = np.array(x)
         loadings_ix = int(n_factors * n_variables)
         error_vars_ix = n_variables + loadings_ix
         factor_vars_ix = n_factors + error_vars_ix
@@ -554,36 +509,21 @@ class ConfirmatoryFactorAnalyzer:
                 x[error_vars_ix:factor_vars_ix].reshape((n_factors, 1), order='F'),
                 x[factor_vars_ix:factor_covs_ix].reshape((n_lower_diag, 1), order='F'))
 
-    def objective(self,
-                  x0,
-                  cov,
-                  loadings,
-                  error_vars,
-                  factor_vars,
-                  factor_covs):
+    def _objective(self, x0, cov_mtx, loadings):
         """
         The objective function.
 
         Parameters
         ----------
-        x0: np.array
+        x0: array-like
             The combined (X, 1) array. These are the
             initial values for the `minimize()` function.
-        cov : np.array or pd.DataFrame
+        cov_mtx : array-like
             The covariance matrix from the original data
             set.
         loadings : array-like
             The loadings matrix (n_factors * n_variables)
             from the model parser. This tells the objective
-            function what elements should be fixed.
-        error_vars : array-like (n_variables * 1)
-            The error variance array. This tells the objective
-            function what elements should be fixed.
-        factor_vars : array-like (n_factors * 1)
-            The factor variance array. This tells the objective
-            function what elements should be fixed.
-        factor_covs : array-like (n_lower_diag * 1)
-            The factor covariance array. This tells the objective
             function what elements should be fixed.
 
         Returns
@@ -594,12 +534,10 @@ class ConfirmatoryFactorAnalyzer:
         (loadings_init,
          error_vars_init,
          factor_vars_init,
-         factor_covs_init) = self.split(x0, self.n_factors, self.n_variables, self.n_lower_diag)
-
-        # if any constraints were set, fix these
-        factor_vars_init[~pd.isna(factor_vars)] = factor_vars[~pd.isna(factor_vars)]
-        factor_covs_init[~pd.isna(factor_covs)] = factor_covs[~pd.isna(factor_covs)]
-        error_vars_init[~pd.isna(error_vars)] = error_vars[~pd.isna(error_vars)]
+         factor_covs_init) = self._split(x0,
+                                         self.model.n_factors,
+                                         self.model.n_variables,
+                                         self.model.n_lower_diag)
 
         # set the loadings to zero where applicable
         loadings_init[np.where(loadings == 0)] = 0
@@ -610,34 +548,18 @@ class ConfirmatoryFactorAnalyzer:
         # make the error variance into a variance-covariance matrix
         error_varcov_init = merge_variance_covariance(error_vars_init)
 
-        # if `fix_first` is True, then we fix the first variable
-        # that loads on each factor to 1; otherwise, we let is vary freely
-        if self.fix_first:
-            loadings_init[self._fix_first_row_idx,
-                          self._fix_first_col_idx] = 1
-
-        # if `fix_first` is False, then standardize the factor
-        # covariance matrix to the correlation matrix
-        else:
+        # make the factor variance-covariance matrix into a correlation matrix
+        with np.errstate(all='ignore'):
             factor_varcov_init = covariance_to_correlation(factor_varcov_init)
 
         # calculate sigma-theta, needed for the objective function
         sigma_theta = loadings_init.dot(factor_varcov_init) \
                                    .dot(loadings_init.T) + error_varcov_init
 
-        # if we do not have the number of observations, we use the Bollen approach;
-        # this should yield the same coefficient estimates, but value of the objective
-        # will most likely be different, and AIC and BIC may be wrong
-        if self.n_obs is None:
-            with np.errstate(invalid='ignore'):
-                error = (np.log(np.linalg.det(sigma_theta)) +
-                         np.trace(cov.dot(np.linalg.inv(sigma_theta)) -
-                                  np.log(np.linalg.det(cov)) - self.n_variables))
-        else:
-            with np.errstate(invalid='ignore'):
-                error = -(((-self.n_obs * self.n_variables / 2) * np.log(2 * np.pi)) -
-                          (self.n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
-                                              np.trace(cov.dot(np.linalg.inv(sigma_theta)))))
+        with np.errstate(all='ignore'):
+            error = -(((-self.n_obs * self.model.n_variables / 2) * np.log(2 * np.pi)) -
+                      (self.n_obs / 2) * (np.log(np.linalg.det(sigma_theta)) +
+                                          np.trace(cov_mtx.dot(np.linalg.inv(sigma_theta)))))
 
             # make sure the error is greater than or
             # equal to zero before we return it; we
@@ -646,103 +568,18 @@ class ConfirmatoryFactorAnalyzer:
 
         return error
 
-    def analyze(self,
-                data,
-                model,
-                n_obs=None,
-                is_cov=False,
-                fix_first=True,
-                bounds=None,
-                maxiter=200,
-                tol=None,
-                disp=True):
+    def fit(self, X, y=None):
         """
         Perform confirmatory factor analysis.
 
         Parameters
         ----------
-        data : pd.DataFrame or np.array
+        X : numpy array
             The data to use for confirmatory
             factor analysis. If this is just a
-            covariance matrix, make sure `is_cov`
-            is set to True.
-        model : dict
-            A dictionary specifying the model
-            inputs. In general, the `model`
-            can have the following keys:
-                - `loadings` : dict or pd.DataFrame
-                    A dictionary where the keys are factor names
-                    and the values are lists of variables that load
-                    on each of those factors. Alternatively, you can
-                    specify a data frame, where the columns are factor
-                    names, the index is variable names, and the values
-                    are 0s and 1s that indicates whether a variable
-                    loads on a particular factor.
-                - factor_covs : list or None, optional
-                    A list of factor covariances. If None, no
-                    covariance constraints will be imposed on the
-                    confirmatory factor analysis model. This list
-                    should be in the following format:
-                    ```
-                        x1        x2        x3        x4        x5
-                    ----------------------------------------------
-                    x1. 0.        0.        0.        0.        0.
-
-                    x2  c(x1,x2)  0.        0.        0.        0.
-
-                    x3  c(x1,x3)  c(x2,x3)  0.        0.        0.
-
-                    x4  c(x1,x4)  c(x2,x4)  c(x3,x4)  0.        0.
-
-                    x5  c(x1,x5)  c(x2,x5)  c(x3,x5)  c(x4,x5)  0.
-
-                    factor_covs = [c(x1,x2), c(x1,x3), c(x2,x3), c(x1,x4), c(x2,x4), ...]
-                    ```
-                    Alternatively, the full covariance matrix.
-                - factor_vars : list or None, optional
-                    A list of factor variances. If None, no
-                    factor variance constraints will be imposed on the
-                    confirmatory factor analysis model.
-                - error_vars : list or None, optional
-                    A list of error variances. If None, no
-                    error variance constraints will be imposed on the
-                    confirmatory factor analysis model.
-        n_obs : int or None, optional
-            The number of observations in the original
-            data set. If this is not passed and `is_cov=True`,
-            then a reduced form of the objective function will
-            be used.
-            Defaults to None.
-        is_cov : bool, optional
-            Whether the input `data` is a
-            covariance matrix. If False,
-            assume it is the full data set
-            Defaults to False.
-        fix_first : bool, optional
-            Whether to fix the first variable loading
-            on a given factor to 1.
-            Defaults to True.
-        bounds : list of tuples or None, optional
-            A list of minimum and maximum
-            boundaries for each element of the
-            input array. This must equal `x0`,
-            which is the input array from your
-            parsed and combined `model`. If None,
-            only the loading matrix will be bounded
-            within the range (0, 1).
-            Defaults to None.
-        maxiter : int, optional
-            The maximum number of iterations
-            for the optimization routine.
-            Defaults to 200.
-        tol : float or None, optional
-            The tolerance for convergence.
-            Defaults to None.
-        disp : bool, optional
-            Whether to print the scipy
-            optimization fmin message to
-            standard output.
-            Defaults to True.
+            covariance matrix, make sure `is_cov_matrix`
+            was set to True.
+        y : ignored
 
         Raises
         ------
@@ -752,164 +589,216 @@ class ConfirmatoryFactorAnalyzer:
             number of variables.
         ValueError
             If `fix_first=True` and `factor_vars` exists in the model.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+        ...               "F2": ["V5", "V6", "V7", "V8"]}
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+        >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+        >>> cfa.fit(X.values)
+        >>> cfa.loadings_
+        array([[0.99131285, 0.        ],
+               [0.46074919, 0.        ],
+               [0.3502267 , 0.        ],
+               [0.58331488, 0.        ],
+               [0.        , 0.98621042],
+               [0.        , 0.73389239],
+               [0.        , 0.37602988],
+               [0.        , 0.50049507]])
         """
+        if self.specification is None:
+            self.model = ModelSpecificationParser.parse_model_specification_from_array(X)
+        elif isinstance(self.specification, ModelSpecification):
+            self.model = self.specification.copy()
+        else:
+            raise ValueError('The `specification` must be None or `ModelSpecification` '
+                             'instance, not {}'.format(type(self.specification)))
 
-        if model.get('factor_vars') and fix_first:
-            raise ValueError('You cannot set `fix_first=True` and pass '
-                             '`factor_vars` in the `model`.')
+        if isinstance(X, pd.DataFrame):
+            X = X.values
 
-        (loadings,
-         error_vars,
-         factor_vars,
-         factor_covs,
-         variable_names,
-         factor_names,
-         n_factors,
-         n_variables,
-         n_lower_diag) = ModelParser().parse(model)
+        # now check the array, and make sure it
+        # meets all of our expected criteria
+        X = check_array(X,
+                        force_all_finite='allow-nan',
+                        estimator=self,
+                        copy=True)
 
-        if not is_cov:
+        # check to see if there are any null values, and if
+        # so impute using the desired imputation approach
+        if np.isnan(X).any() and not self.is_cov_matrix:
+            X = impute_values(X, how=self.impute)
+
+        if not self.is_cov_matrix:
             # make sure that the columns are in the proper order
-            data = data[variable_names].copy()
+            # data = data[variable_names].copy()
             # get the number of observations from the data, if `n_obs` not passed;
             # then, calculate the covariance matrix from the data set
-            n_obs = data.shape[0] if n_obs is None else n_obs
-            data = data.cov() * ((n_obs - 1) / n_obs)
+            self.n_obs = X.shape[0] if self.n_obs is None else self.n_obs
+            self.mean_ = np.mean(X, axis=0)
+            cov_mtx = cov(X)
         else:
-            error_msg = ('If `is_cov=True`, then the rows and column in the data '
+            error_msg = ('If `is_cov_matrix=True`, then the rows and column in the data '
                          'set must be equal, and must equal the number of variables '
                          'in your model.')
-            assert data.shape[0] == data.shape[1] == n_variables, error_msg
-            # make sure the columns and indexes are in the proper order,
-            # and set `used_bollen` to true; then, log the warning if `log_warnings=True`
-            data = data.loc[variable_names, variable_names].copy()
+            assert X.shape[0] == X.shape[1] == self.model.n_variables, error_msg
+            cov_mtx = X.copy()
 
-            if n_obs is None:
-                self.used_bollen = True
-                if self.log_warnings:
-                    logging.warning("You have passed a covariance matrix (`is_cov=True`) "
-                                    "but you have not specified the number of observations "
-                                    "(`n_obs=None`). Therefore, a reduced version of the "
-                                    "objective function will be used (Bollen, 1989 p.107). "
-                                    "The AIC, BIC, and standard errors may not be correct.")
-
-        # we set a bunch of instance-level variables that will be
-        # referenced primarily by the objective function
-        self.n_obs = n_obs
-        self.n_factors = n_factors
-        self.n_variables = n_variables
-        self.n_lower_diag = n_lower_diag
-        self.fix_first = fix_first
-        self.factor_names = factor_names
-        self.variable_names = variable_names
-
-        (fix_first_row_idx,
-         fix_first_col_idx) = get_first_idxs_from_values(loadings)
-        self._fix_first_row_idx = fix_first_row_idx
-        self._fix_first_col_idx = fix_first_col_idx
-
-        # if we set `fix_first=False`, then we need to do two things (1)
-        # bound the factor covariances between 0 and 1, and (2) fix the
-        # factor variances to 1; if the latter is not specified in the model
-        # already, for the factor variances to 1 and warn the user
-        loadings_free = loadings.copy()
-        if fix_first:
-            loadings_free[fix_first_row_idx, fix_first_col_idx] = 0
-        else:
-            if not all(factor_vars == 1):
-                if self.log_warnings:
-                    logging.warning("You have set `fix_first=False`, but have not set all "
-                                    "`factor_vars` equal to 1. All `factor_vars` will be "
-                                    "forced to 1.")
-
-        loadings_free = get_free_parameter_idxs(loadings_free, eq=1)
-        error_covs_free = get_free_parameter_idxs(merge_variance_covariance(error_vars))
-        factor_covs_free = get_symmetric_lower_idxs(n_factors, fix_first)
-
-        # we make all of these instance-level hidden variables, so that
-        # we can reference them again later when calculating the standard errors
-        self._loadings_free = loadings_free
-        self._error_covs_free = error_covs_free
-        self._factor_covs_free = factor_covs_free
-
-        # we want to know whether any of the variances or
-        # covariances are fixed for the errors or factors,
-        # so that we can force these to their fixed values
-        # after the optimization routine is finished
-        is_error_vars_fixed = pd.DataFrame(error_vars).notnull().any().any()
-        is_factor_vars_fixed = pd.DataFrame(factor_vars).notnull().any().any()
-        is_factor_covs_fixed = pd.DataFrame(factor_covs).notnull().any().any()
+        self.cov_ = cov_mtx.copy()
 
         # we initialize all of the arrays, setting the covariances
         # lower than the expected variances, and the loadings to 1 or 0
-        loading_init = loadings.copy()
-        error_vars_init = np.full((error_vars.shape[0], 1), 0.5)
-        factor_vars_init = np.full((factor_vars.shape[0], 1), 1)
-        factor_covs_init = np.full((factor_covs.shape[0], 1), 0.05)
+        loading_init = self.model.loadings
+        error_vars_init = np.full((self.model.n_variables, 1), 0.5)
+        factor_vars_init = np.full((self.model.n_factors, 1), 1.0)
+        factor_covs_init = np.full((self.model.n_lower_diag, 1), 0.05)
 
         # we merge all of the arrays into a single 1d vector
-        x0 = self.combine(loading_init,
-                          error_vars_init,
-                          factor_vars_init,
-                          factor_covs_init,
-                          n_factors,
-                          n_variables,
-                          n_lower_diag)
+        x0 = self._combine(loading_init,
+                           error_vars_init,
+                           factor_vars_init,
+                           factor_covs_init,
+                           self.model.n_factors,
+                           self.model.n_variables,
+                           self.model.n_lower_diag)
 
         # if the bounds argument is None, then we initialized the
         # boundaries to (None, None) for everything except factor covariances;
         # at some point in the future, we may update this to place limits
         # on the loading matrix boundaries, too, but the case in R and SAS
-        if bounds is not None:
+        if self.bounds is not None:
             error_msg = ('The length of `bounds` must equal the length of your '
-                         'input array `x0`: {} != {}.'.format(len(bounds), len(x0)))
-            assert len(bounds) == len(x0), error_msg
+                         'input array `x0`: {} != {}.'.format(len(self.bounds), len(x0)))
+            assert len(self.bounds) == len(x0), error_msg
 
         # fit the actual model using L-BFGS algorithm;
         # the constraints are set inside the objective function,
         # so that we can avoid using linear programming methods (e.g. SLSQP)
-        res = minimize(self.objective, x0,
+        res = minimize(self._objective, x0,
                        method='L-BFGS-B',
-                       options={'maxiter': maxiter, 'disp': disp},
-                       bounds=bounds,
-                       args=(data,
-                             loadings,
-                             error_vars,
-                             factor_vars,
-                             factor_covs))
+                       options={'maxiter': self.max_iter, 'disp': self.disp},
+                       bounds=self.bounds,
+                       args=(cov_mtx, self.model.loadings))
+
+        # if the optimizer failed to converge, print the message
+        if not res.success:
+            warnings.warn('The optimization routine failed '
+                          'to converge: {}'.format(str(res.message)))
 
         # we split all the 1d array back into the set of original arrays
         (loadings_res,
          error_vars_res,
          factor_vars_res,
-         factor_covs_res) = self.split(res.x, n_factors, n_variables, n_lower_diag)
+         factor_covs_res) = self._split(res.x,
+                                        self.model.n_factors,
+                                        self.model.n_variables,
+                                        self.model.n_lower_diag)
 
         # we combine the factor covariances and variances into
         # a single variance-covariance matrix to make things easier,
         # but also check to make see if anything was fixed
-        factor_covs_final = factor_covs if is_factor_covs_fixed else factor_covs_res
-        factor_vars_final = factor_vars if is_factor_vars_fixed else factor_vars_res
-        factor_covs_final = merge_variance_covariance(factor_vars_final, factor_covs_final)
+        factor_varcovs_res = merge_variance_covariance(factor_vars_res, factor_covs_res)
+        with np.errstate(all='ignore'):
+            factor_varcovs_res = covariance_to_correlation(factor_varcovs_res)
 
-        # if we aren't fixing the first variable to 1, then we need to make sure
-        # to convert the covariance matrix into a correlation matrix
-        if not fix_first:
-            factor_covs_final = covariance_to_correlation(factor_covs_final)
-
-        # we also check to make see if the error variances were fixed
-        errror_vars_final = error_vars if is_error_vars_fixed else error_vars_res
-
-        self.loadings = pd.DataFrame(loadings_res, columns=factor_names, index=variable_names)
-        self.error_vars = pd.DataFrame(errror_vars_final, columns=['evars'], index=variable_names)
-        self.factor_covs = pd.DataFrame(factor_covs_final, columns=factor_names, index=factor_names)
+        self.loadings_ = loadings_res
+        self.error_vars_ = error_vars_res
+        self.factor_varcovs_ = factor_varcovs_res
 
         # we also calculate the log-likelihood, AIC, and BIC
-        self.log_likelihood = -res.fun
-        self.aic = 2 * res.fun + 2 * (x0.shape[0] + n_variables)
-        if n_obs is not None:
-            self.bic = 2 * res.fun + np.log(n_obs) * (x0.shape[0] + n_variables)
+        self.log_likelihood_ = -res.fun
+        self.aic_ = 2 * res.fun + 2 * (x0.shape[0] + self.model.n_variables)
+        if self.n_obs is not None:
+            self.bic_ = 2 * res.fun + np.log(self.n_obs) * (x0.shape[0] + self.model.n_variables)
 
-        self.is_fitted = True
+    def transform(self, X):
+        """
+        Get the factor scores for new data set.
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            The data to score using the fitted factor model.
+
+        Returns
+        -------
+        X_new : numpy array, shape (n_samples, n_components)
+            The latent variables of X.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+        ...               "F2": ["V5", "V6", "V7", "V8"]}
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+        >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+        >>> cfa.fit(X.values)
+        >>> cfa.transform(X.values)
+        array([[-0.46852166, -1.08708035],
+               [ 2.59025301,  1.20227783],
+               [-0.47215977,  2.65697245],
+               ...,
+               [-1.5930886 , -0.91804114],
+               [ 0.19430887,  0.88174818],
+           [-0.27863554, -0.7695101 ]])
+
+        References
+        ----------
+        https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6157408/
+        """
+
+        # check if the data is a data frame,
+        # so we can convert it to an array
+        if isinstance(X, pd.DataFrame):
+            X = X.values
+
+        # now check the array, and make sure it
+        # meets all of our expected criteria
+        X = check_array(X,
+                        force_all_finite=True,
+                        estimator=self,
+                        copy=True)
+
+        # meets all of our expected criteria
+        check_is_fitted(self, ['loadings_', 'error_vars_'])
+
+        # see if we saved the original mean and std
+        if self.mean_ is None:
+            warnings.warn('Could not find original mean; using the mean '
+                          'from the current data set.')
+            mean = np.mean(X, axis=0)
+        else:
+            mean = self.mean_
+
+        # get the scaled data
+        X_scale = (X - mean)
+
+        # get the loadings and error variances
+        loadings = self.loadings_.copy()
+        error_vars = self.error_vars_.copy()
+
+        # make the error variance an identity matrix,
+        # and take the inverse of this matrix
+        error_covs = np.eye(error_vars.shape[0])
+        np.fill_diagonal(error_covs, error_vars)
+        error_covs_inv = np.linalg.inv(error_covs)
+
+        # calculate the weights, using Bartlett's formula
+        # (lambda' error_covsˆ−1 lambda)ˆ−1 lambda' error_covsˆ−1 (X - muX)
+        weights = np.linalg.pinv(loadings.T.dot(error_covs_inv)
+                                           .dot(loadings)) \
+                           .dot(loadings.T).dot(error_covs_inv)
+
+        scores = weights.dot(X_scale.T).T
+        return scores
 
     def get_model_implied_cov(self):
         """
@@ -918,13 +807,43 @@ class ConfirmatoryFactorAnalyzer:
 
         Returns
         -------
-        model_implied_cov : pd.DataFrame
+        model_implied_cov : numpy array
             The model-implied covariance
             matrix.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+        ...               "F2": ["V5", "V6", "V7", "V8"]}
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+        >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+        >>> cfa.fit(X.values)
+        >>> cfa.get_model_implied_cov()
+        array([[2.07938612, 0.45674659, 0.34718423, 0.57824753, 0.16997013,
+                0.12648394, 0.06480751, 0.08625868],
+               [0.45674659, 1.16703337, 0.16136667, 0.26876186, 0.07899988,
+                0.05878807, 0.03012168, 0.0400919 ],
+               [0.34718423, 0.16136667, 1.07364855, 0.20429245, 0.06004974,
+                0.04468625, 0.02289622, 0.03047483],
+               [0.57824753, 0.26876186, 0.20429245, 1.28809317, 0.10001495,
+                0.07442652, 0.03813447, 0.05075691],
+               [0.16997013, 0.07899988, 0.06004974, 0.10001495, 2.0364391 ,
+                0.72377232, 0.37084458, 0.49359346],
+               [0.12648394, 0.05878807, 0.04468625, 0.07442652, 0.72377232,
+                1.48080077, 0.27596546, 0.36730952],
+               [0.06480751, 0.03012168, 0.02289622, 0.03813447, 0.37084458,
+                0.27596546, 1.11761918, 0.1882011 ],
+               [0.08625868, 0.0400919 , 0.03047483, 0.05075691, 0.49359346,
+                0.36730952, 0.1882011 , 1.28888233]])
         """
-        if self.is_fitted:
-            error = np.diag(self.error_vars.values.flatten())
-            return self.loadings.dot(self.factor_covs).dot(self.loadings.T) + error
+        # meets all of our expected criteria
+        check_is_fitted(self, ['loadings_', 'factor_varcovs_'])
+        error = np.diag(self.error_vars_.flatten())
+        return self.loadings_.dot(self.factor_varcovs_).dot(self.loadings_.T) + error
 
     def get_derivatives_implied_cov(self):
         """
@@ -933,30 +852,30 @@ class ConfirmatoryFactorAnalyzer:
 
         Returns
         -------
-        loadings_dx: pd.DataFrame
+        loadings_dx : numpy array
             The derivative of the loadings matrix.
-        factor_covs_dx: pd.DataFrame
+        factor_covs_dx : numpy array
             The derivative of the factor covariance matrix.
-        error_covs_dx: pd.DataFrame
+        error_covs_dx : numpy array
             The derivative of the error covariance matrix.
         """
-        if not self.is_fitted:
-            return None
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
 
-        loadings = self.loadings
-        factor_covs = self.factor_covs
+        loadings = self.loadings_.copy()
+        factor_covs = self.factor_varcovs_.copy()
 
-        sym_lower_var_idx = get_symmetric_lower_idxs(self.n_variables)
-        sym_upper_fac_idx = get_symmetric_upper_idxs(self.n_factors, diag=False)
-        sym_lower_fac_idx = get_symmetric_lower_idxs(self.n_factors, diag=False)
+        sym_lower_var_idx = get_symmetric_lower_idxs(self.model.n_variables)
+        sym_upper_fac_idx = get_symmetric_upper_idxs(self.model.n_factors, diag=False)
+        sym_lower_fac_idx = get_symmetric_lower_idxs(self.model.n_factors, diag=False)
 
-        factors_diag = np.eye(self.n_factors)
+        factors_diag = np.eye(self.model.n_factors)
         factors_diag_mult = factors_diag.dot(factor_covs).dot(factors_diag.T).dot(loadings.T)
 
         # calculate the derivative of the loadings matrix, using the commutation matrix
-        loadings_dx = np.eye(self.n_variables**2) + commutation_matrix(self.n_variables,
-                                                                       self.n_variables)
-        loadings_dx = loadings_dx.dot(np.kron(factors_diag_mult, np.eye(self.n_variables)).T)
+        loadings_dx = np.eye(self.model.n_variables**2) + commutation_matrix(self.model.n_variables,
+                                                                             self.model.n_variables)
+        loadings_dx = loadings_dx.dot(np.kron(factors_diag_mult, np.eye(self.model.n_variables)).T)
 
         # calculate the derivative of the factor_covs matrix
         factor_covs_dx = loadings.dot(factors_diag)
@@ -973,7 +892,7 @@ class ConfirmatoryFactorAnalyzer:
 
         # calculate the derivative of the error_cov matrix,
         # which we assume will always be a diagonal matrix
-        error_covs_dx = np.eye(self.n_variables**2)
+        error_covs_dx = np.eye(self.model.n_variables**2)
 
         # make sure these matrices are symmetric
         loadings_dx = loadings_dx[sym_lower_var_idx, :]
@@ -981,12 +900,11 @@ class ConfirmatoryFactorAnalyzer:
         error_covs_dx = error_covs_dx[sym_lower_var_idx, :]
 
         # we also want to calculate the derivative for the intercepts
-        intercept_dx = np.zeros((loadings_dx.shape[0], self.n_variables), dtype=float)
-
-        return (pd.DataFrame(loadings_dx)[self._loadings_free].copy(),
-                pd.DataFrame(factor_covs_dx)[self._factor_covs_free].copy(),
-                pd.DataFrame(error_covs_dx)[self._error_covs_free].copy(),
-                pd.DataFrame(intercept_dx).copy())
+        intercept_dx = np.zeros((loadings_dx.shape[0], self.model.n_variables), dtype=float)
+        return (loadings_dx[:, self.model.loadings_free].copy(),
+                factor_covs_dx[:, self.model.factor_covs_free].copy(),
+                error_covs_dx[:, self.model.error_vars_free].copy(),
+                intercept_dx)
 
     def get_derivatives_implied_mu(self):
         """
@@ -1000,40 +918,36 @@ class ConfirmatoryFactorAnalyzer:
 
         Returns
         -------
-        loadings_dx: pd.DataFrame
+        loadings_dx : numpy array
             The derivative of the loadings means.
-        factor_covs_dx: pd.DataFrame
+        factor_covs_dx : numpy array
             The derivative of the factor covariance means.
-        error_covs_dx: pd.DataFrame
+        error_covs_dx : numpy array
             The derivative of the error covariance means.
         """
-        if not self.is_fitted:
-            return None
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
 
-        # just initializing some matrices that we'll
-        # use below to correct the shape of the loadings_dx
-        factors_zero = np.zeros((self.n_factors, 1))
-        factors_diag = np.eye(self.n_factors)
+        # initialize some matrices that we'll use below to
+        # correct the shape of the mean loadings derivatives
+        factors_zero = np.zeros((self.model.n_factors, 1))
+        factors_diag = np.eye(self.model.n_factors)
 
         # the mean derivatives will just be zeros for both
         # the error covariance and factor covariance matrices,
-        # since we don't have actual mean values (because users
-        # can simply pass the covariance matrix, if they want)
-        error_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self._error_covs_free))),
-                                     columns=self._error_covs_free)
-        factor_covs_dx = pd.DataFrame(np.zeros((self.n_variables, len(self._factor_covs_free))),
-                                      columns=self._factor_covs_free)
+        # since we don't have actual mean values
+        error_covs_dx = np.zeros((self.model.n_variables, len(self.model.error_vars_free)))
+        factor_covs_dx = np.zeros((self.model.n_variables, len(self.model.factor_covs_free)))
 
         # again, the implied means are just going to be diagonal matrices
-        # corresponding to the number of variables and factors; we don't
-        # have actual mean values that we're relying on
-        loadings_dx = np.kron(factors_diag.dot(factors_zero).T, np.eye(self.n_variables))
-        loadings_dx = pd.DataFrame(loadings_dx)[self._loadings_free].copy()
+        # corresponding to the number of variables and factors
+        loadings_dx = np.kron(factors_diag.dot(factors_zero).T, np.eye(self.model.n_variables))
+        loadings_dx = loadings_dx[:, self.model.loadings_free].copy()
 
         # we also calculate the derivative for the intercept, which will be zeros again
-        intercept_dx = np.zeros((loadings_dx.shape[0], self.n_variables))
-        intercept_dx[:self.n_variables, :self.n_variables] = np.eye(self.n_variables)
-        intercept_dx = pd.DataFrame(intercept_dx)
+        intercept_dx = np.zeros((loadings_dx.shape[0], self.model.n_variables))
+        intercept_dx[:self.model.n_variables,
+                     :self.model.n_variables] = np.eye(self.model.n_variables)
 
         return (loadings_dx,
                 factor_covs_dx,
@@ -1047,36 +961,59 @@ class ConfirmatoryFactorAnalyzer:
 
         Returns
         -------
-        loadings_se : pd.DataFrame
+        loadings_se : numpy array
             The standard errors for the factor loadings.
-        error_vars_se : pd.DataFrame
+        error_vars_se : numpy array
             The standard errors for the error variances.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+        ...                              ModelSpecificationParser)
+        >>> X = pd.read_csv('tests/data/test11.csv')
+        >>> model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+        ...               "F2": ["V5", "V6", "V7", "V8"]}
+        >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
+        >>> cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
+        >>> cfa.fit(X.values)
+        >>> cfa.get_standard_errors()
+        (array([[0.06779949, 0.        ],
+               [0.04369956, 0.        ],
+               [0.04153113, 0.        ],
+               [0.04766645, 0.        ],
+               [0.        , 0.06025341],
+               [0.        , 0.04913149],
+               [0.        , 0.0406604 ],
+               [0.        , 0.04351208]]),
+         array([0.11929873, 0.05043616, 0.04645803, 0.05803088,
+                0.10176889, 0.06607524, 0.04742321, 0.05373646]))
         """
-        if not self.is_fitted or self.n_obs is None:
-            return None
+        # meets all of our expected criteria
+        check_is_fitted(self, ['loadings_', 'n_obs'])
 
         (loadings_dx,
          factor_covs_dx,
-         error_cov_dx,
+         error_covs_dx,
          intercept_dx) = self.get_derivatives_implied_cov()
 
         (loadings_dx_mu,
          factor_covs_dx_mu,
-         error_cov_dx_mu,
+         error_covs_dx_mu,
          intercept_dx_mu) = self.get_derivatives_implied_mu()
 
-        # combine all of our covariance and mean derivatives; below we will
-        # merge all of these together in a single matrix, delta, to use the delta
-        # rule (basically, using the gradients to calculate the information)
-        loadings_dx = loadings_dx_mu.append(loadings_dx, ignore_index=True)
-        factor_covs_dx = factor_covs_dx_mu.append(factor_covs_dx, ignore_index=True)
-        error_cov_dx = error_cov_dx_mu.append(error_cov_dx, ignore_index=True)
-        intercept_dx = intercept_dx_mu.append(intercept_dx, ignore_index=True)
+        # combine all of our derivatives; below we will  merge all of these
+        # together in a single matrix, delta, to use the delta rule
+        # (basically, using the gradients to calculate the information)
+        loadings_dx = np.append(loadings_dx_mu, loadings_dx, axis=0)
+        factor_covs_dx = np.append(factor_covs_dx_mu, factor_covs_dx, axis=0)
+        error_cov_dx = np.append(error_covs_dx_mu, error_covs_dx, axis=0)
+        intercept_dx = np.append(intercept_dx_mu, intercept_dx, axis=0)
 
         # get get the implied covariance, invert it, and take the Kronecker product
         sigma = self.get_model_implied_cov()
         sigma_inv = np.linalg.inv(sigma)
-        sigma_inv_kron = pd.DataFrame(np.kron(sigma_inv, sigma_inv)).values
+        sigma_inv_kron = np.kron(sigma_inv, sigma_inv)
 
         # we get the fisher information matrix for H1, which is the unrestricted
         # model information; we'll use this with the deltas to calculate the full
@@ -1084,9 +1021,11 @@ class ConfirmatoryFactorAnalyzer:
         h1_information = 0.5 * duplication_matrix_pre_post(sigma_inv_kron)
         h1_information = block_diag(sigma_inv, h1_information)
 
-        # we concatenate all the deltas
-        delta = pd.concat([loadings_dx, error_cov_dx, factor_covs_dx, intercept_dx], axis=1)
-        delta.columns = list(range(delta.shape[1]))
+        # we concatenate all derivatives into a delta matrix
+        delta = np.concatenate((loadings_dx,
+                                error_cov_dx,
+                                factor_covs_dx,
+                                intercept_dx), axis=1)
 
         # calculate the fisher information matrix
         information = delta.T.dot(h1_information).dot(delta)
@@ -1095,28 +1034,22 @@ class ConfirmatoryFactorAnalyzer:
         # calculate the standard errors from the diagonal of the
         # information / cov matrix; also take the absolute value,
         # just in case anything is negative
-        se = pd.DataFrame(np.sqrt(np.abs(np.diag(information))))
+        se = np.sqrt(np.abs(np.diag(information)))
 
         # get the indexes for the standard errors
         # for the loadings and the errors variances;
         # in the future, we may add the factor and intercept
         # covariances, but these sometimes require transformations
         # that are more complicated, so for now we won't return them
-        loadings_idx = len(self._loadings_free)
-        error_vars_idx = self.n_variables + loadings_idx
+        loadings_idx = len(self.model.loadings_free)
+        error_vars_idx = self.model.n_variables + loadings_idx
 
         # get the loading standard errors and reshape them into the
         # format of the original loadings matrix
-        loadings_se = np.zeros((self.n_factors * self.n_variables, 1))
-        loadings_se[self._loadings_free] = se.iloc[:loadings_idx].values
-        loadings_se = pd.DataFrame(loadings_se.reshape((self.n_variables,
-                                                        self.n_factors), order='F'),
-                                   columns=self.factor_names,
-                                   index=self.variable_names)
+        loadings_se = np.zeros((self.model.n_factors * self.model.n_variables,))
+        loadings_se[self.model.loadings_free] = se[:loadings_idx]
+        loadings_se = loadings_se.reshape((self.model.n_variables, self.model.n_factors), order='F')
 
         # get the error variance standard errors
-        error_vars_se = pd.DataFrame(se.iloc[loadings_idx: error_vars_idx].values,
-                                     columns=['error_vars'],
-                                     index=self.variable_names)
-
+        error_vars_se = se[loadings_idx: error_vars_idx]
         return loadings_se, error_vars_se
