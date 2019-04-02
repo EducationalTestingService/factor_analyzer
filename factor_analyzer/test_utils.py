@@ -472,6 +472,8 @@ def check_cfa(json_name_input,
 
         data1 = outputs_r[output_type].values
         data2 = outputs_p[output_type]
+        print(data1)
+        print(data2)
 
         yield check_close(data1, data2,
                           rel_tol=rel_tol,
