@@ -62,11 +62,11 @@ Two common types of rotations are:
    upon the varimax rotation, but ultimately allows factors to become
    correlated.
 
-This package includes a `factor_analyzer` module with a stand-alone
-`FactorAnalyzer` class. The class includes a `fit()` method that
+This package includes a ``factor_analyzer`` module with a stand-alone
+``FactorAnalyzer`` class. The class includes a ``fit()`` method that
 allows users to perform factor analysis using either minres or MLE, with
 optional rotations on the factor loading matrices. The package also offers
-a stand-alone `Rotator` class to perform common rotations on an unrotated
+a stand-alone ``Rotator`` class to perform common rotations on an unrotated
 loading matrix.
 
 The following rotations options are available in both `FactorAnalyzer`
@@ -80,12 +80,12 @@ and `Rotator`:
     (f) quartimax (orthogonal rotation)
     (g) equamax (orthogonal rotation)
 
-In adddition, the package includes a `confirmatory_factor_analyzer`
-module with a stand-alone `ConfirmatoryFactorAnalyzer` class. The
-class includes a `fit()` method that allows users to perform
+In adddition, the package includes a ``confirmatory_factor_analyzer``
+module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
+class includes a ``fit()`` method that allows users to perform
 confirmatory factor analysis using MLE. Performing CFA requires users
 to specify a model with the expected factor loading relationships. This
-can be done using the `ModelSpecificationParser` class.
+can be done using the ``ModelSpecificationParser`` class.
 
 Examples
 --------
@@ -182,7 +182,7 @@ Requirements
 Contributing
 ------------
 
-Contributions to `factor_analyzer` are very welcome. Please file an issue
+Contributions to ``factor_analyzer`` are very welcome. Please file an issue
 on GitHub, or contact jbiggs@ets.org if you would like to contribute.
 
 Installation
