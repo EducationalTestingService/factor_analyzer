@@ -21,16 +21,18 @@ build:
 
 requirements:
   build:
-    - python
+    - python >=3.6
     - setuptools
     - pandas
-    - scipy
-    - numpy
+    - scipy 1.2.1
+    - numpy 1.16.2
+    - scikit-learn 0.20.1
   run:
-    - python
+    - python >=3.6
     - pandas
-    - scipy
-    - numpy
+    - scipy 1.2.1
+    - numpy 1.16.2
+    - scikit-learn 0.20.1
 
 test:
   imports:
