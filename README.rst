@@ -72,7 +72,7 @@ methods that enable users to perform factor analysis and score new data
 using the fitted factor model. Users can also perform optional otations
 on a factor loading matrix using the ``Rotator`` class.
 
-The following `rotations options are available in both ``FactorAnalyzer``
+The following rotation options are available in both ``FactorAnalyzer`` 
 and ``Rotator``:
 
     (a) varimax (orthogonal rotation)
@@ -108,8 +108,8 @@ Exploratory factor analysis example.
   In [4]: fa.fit(df_features)                                                                                                                            
   Out[4]: 
   FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
-          method='minres', n_factors=3, rotation=None, rotation_kwargs={},
-          use_smc=True)
+                 method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                 use_smc=True)
 
   In [5]: fa.loadings_                                                                                                                                   
   Out[5]: 
@@ -142,7 +142,8 @@ Confirmatory factor analysis example.
 
   In [4]: model_dict = {"F1": ["V1", "V2", "V3", "V4"], 
      ...:               "F2": ["V5", "V6", "V7", "V8"]} 
-  In [5]: model_spec = ModelSpecificationParser.parse_model_specification_from_dict(df_features, model_dict)                                             
+  In [5]: model_spec = ModelSpecificationParser.parse_model_specification_from_dict(df_features,
+     ...:                                                                           model_dict)
 
   In [6]: cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)                                                                                       
 

@@ -204,11 +204,6 @@ def partial_correlations(x):
     return pcor
 
 
-########################################################
-# Other helper functions
-########################################################
-
-
 def unique_elements(seq):
     """
     Get the first unique instance of every
