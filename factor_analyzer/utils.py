@@ -7,7 +7,131 @@ the confirmatory factor analysis module.
 :organization: ETS
 """
 import numpy as np
-import pandas as pd
+
+
+def cov(x):
+    """
+    Calculate the covariance matrix.
+
+    Parameters
+    ----------
+    x : array-like
+        A 1-D or 2-D array containing multiple variables
+        and observations. Each column of x represents a variable,
+        and each row a single observation of all those variables.
+
+    Returns
+    -------
+    r : numpy array
+        The covariance matrix of the variables.
+    """
+    r = np.cov(x, rowvar=False, ddof=0)
+    return r
+
+
+def corr(x):
+    """
+    Calculate the correlation matrix.
+
+    Parameters
+    ----------
+    x : array-like
+        A 1-D or 2-D array containing multiple variables
+        and observations. Each column of x represents a variable,
+        and each row a single observation of all those variables.
+
+    Returns
+    -------
+    r : numpy array
+        The correlation matrix of the variables.
+    """
+    x = (x - x.mean(0)) / x.std(0)
+    r = cov(x)
+    return r
+
+
+def apply_impute_nan(x, how='mean'):
+    """
+    Apply a function to impute NaN values
+    with the mean or median.
+
+    Parameters
+    ----------
+    x : array-like
+        A 1-D array to impute.
+    how : str, optional
+        Whether to impute the 'mean'
+        or 'median'.
+        Defaults to 'mean'.
+
+    Returns
+    -------
+    x : numpy array
+        The array, with missing values imputed.
+    """
+
+    if how == 'mean':
+        x[np.isnan(x)] = np.nanmean(x)
+    elif how == 'median':
+        x[np.isnan(x)] = np.nanmedian(x)
+    return x
+
+
+def impute_values(x, how='mean'):
+    """
+    Impute NaN values with the mean or median,
+    or drop rows with NaN values.
+
+    Parameters
+    ----------
+    x : array-like
+        An array to impute.
+    how : str, optional
+        Whether to impute the 'mean'
+        or 'median'.
+        Defaults to 'mean'.
+
+    Returns
+    -------
+    x : numpy array
+        The array, with missing values imputed or dropped.
+    """
+    # impute mean or median, if `how` is set to 'mean' or 'median'
+    if how in ['mean', 'median']:
+        x = np.apply_along_axis(apply_impute_nan, 0, x, how=how)
+    # drop missing if `how` is set to 'drop'
+    elif how == 'drop':
+        x = x[~np.isnan(x).any(1), :].copy()
+    return x
+
+
+def smc(corr_mtx, sort=False):
+    """
+    Calculate the squared multiple correlations.
+    This is equivalent to regressing each variable
+    on all others and calculating the r-squared values.
+
+    Parameters
+    ----------
+    corr_mtx : array-like
+        The correlation matrix used to calculate SMC.
+    sort : bool, optional
+        Whether to sort the values for SMC
+        before returning.
+        Defaults to False.
+
+    Returns
+    -------
+    smc : numpy array
+        The squared multiple correlations matrix.
+    """
+
+    corr_inv = np.linalg.inv(corr_mtx)
+    smc = 1 - 1 / np.diag(corr_inv)
+
+    if sort:
+        smc = np.sort(smc)
+    return smc
 
 
 def covariance_to_correlation(m):
@@ -16,7 +140,7 @@ def covariance_to_correlation(m):
 
     Parameters
     ----------
-    m : numpy array
+    m : array-like
         The covariance matrix.
 
     Returns
@@ -41,37 +165,30 @@ def covariance_to_correlation(m):
     return retval
 
 
-def partial_correlations(data):
+def partial_correlations(x):
     """
     This is a python port of the `pcor` function implemented in
     the `ppcor` R package, which computes partial correlations
-    of each pair of variables in the given data frame `data`,
-    excluding all other variables.
+    of each pair of variables in the given array, excluding all
+    other variables.
 
     Parameters
     ----------
-    data : pd.DataFrame
-        Data frame containing the feature values.
+    x : array-like
+        An array containing the feature values.
 
     Returns
     -------
-    df_pcor : pd.DataFrame
-        Data frame containing the partial correlations of of each
-        pair of variables in the given data frame `df`,
-        excluding all other variables.
+    pcor : numpy array
+        An array containing the partial correlations of of each
+        pair of variables in the given array, excluding all other
+        variables.
     """
-    numrows, numcols = data.shape
-    df_cov = data.cov()
-    columns = df_cov.columns
-
-    # return a matrix of nans if the number of columns is
-    # greater than the number of rows. When the ncol == nrows
-    # we get the degenerate matrix with 1 only. It is not meaningful
-    # to compute partial correlations when ncol > nrows.
-
+    numrows, numcols = x.shape
+    x_cov = cov(x)
     # create empty array for when we cannot compute the
     # matrix inversion
-    empty_array = np.empty((len(columns), len(columns)))
+    empty_array = np.empty((numcols, numcols))
     empty_array[:] = np.nan
     if numcols > numrows:
         icvx = empty_array
@@ -79,13 +196,12 @@ def partial_correlations(data):
         # we also return nans if there is singularity in the data
         # (e.g. all human scores are the same)
         try:
-            icvx = np.linalg.inv(df_cov)
+            icvx = np.linalg.inv(x_cov)
         except np.linalg.LinAlgError:
             icvx = empty_array
     pcor = -1 * covariance_to_correlation(icvx)
     np.fill_diagonal(pcor, 1.0)
-    df_pcor = pd.DataFrame(pcor, columns=columns, index=columns)
-    return df_pcor
+    return pcor
 
 
 def unique_elements(seq):
@@ -115,13 +231,13 @@ def fill_lower_diag(x):
 
     Parameters
     ----------
-    x : np.array
+    x : array-like
         The flattened input matrix that will be used to fill
         the lower diagonal of the square matrix.
 
     Returns
     -------
-    out : np.array
+    out : numpy array
         The output square matrix, with the lower
         diagonal filled by x.
 
@@ -145,10 +261,10 @@ def merge_variance_covariance(variances, covariances=None):
 
     Parameters
     ----------
-    variances : np.array
+    variances : array-like
         The variances that will be used to fill the diagonal
         of the square matrix.
-    covariances : np.array or None, optional
+    covariances : array-like or None, optional
         The flattened input matrix that will be used to fill
         the lower and upper diagonal of the square matrix. If
         None, then only the variances will be used.
@@ -156,17 +272,15 @@ def merge_variance_covariance(variances, covariances=None):
 
     Returns
     -------
-    variance_covariance : np.array
+    variance_covariance : numpy array
         The variance-covariance matrix.
     """
-    variances = np.array(variances)
     variances = (variances if len(variances.shape) == 1
                  else np.squeeze(variances, axis=1))
     if covariances is None:
         variance_covariance = np.zeros((variances.shape[0],
                                         variances.shape[0]))
     else:
-        covariances = np.array(covariances)
         variance_covariance = fill_lower_diag(covariances)
         variance_covariance += variance_covariance.T
     np.fill_diagonal(variance_covariance, variances)
@@ -179,7 +293,7 @@ def get_first_idxs_from_values(x, eq=1, use_columns=True):
 
     Parameters
     ----------
-    x : np.array
+    x : array-like
         The input matrix.
     eq : str or int, optional
         The given value to find.
@@ -209,23 +323,28 @@ def get_first_idxs_from_values(x, eq=1, use_columns=True):
     return row_idx, col_idx
 
 
-def get_free_parameter_idxs(x, eq='X'):
+def get_free_parameter_idxs(x, eq=1):
     """
     Get the free parameter indexes from
     the flattened matrix.
 
     Parameters
     ----------
-    x : np.array
+    x : array-like
         The input matrix.
     eq : str or int, optional
         The value that free parameters
         should be equal to. NaN fields
         will be populated with this value.
-        Defaults to 'X'
+        Defaults to 1
+
+    Returns
+    -------
+    idx : numpy array
+        The free parameter indexes.
     """
-    x = pd.DataFrame(x).fillna(eq)
-    x = x.values.flatten(order='F')
+    x[np.isnan(x)] = eq
+    x = x.flatten(order='F')
     return np.where(x == eq)[0]
 
 
@@ -243,7 +362,7 @@ def duplication_matrix(n=1):
 
     Returns
     -------
-    duplication_matrix : np.array
+    duplication_matrix : numpy array
         The duplication matrix.
 
     Raises`
@@ -278,12 +397,12 @@ def duplication_matrix_pre_post(x):
 
     Parameters
     ----------
-    x : np.array
+    x : array-like
         The input matrix
 
     Returns
     -------
-    out : pd.DataFrame
+    out : numpy array
         The transformed matrix.
 
     Raises
@@ -305,7 +424,7 @@ def duplication_matrix_pre_post(x):
     out[u, :] = out[u, :] / 2.0
     out = out[:, idx1] + out[:, idx2]
     out[:, u] = out[:, u] / 2.0
-    return pd.DataFrame(out)
+    return out
 
 
 def commutation_matrix(p, q):
@@ -323,7 +442,7 @@ def commutation_matrix(p, q):
 
     Returns
     -------
-    commutation_matrix : np.array
+    commutation_matrix : numpy array
         The commutation matrix
 
     References
@@ -350,7 +469,7 @@ def get_symmetric_lower_idxs(n=1, diag=True):
 
     Returns
     -------
-    indexes : np.array
+    indexes : numpy array
         The indexes for the lower triangle.
     """
     rows = np.repeat(np.arange(n), n).reshape(n, n)
@@ -375,10 +494,9 @@ def get_symmetric_upper_idxs(n=1, diag=True):
 
     Returns
     -------
-    indexes : np.array
+    indexes : numpy array
         The indexes for the upper triangle.
     """
-
     rows = np.repeat(np.arange(n), n).reshape(n, n)
     cols = rows.T
     temp = np.arange(n * n).reshape(n, n)

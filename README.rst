@@ -12,12 +12,17 @@ FactorAnalyzer
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
 
-This is a Python module to perform exploratory factor analysis, with several
-optional rotations. Estimation can be performed using a minimum residual
-(minres) solution (identitical to unweighted least squares), or maximum
-likelihood estimation (MLE).
+This is a Python module to perform exploratory and factor analysis (EFA), with several 
+optional rotations. It also includes a class to perform confirmatory factor
+analysis (CFA), with certain pre-defined constraints. In expoloratory factor analysis,
+factor extraction can be performed using a variety of estimation techniques. The
+``factor_analyzer`` package allows users to perfrom EFA using either (1) a minimum
+residual (MINRES) solution, (2) a maximum likelihood (ML) solution, or (3) a principal
+factor solution. However, CFA can only be performe using an ML solution.
 
-Portions of this code are ported from the excellent R library ``psych``.
+Both the EFA and CFA classes within this package are fully compatible with `scikit-learn`.
+Portions of this code are ported from the excellent R library `psych`, and the `sem`
+package provided inspiration for the CFA class.
 
 Please see the `official documentation <http://factor-analyzer.readthedocs.io/en/latest/index.html>`__ for additional details.
 
@@ -36,12 +41,13 @@ variable and the latent factors.
 Confirmatory factor analysis (CFA), a closely associated technique, is
 used to test an a priori hypothesis about latent relationships among sets
 of observed variables. In CFA, the researcher specifies the expected pattern
-of factor loadings, and other possible constraints on the model.
+of factor loadings (and possibly other constraints), and fits a model according
+to this specification.
 
 Typically, a number of factors (K) in an EFA or CFA model is selected
 such that it is substantially smaller than the number of variables. The
 factor analysis model can be estimated using a variety of standard
-estimation methods, including but not limited to OLS, minres, or MLE.
+estimation methods, including but not limited MINRES or ML.
 
 Factor loadings are similar to standardized regression coefficients, and
 variables with higher loadings on a particular factor can be interpreted
@@ -61,13 +67,12 @@ Two common types of rotations are:
    correlated.
 
 This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer``class. The class includes an ``analyze()`` method that
-allows users to perform factor analysis using either minres or MLE, with
-optional rotations on the factor loading matrices. The package also offers
-a stand-alone ``Rotator`` class to perform common rotations on an unrotated
-loading matrix.
+``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()`` 
+methods that enable users to perform factor analysis and score new data
+using the fitted factor model. Users can also perform optional otations
+on a factor loading matrix using the ``Rotator`` class.
 
-The following rotations options are available in both ``FactorAnalyzer``
+The following rotation options are available in both ``FactorAnalyzer`` 
 and ``Rotator``:
 
     (a) varimax (orthogonal rotation)
@@ -80,10 +85,11 @@ and ``Rotator``:
 
 In adddition, the package includes a ``confirmatory_factor_analyzer``
 module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
-class includes an ``analyze()`` method that allows users to perform
-confirmatory factor analysis using MLE. Performing CFA requires users
-to specify a model with the expected factor loading relationships and
-other constraints.
+class includes ``fit()`` and ``transform()``  that enable users to perform
+confirmatory factor analysis and score new data using the fitted model.
+Performing CFA requires users to specify in advance a model specification
+with the expected factor loading relationships. This can be done using
+the ``ModelSpecificationParser`` class.
 
 Examples
 --------
@@ -92,111 +98,82 @@ Exploratory factor analysis example.
 
 .. code:: python
 
-    In [1]: import pandas as pd
+  In [1]: import pandas as pd 
+     ...: from factor_analyzer import FactorAnalyzer                                                                                                     
 
-    In [2]: from factor_analyzer import FactorAnalyzer
+  In [2]: df_features = pd.read_csv('tests/data/test02.csv')                                                                                             
 
-    In [3]: df_features = pd.read_csv('test02.csv')
+  In [3]: fa = FactorAnalyzer(rotation=None)                                                                                                             
 
-    In [4]: fa = FactorAnalyzer()
+  In [4]: fa.fit(df_features)                                                                                                                            
+  Out[4]: 
+  FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                 method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                 use_smc=True)
 
-    In [5]: fa.analyze(df_features, 3, rotation=None)
+  In [5]: fa.loadings_                                                                                                                                   
+  Out[5]: 
+  array([[-0.12991218,  0.16398151,  0.73823491],
+         [ 0.03899558,  0.04658425,  0.01150343],
+         [ 0.34874135,  0.61452341, -0.07255666],
+         [ 0.45318006,  0.7192668 , -0.0754647 ],
+         [ 0.36688794,  0.44377343, -0.01737066],
+         [ 0.74141382, -0.15008235,  0.29977513],
+         [ 0.741675  , -0.16123009, -0.20744497],
+         [ 0.82910167, -0.20519428,  0.04930817],
+         [ 0.76041819, -0.23768727, -0.12068582],
+         [ 0.81533404, -0.12494695,  0.17639684]])
 
-    In [6]: fa.loadings
-    Out[6]: 
-               Factor1   Factor2   Factor3
-    sex      -0.129912 -0.163982  0.738235
-    zygosity  0.038996 -0.046584  0.011503
-    moed      0.348741 -0.614523 -0.072557
-    faed      0.453180 -0.719267 -0.075465
-    faminc    0.366888 -0.443773 -0.017371
-    english   0.741414  0.150082  0.299775
-    math      0.741675  0.161230 -0.207445
-    socsci    0.829102  0.205194  0.049308
-    natsci    0.760418  0.237687 -0.120686
-    vocab     0.815334  0.124947  0.176397
-
-    In [7]: fa.get_uniqueness()
-    Out[7]: 
-              Uniqueness
-    sex         0.411242
-    zygosity    0.996177
-    moed        0.495476
-    faed        0.271588
-    faminc      0.668157
-    english     0.337916
-    math        0.380890
-    socsci      0.268054
-    natsci      0.350704
-    vocab       0.288503
-
-    In [8]: fa.get_factor_variance()
-    Out[8]: 
-                     Factor1   Factor2   Factor3
-    SS Loadings     3.510189  1.283710  0.737395
-    Proportion Var  0.351019  0.128371  0.073739
-    Cumulative Var  0.351019  0.479390  0.553129
+  In [6]: fa.get_communalities()                                                                                                                         
+  Out[6]: 
+  array([0.5887579 , 0.00382308, 0.50452402, 0.72841182, 0.33184336,
+         0.66208429, 0.61911037, 0.73194557, 0.64929612, 0.71149718])
 
 Confirmatory factor analysis example.
 
 .. code:: python
 
-    In [1]: import pandas as pd
+  In [1]: import pandas as pd                                                                                                                            
 
-    In [2]: from factor_analyzer import ConfirmatoryFactorAnalyzer
+  In [2]: from factor_analyzer import (ConfirmatoryFactorAnalyzer, 
+     ...:                              ModelSpecificationParser)                                                                                         
 
-    In [3]: data = pd.read_csv('tests/data/test12.csv')
+  In [3]: df_features = pd.read_csv('tests/data/test11.csv')                                                                                             
 
-    In [4]: model = {'loadings': {"Verbal": ["english", "vocab", "socsci"],
-       ...:                       "Quant": ["socsci", "math", "natsci"]}}
-                        
-    In [6]: cfa.analyze(data, model, fix_first=False)
+  In [4]: model_dict = {"F1": ["V1", "V2", "V3", "V4"], 
+     ...:               "F2": ["V5", "V6", "V7", "V8"]} 
+  In [5]: model_spec = ModelSpecificationParser.parse_model_specification_from_dict(df_features,
+     ...:                                                                           model_dict)
 
-    In [5]: cfa = ConfirmatoryFactorAnalyzer()
+  In [6]: cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)                                                                                       
 
-    In [7]: cfa.loadings
-    Out[7]: 
-               Verbal     Quant
-    english  3.532436  0.000000
-    vocab    4.221969  0.000000
-    socsci   3.281362  1.099739
-    math     0.000000  4.888016
-    natsci   0.000000  4.850257
+  In [7]: cfa.fit(df_features.values)                                                                                                                    
 
-    In [8]:  cfa.factor_covs
-    Out[8]: 
-              Verbal     Quant
-    Verbal  1.000000  0.833013
-    Quant   0.833013  1.000000
+  In [8]: cfa.loadings_                                                                                                                                  
+  Out[8]: 
+  array([[0.99131285, 0.        ],
+         [0.46074919, 0.        ],
+         [0.3502267 , 0.        ],
+         [0.58331488, 0.        ],
+         [0.        , 0.98621042],
+         [0.        , 0.73389239],
+         [0.        , 0.37602988],
+         [0.        , 0.50049507]])
 
-    In [9]: cfa.error_vars
-    Out[9]: 
-                 evars
-    english   9.249541
-    vocab     5.044325
-    socsci    5.782677
-    math     15.519003
-    natsci    9.406164
+  In [9]: cfa.factor_varcovs_                                                                                                                           
+  Out[9]: 
+  array([[1.        , 0.17385704],
+         [0.17385704, 1.        ]])
 
-    In [10]: loadings_se, error_vars_se = cfa.get_standard_errors()
-
-    In [11]: loadings_se
-    Out[11]: 
-               Verbal     Quant
-    english  0.100785  0.000000
-    vocab    0.098195  0.000000
-    socsci   0.217784  0.216251
-    math     0.000000  0.138298
-    natsci   0.000000  0.123820
-
-    In [12]: error_vars_se
-    Out[12]: 
-             error_vars
-    english    0.385040
-    vocab      0.353237
-    socsci     0.307728
-    math       0.742082
-    natsci     0.600859
+  In [10]: cfa.transform(df_features.values)                                                                                                             
+  Out[10]: 
+  array([[-0.46852166, -1.08708035],
+         [ 2.59025301,  1.20227783],
+         [-0.47215977,  2.65697245],
+         ...,
+         [-1.5930886 , -0.91804114],
+         [ 0.19430887,  0.88174818],
+         [-0.27863554, -0.7695101 ]])
 
 Requirements
 ------------
@@ -205,11 +182,12 @@ Requirements
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``
+-  ``scikit-learn``
 
 Contributing
 ------------
 
-Contributions to FactorAnalyzer are very welcome. Please file an issue
+Contributions to ``factor_analyzer`` are very welcome. Please file an issue
 on GitHub, or contact jbiggs@ets.org if you would like to contribute.
 
 Installation
@@ -221,7 +199,7 @@ You can install this package via ``pip`` with:
 
 Alternatively, you can install via ``conda`` with:
 
-``$ conda install -c desilinguist factor_analyzer``
+``$ conda install -c ets factor_analyzer``
 
 License
 -------

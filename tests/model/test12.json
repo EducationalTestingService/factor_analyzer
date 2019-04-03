@@ -1,2 +1,2 @@
-{"loadings": {"Verbal": ["english", "vocab", "socsci"],
-              "Quant": ["socsci", "math", "natsci"]}}
+{"Verbal": ["english", "vocab", "socsci"],
+ "Quant": ["socsci", "math", "natsci"]}

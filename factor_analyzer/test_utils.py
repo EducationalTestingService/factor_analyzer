@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 from os.path import join
 
+from factor_analyzer.utils import unique_elements
+from factor_analyzer import ModelSpecificationParser
 from factor_analyzer import ConfirmatoryFactorAnalyzer
 from factor_analyzer import FactorAnalyzer
 from factor_analyzer import Rotator
@@ -73,28 +75,25 @@ def calculate_py_output(test_name,
 
     if use_corr_matrix:
         X = data.corr()
-        scale_mean = data.mean(0)
-        scale_std = data.std(0)
     else:
         X = data.copy()
-        scale_mean = None
-        scale_std = None
 
     rotation = None if rotation == 'none' else rotation
     method = {'uls': 'minres'}.get(method, method)
 
-    fa = FactorAnalyzer()
-    fa.analyze(X, factors, method=method, rotation=rotation, use_corr_matrix=use_corr_matrix)
+    fa = FactorAnalyzer(n_factors=factors, method=method,
+                        rotation=rotation, is_corr_matrix=use_corr_matrix)
+    fa.fit(X)
 
     evalues, values = fa.get_eigenvalues()
 
     return {'value': values,
             'evalues': evalues,
-            'structure': fa.structure,
-            'loading': fa.loadings,
-            'uniquenesses': fa.get_uniqueness(),
+            'structure': fa.structure_,
+            'loading': fa.loadings_,
+            'uniquenesses': fa.get_uniquenesses(),
             'communalities': fa.get_communalities(),
-            'scores': fa.get_scores(data, scale_mean, scale_std)}
+            'scores': fa.transform(data)}
 
 
 def collect_r_output(test_name,
@@ -178,29 +177,23 @@ def normalize(data, absolute=False):
     data : pd.DataFrame
         The normalized data frame.
     """
-    # check for possible index column
-    # if there is an unnamed column, we want to make it the index
-    possible_index = [col for col in data.columns if 'Unnamed' in col]
 
-    # get numeric columns, in case we are taking absolute value
-    numeric_cols = [col for col in data.dtypes[data.dtypes != 'object'].index.values
-                    if col not in possible_index]
+    # # get numeric columns, in case we are taking absolute value
+    data = data.copy()
+
+    if isinstance(data, pd.DataFrame):
+        data = data[[col for col in data if 'unnamed' not in col.lower()]].copy()
+        data = data.select_dtypes(include=[np.number])
+        data = data.values
+    else:
+        if data.ndim == 1:
+            data = np.expand_dims(data, axis=1)
 
     # take absolute value
     if absolute:
-        data[numeric_cols] = data[numeric_cols].abs()
+        data = np.abs(data)
 
-    # set index
-    if len(possible_index) == 1:
-        data.set_index(possible_index[0], inplace=True)
-
-    # sort the values
-    data = data[data.abs().sum().sort_values(ascending=False).index.values]
-
-    # update index name and column names
-    data.index.name = ''
-    data.columns = ['col{}'.format(i) for i in range(1, data.shape[1] + 1)]
-    return data.reset_index(drop=True)
+    return data
 
 
 def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
@@ -235,18 +228,22 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
         data1 = normalize(data1, absolute)
         data2 = normalize(data2, absolute)
 
-    assert data1.shape == data2.shape
+    # print(data1)
+    # print(data2)
+
+    err_msg = 'r - py: {} != {}'
+    assert data1.shape == data2.shape, err_msg.format(data1.shape, data2.shape)
 
     arr = np.empty(shape=data1.shape, dtype=bool)
     for i in range(data1.shape[0]):
         for j in range(data2.shape[1]):
-            check = math.isclose(data1.iloc[i, j],
-                                 data2.iloc[i, j],
+            check = math.isclose(data1[i, j],
+                                 data2[i, j],
                                  rel_tol=rel_tol,
                                  abs_tol=abs_tol)
             arr[i, j] = check
 
-    check = arr.sum(None) / arr.size
+    check = np.sum(arr) / arr.size
     return check
 
 
@@ -334,7 +331,7 @@ def check_scenario(test_name,
 
         data1 = r_output[output_type]
         data2 = py_output[output_type]
-
+        print(output_type)
         yield check_close(data1, data2, rel_tol, abs_tol)
 
 
@@ -376,8 +373,8 @@ def check_rotation(test_name,
     r_loading = r_input['loading']
     r_loading = normalize(r_loading, absolute=False)
 
-    rotator = Rotator()
-    rotated_loading, _, _ = rotator.rotate(r_loading, rotation)
+    rotator = Rotator(method=rotation)
+    rotated_loading = rotator.fit_transform(r_loading, rotation)
 
     r_output = collect_r_output(test_name, factors, method, rotation,
                                 output_types=['loading'])
@@ -392,10 +389,8 @@ def check_rotation(test_name,
 def calculate_py_output_cfa(json_name,
                             data_name,
                             is_cov=False,
-                            fix_first=True,
                             data_dir=None,
                             json_dir=None,
-                            maxiter=200,
                             n_obs=None,
                             **kwargs):
 
@@ -414,35 +409,34 @@ def calculate_py_output_cfa(json_name,
     with open(jsonname) as model_file:
         model = json.load(model_file)
 
-    if is_cov:
-        data = data * ((n_obs - 1) / n_obs)
+    columns = unique_elements([v for f in model.values() for v in f])
+    data = data[columns].copy()
+    model_spec = ModelSpecificationParser.parse_model_specification_from_dict(data, model)
 
-    cfa = ConfirmatoryFactorAnalyzer()
-    cfa.analyze(data, model,
-                n_obs=n_obs,
-                is_cov=is_cov,
-                fix_first=fix_first,
-                maxiter=maxiter,
-                disp=False)
+    cfa = ConfirmatoryFactorAnalyzer(model_spec,
+                                     n_obs=n_obs,
+                                     is_cov_matrix=is_cov,
+                                     disp=False)
+    cfa.fit(data.values)
+    transform = cfa.transform(data.values)
 
     (loadingsse,
      errorcovsse) = cfa.get_standard_errors()
 
-    outputs = {'errorvars': cfa.error_vars.copy(),
+    outputs = {'loadings': cfa.loadings_.copy(),
+               'errorvars': cfa.error_vars_.copy(),
+               'factorcovs': cfa.factor_varcovs_.copy(),
+               'loadingsse': loadingsse.copy(),
                'errorvarsse': errorcovsse.copy(),
-               'factorcovs': cfa.factor_covs.copy(),
-               'loadings': cfa.loadings.copy(),
-               'loadingsse': loadingsse.copy()}
+               'transform': transform.copy()}
 
-    return outputs, cfa.n_factors
+    return outputs, cfa.model.n_factors
 
 
 def check_cfa(json_name_input,
               data_name_input,
               data_name_expected=None,
               is_cov=False,
-              fix_first=True,
-              maxiter=200,
               n_obs=None,
               rel_tol=0,
               abs_tol=0,
@@ -454,17 +448,14 @@ def check_cfa(json_name_input,
     if data_name_expected is None:
         data_name_expected = json_name_input
 
-    output_types = ['errorvars', 'errorvarsse',
-                    'factorcovs', 'loadings',
-                    'loadingsse']
+    output_types = ['loadings', 'errorvars', 'factorcovs',
+                    'loadingsse', 'errorvarsse', 'transform']
 
     (outputs_p,
      factors) = calculate_py_output_cfa(json_name_input,
                                         data_name_input,
                                         is_cov=is_cov,
                                         n_obs=n_obs,
-                                        maxiter=maxiter,
-                                        fix_first=fix_first,
                                         data_dir=data_dir,
                                         json_dir=json_dir,
                                         **kwargs)
@@ -475,18 +466,16 @@ def check_cfa(json_name_input,
                                  'none',
                                  output_types=output_types,
                                  top_dir=expected_dir,
-                                 index_col=0)
+                                 header=None)
 
     for output_type in output_types:
 
-        data1 = outputs_r[output_type]
+        data1 = outputs_r[output_type].values
         data2 = outputs_p[output_type]
-
-        print(output_type)
         print(data1)
         print(data2)
 
         yield check_close(data1, data2,
                           rel_tol=rel_tol,
                           abs_tol=abs_tol,
-                          with_normalize=False)
+                          with_normalize=True)

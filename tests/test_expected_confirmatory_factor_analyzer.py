@@ -8,8 +8,9 @@ Tests for ConfirmatoryFactorAnalyzer class
 import numpy as np
 import pandas as pd
 from factor_analyzer.test_utils import check_cfa
-from factor_analyzer.confirmatory_factor_analyzer import ModelParser
-
+from factor_analyzer.confirmatory_factor_analyzer import (ModelSpecification,
+                                                          ModelSpecificationParser,
+                                                          ConfirmatoryFactorAnalyzer)
 from nose.tools import eq_, raises
 from numpy.testing import assert_array_equal
 
@@ -24,19 +25,6 @@ def test_11_cfa():
 
     for check in check_cfa(json_name_input,
                            data_name_input,
-                           fix_first=False,
-                           rel_tol=0.1):
-        assert check >= THRESHOLD
-
-
-def test_11_fix_first_cfa():
-
-    json_name_input = 'test11-fix-first'
-    data_name_input = 'test11'
-
-    for check in check_cfa(json_name_input,
-                           data_name_input,
-                           fix_first=True,
                            rel_tol=0.1):
         assert check >= THRESHOLD
 
@@ -48,20 +36,7 @@ def test_12_cfa():
 
     for check in check_cfa(json_name_input,
                            data_name_input,
-                           fix_first=False,
-                           rel_tol=0.1):
-        assert check >= THRESHOLD
-
-
-def test_12_cfa_fix_first_cfa():
-
-    json_name_input = 'test12-fix-first'
-    data_name_input = 'test12'
-
-    for check in check_cfa(json_name_input,
-                           data_name_input,
-                           fix_first=True,
-                           rel_tol=0.1):
+                           abs_tol=0.05):
         assert check >= THRESHOLD
 
 
@@ -73,153 +48,113 @@ def test_13_cfa():
     for check in check_cfa(json_name_input,
                            data_name_input,
                            index_col=0,
-                           fix_first=False,
                            is_cov=True,
                            n_obs=64,
-                           maxiter=250,
                            rel_tol=0.1):
         assert check >= THRESHOLD
 
 
-def test_13_cfa_first_cfa():
+def test_14_cfa():
 
-    json_name_input = 'test13-fix-first'
-    data_name_input = 'test13'
+    json_name_input = 'test14'
+    data_name_input = 'test14'
 
     for check in check_cfa(json_name_input,
                            data_name_input,
                            index_col=0,
-                           fix_first=True,
-                           is_cov=True,
-                           n_obs=64,
-                           maxiter=250,
                            rel_tol=0.1):
         assert check >= THRESHOLD
 
 
-class TestModelParser:
+@raises(ValueError)
+def test_14_cfa_no_model():
 
-    def setUp(self):
+    X = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
 
-        self.elements = ['loadings',
-                         'error_vars',
-                         'factor_vars',
-                         'factor_covs',
-                         'variable_names',
-                         'factor_names',
-                         'n_factors',
-                         'n_variables',
-                         'n_lower_diag']
+    cfa = ConfirmatoryFactorAnalyzer('string_not_model')
+    cfa.fit(X)
 
-    def check_result(self, result, expected):
-        for idx in range(len(result)):
-            print(self.elements[idx])
-            x, y = result[idx], expected[idx]
-            if isinstance(x, np.ndarray):
-                assert_array_equal(x, y)
+
+@raises(AssertionError)
+def test_14_cfa_bad_bounds():
+
+    X = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+
+    cfa = ConfirmatoryFactorAnalyzer(bounds=[(0, 1)])
+    cfa.fit(X)
+
+
+@raises(ValueError)
+def test_14_cfa_cov_with_no_obs():
+
+    ConfirmatoryFactorAnalyzer(is_cov_matrix=True)
+
+
+class TestModelSpecificationParser:
+
+    def test_model_spec_str(self):
+
+        ms = ModelSpecification(np.array([[0, 0, 0]]), 3, 1)
+        assert str(ms).startswith('<ModelSpecification object at ')
+
+    def test_model_spec_as_dict(self):
+
+        loadings = np.array([[0, 0, 0]])
+        n_factors = 3
+        n_variables = 1
+        ms = ModelSpecification(loadings, n_factors, n_variables)
+
+        expected = {'loadings': loadings,
+                    'n_variables': n_variables,
+                    'n_factors': n_factors}
+        new_dict = ms.get_model_specification_as_dict()
+        for key, value in expected.items():
+            assert key in new_dict
+            if isinstance(value, np.ndarray):
+                assert_array_equal(new_dict[key], value)
             else:
-                eq_(x, y)
+                eq_(new_dict[key], value)
 
-    def test_model_parser_with_only_loadings(self):
+    def test_model_spec_parser_from_dict_none(self):
+        X = np.array([[0, 0, 0]])
+        ms = ModelSpecificationParser.parse_model_specification_from_dict(X, None)
+        assert isinstance(ms, ModelSpecification)
+        eq_(ms.n_factors, 3)
+        eq_(ms.n_variables, 3)
+        assert_array_equal(ms.loadings, np.ones((3, 3), dtype=int))
 
-        loadings = pd.DataFrame({'F1': [1, 1, 1, 1, 0, 0],
-                                 'F2': [0, 0, 0, 1, 1, 1]}).values
+    @raises(ValueError)
+    def test_model_spec_parser_from_dict_error(self):
+        X = np.array([[0, 0, 0]])
+        ModelSpecificationParser.parse_model_specification_from_dict(X, 'not_a_model')
 
-        expected = (loadings,                  # loadings
-                    np.full((6, 1), np.nan),   # error_vars
-                    np.full((2, 1), np.nan),   # factor_vars
-                    np.full((1, 1), np.nan),   # factor_covs
-                    ['var1', 'var2', 'var3', 'var4', 'var5', 'var6'],
-                    ['F1', 'F2'],
-                    2,                         # n_factors
-                    6,                         # n_variables
-                    1)                         # n_lower_diag
+    def test_model_spec_parser_from_array_none(self):
+        X = np.array([[0, 0, 0]])
+        ms = ModelSpecificationParser.parse_model_specification_from_array(X, None)
+        assert isinstance(ms, ModelSpecification)
+        eq_(ms.n_factors, 3)
+        eq_(ms.n_variables, 3)
+        assert_array_equal(ms.loadings, np.ones((3, 3), dtype=int))
 
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']}}
+    def test_model_spec_parser_from_array(self):
+        X = np.array([[0, 0, 0]])
+        spec = np.ones((3, 3), dtype=int)
+        ms = ModelSpecificationParser.parse_model_specification_from_array(X, spec)
+        assert isinstance(ms, ModelSpecification)
+        eq_(ms.n_factors, 3)
+        eq_(ms.n_variables, 3)
+        assert_array_equal(ms.loadings, np.ones((3, 3), dtype=int))
 
-        mp = ModelParser()
-        result = mp.parse(model)
-        self.check_result(result, expected)
+    def test_model_spec_parser_from_frame(self):
+        X = np.array([[0, 0, 0]])
+        spec = pd.DataFrame(np.ones((3, 3), dtype=int))
+        ms = ModelSpecificationParser.parse_model_specification_from_array(X, spec)
+        assert isinstance(ms, ModelSpecification)
+        eq_(ms.n_factors, 3)
+        eq_(ms.n_variables, 3)
+        assert_array_equal(ms.loadings, np.ones((3, 3), dtype=int))
 
-    def test_model_parser_with_loadings_and_factor_var_and_cov(self):
-
-        loadings = pd.DataFrame({'F1': [1, 1, 1, 1, 0, 0],
-                                 'F2': [0, 0, 0, 1, 1, 1]}).values
-
-        expected = (loadings,                  # loadings
-                    np.full((6, 1), np.nan),   # error_vars
-                    np.ones((2, 1)),           # factor_vars
-                    np.zeros((1, 1)),          # factor_covs
-                    ['var1', 'var2', 'var3', 'var4', 'var5', 'var6'],
-                    ['F1', 'F2'],
-                    2,                         # n_factors
-                    6,                         # n_variables
-                    1)                         # n_lower_diag
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'factor_vars': [1, 1],
-                 'factor_covs': [[0, 0], [0, 0]]}
-
-        mp = ModelParser()
-        result = mp.parse(model)
-        self.check_result(result, expected)
-
-    @raises(AssertionError)
-    def test_model_parser_with_factor_cov_mismatch_shape(self):
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'factor_covs': [[0, 0], [0, 0], [0, 0]]}
-
-        mp = ModelParser()
-        mp.parse(model)
-
-    @raises(AssertionError)
-    def test_model_parser_with_factor_cov_1d_too_long(self):
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'factor_covs': [0, 0, 0, 0, 0, 0]}
-
-        mp = ModelParser()
-        mp.parse(model)
-
-    @raises(TypeError)
-    def test_model_parser_with_loadings_not_dict(self):
-
-        model = {'loadings': 'f1 = var1 + var2 + var3'}
-
-        mp = ModelParser()
-        mp.parse(model)
-
-    @raises(AssertionError)
-    def test_model_parser_with_error_vars_too_long(self):
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'errors_vars': [0, 0, 0, 0, 0, 0, 0]}
-
-        mp = ModelParser()
-        mp.parse(model)
-
-    @raises(AssertionError)
-    def test_model_parser_with_factor_vars_too_long(self):
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'factor_vars': [0, 0, 0]}
-
-        mp = ModelParser()
-        mp.parse(model)
-
-    @raises(KeyError)
-    def test_model_parser_with_wrong_key(self):
-
-        model = {'loadings': {'F1': ['var1', 'var2', 'var3', 'var4'],
-                              'F2': ['var4', 'var5', 'var6']},
-                 'factor_varsings': [0, 0, 0]}
-
-        mp = ModelParser()
-        mp.parse(model)
+    @raises(ValueError)
+    def test_model_spec_parser_from_array_error(self):
+        X = np.array([[0, 0, 0]])
+        ModelSpecificationParser.parse_model_specification_from_array(X, 'not_a_model')

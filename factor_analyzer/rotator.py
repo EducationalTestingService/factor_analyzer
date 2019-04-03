@@ -9,7 +9,8 @@ rotations of factor loading matrices.
 
 import numpy as np
 import scipy as sp
-import pandas as pd
+
+from sklearn.base import BaseEstimator
 
 ORTHOGONAL_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax']
 
@@ -18,11 +19,62 @@ OBLIQUE_ROTATIONS = ['promax', 'oblimin', 'quartimin']
 POSSIBLE_ROTATIONS = ORTHOGONAL_ROTATIONS + OBLIQUE_ROTATIONS
 
 
-class Rotator:
+class Rotator(BaseEstimator):
     """
     The Rotator class takes an (unrotated)
     factor loading matrix and performs one
     of several rotations.
+
+    Parameters
+    ----------
+    method : str, optional
+        The factor rotation method. Options include:
+            (a) varimax (orthogonal rotation)
+            (b) promax (oblique rotation)
+            (c) oblimin (oblique rotation)
+            (d) oblimax (orthogonal rotation)
+            (e) quartimin (oblique rotation)
+            (f) quartimax (orthogonal rotation)
+            (g) equamax (orthogonal rotation)
+        Defaults to 'varimax'.
+    normalize : bool or None, optional
+        Whether to perform Kaiser normalization
+        and de-normalization prior to and following
+        rotation. Used for varimax and promax rotations.
+        If None, default for promax is False, and default
+        for varimax is True.
+        Defaults to None.
+    power : int, optional
+        The power to which to raise the promax loadings
+        (minus 1). Numbers should generally range form 2 to 4.
+        Defaults to 4.
+    kappa : int, optional
+        The kappa value for the equamax objective.
+        Ignored if the method is not 'equamax'.
+        Defaults to 0.
+    gamma : int, optional
+        The gamma level for the oblimin objective.
+        Ignored if the method is not 'oblimin'.
+        Defaults to 0.
+    max_iter : int, optional
+        The maximum number of iterations.
+        Used for varimax and oblique rotations.
+        Defaults to `1000`.
+    tol : float, optional
+        The convergence threshold.
+        Used for varimax and oblique rotations.
+        Defaults to `1e-5`.
+
+    Attributes
+    ----------
+    loadings_ : numpy array, shape (n_features, n_factors)
+        The loadings matrix
+    rotation_ : numpy array, shape (n_factors, n_factors)
+        The rotation matrix
+    psi_ : numpy array or None
+        The factor correlations
+        matrix. This only exists
+        if the rotation is oblique.
 
     Notes
     -----
@@ -36,26 +88,46 @@ class Rotator:
     Examples
     --------
     >>> import pandas as pd
-    >>> from factor_analyzer import Rotator
-    >>> unrotated_loadings = pd.read_csv('loading_uls_none_3_test01.csv')
+    >>> from factor_analyzer import FactorAnalyzer, Rotator
+    >>> df_features = pd.read_csv('test02.csv')
+    >>> fa = FactorAnalyzer(rotation=None)
+    >>> fa.fit(df_features)
     >>> rotator = Rotator()
-    >>> loadings, rotate_mtx = rotator.rotate(unrotated_loadings, 'varimax')
-    >>> loadings
-               Factor1   Factor2   Factor3
-    sex      -0.076925  0.044992  0.762026
-    zygosity  0.018420  0.057579  0.012978
-    moed      0.060674  0.706943 -0.033120
-    faed      0.113147  0.845224 -0.034069
-    faminc    0.153070  0.555351 -0.001220
-    english   0.774515  0.147466  0.201190
-    math      0.706296  0.172295 -0.300973
-    socsci    0.839906  0.150589 -0.061835
-    natsci    0.766202  0.104519 -0.226524
-    vocab     0.813730  0.209159  0.074794
+    >>> rotator.fit_transform(fa.loadings_)
+    array([[-0.07693215,  0.04499572,  0.76211208],
+           [ 0.01842035,  0.05757874,  0.01297908],
+           [ 0.06067925,  0.70692662, -0.03311798],
+           [ 0.11314343,  0.84525117, -0.03407129],
+           [ 0.15307233,  0.5553474 , -0.00121802],
+           [ 0.77450832,  0.1474666 ,  0.20118338],
+           [ 0.7063001 ,  0.17229555, -0.30093981],
+           [ 0.83990851,  0.15058874, -0.06182469],
+           [ 0.76620579,  0.1045194 , -0.22649615],
+           [ 0.81372945,  0.20915845,  0.07479506]])
     """
 
-    @staticmethod
-    def _oblimax_obj(loadings, **kwargs):
+    def __init__(self,
+                 method='varimax',
+                 normalize=True,
+                 power=4,
+                 kappa=0,
+                 gamma=0,
+                 max_iter=500,
+                 tol=1e-5):
+
+        self.method = method
+        self.normalize = normalize
+        self.power = power
+        self.kappa = kappa
+        self.gamma = gamma
+        self.max_iter = max_iter
+        self.tol = tol
+
+        self.loadings_ = None
+        self.rotation_ = None
+        self.phi_ = None
+
+    def _oblimax_obj(self, loadings):
         """
         The Oblimax function objective.
 
@@ -68,18 +140,17 @@ class Rotator:
         -------
         gradient_dict : dict
             A dictionary with
-                - grad : np.array
-                    The gradient.
-                - criterion : float
-                    The value of the criterion for the objective.
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
         """
         gradient = -(4 * loadings**3 / (np.sum(loadings**4)) - 4 * loadings /
                      (np.sum(loadings**2)))
         criterion = (np.log(np.sum(loadings**4)) - 2 * np.log(np.sum(loadings**2)))
         return {'grad': gradient, 'criterion': criterion}
 
-    @staticmethod
-    def _quartimax_obj(loadings, **kwargs):
+    def _quartimax_obj(self, loadings):
         """
         Quartimax function objective.
 
@@ -92,17 +163,16 @@ class Rotator:
         -------
         gradient_dict : dict
             A dictionary with
-                - grad : np.array
-                    The gradient.
-                - criterion : float
-                    The value of the criterion for the objective.
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
         """
         gradient = -loadings**3
         criterion = -np.sum(np.diag(np.dot((loadings**2).T, loadings**2))) / 4
         return {'grad': gradient, 'criterion': criterion}
 
-    @staticmethod
-    def _oblimin_obj(loadings, gamma=0, **kwargs):
+    def _oblimin_obj(self, loadings):
         """
         The Oblimin function objective.
 
@@ -110,29 +180,25 @@ class Rotator:
         ----------
         loadings : array-like
             The loading matrix
-        gamma : int, optional
-            The gamma level for the objective.
-            Defaults to 0.
 
         Returns
         -------
         gradient_dict : dict
             A dictionary with
-                - grad : np.array
-                    The gradient.
-                - criterion : float
-                    The value of the criterion for the objective.
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
-        if (0 != gamma):
+        if (0 != self.gamma):
             p = loadings.shape[0]
             X = np.diag(1, p) - np.dot(np.zeros((p, p)), X)
         gradient = loadings * X
         criterion = np.sum(loadings**2 * X) / 4
         return {'grad': gradient, 'criterion': criterion}
 
-    @staticmethod
-    def _quartimin_obj(loadings, **kwargs):
+    def _quartimin_obj(self, loadings):
         """
         Quartimin function objective.
 
@@ -145,18 +211,17 @@ class Rotator:
         -------
         gradient_dict : dict
             A dictionary with
-                - grad : np.array
-                    The gradient.
-                - criterion : float
-                    The value of the criterion for the objective.
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
         gradient = loadings * X
         criterion = np.sum(loadings**2 * X) / 4
         return {'grad': gradient, 'criterion': criterion}
 
-    @staticmethod
-    def _equamax_obj(loadings, kappa=0, **kwargs):
+    def _equamax_obj(self, loadings):
         """
         Equamax function objective.
 
@@ -164,18 +229,15 @@ class Rotator:
         ----------
         loadings : array-like
             The loading matrix
-        kappa : int, optional
-            The kappa value for the objective
-            Defaults to 0.
 
         Returns
         -------
         gradient_dict : dict
             A dictionary with
-                - grad : np.array
-                    The gradient.
-                - criterion : float
-                    The value of the criterion for the objective.
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
         """
         p, k = loadings.shape
 
@@ -183,23 +245,18 @@ class Rotator:
         M = np.ones(p) - np.eye(p)
 
         loadings_squared = loadings**2
-        f1 = (1 - kappa) * np.sum(np.diag(np.dot(loadings_squared.T,
-                                                 np.dot(loadings_squared, N)))) / 4
-        f2 = kappa * np.sum(np.diag(np.dot(loadings_squared.T,
-                                           np.dot(M, loadings_squared)))) / 4
+        f1 = (1 - self.kappa) * np.sum(np.diag(np.dot(loadings_squared.T,
+                                                      np.dot(loadings_squared, N)))) / 4
+        f2 = self.kappa * np.sum(np.diag(np.dot(loadings_squared.T,
+                                                np.dot(M, loadings_squared)))) / 4
 
-        gradient = ((1 - kappa) * loadings * np.dot(loadings_squared, N) +
-                    kappa * loadings * np.dot(M, loadings_squared))
+        gradient = ((1 - self.kappa) * loadings * np.dot(loadings_squared, N) +
+                    self.kappa * loadings * np.dot(M, loadings_squared))
 
         criterion = f1 + f2
         return {'grad': gradient, 'criterion': criterion}
 
-    def oblique(self,
-                loadings,
-                objective,
-                max_iter=1000,
-                tolerance=1e-5,
-                **kwargs):
+    def _oblique(self, loadings, method):
         """
         A generic function for performing
         all oblique rotations, except for
@@ -208,41 +265,27 @@ class Rotator:
 
         Parameters
         ----------
-        loadings : pd.DataFrame
-            The original loadings matrix
-        objective : function
-            The function for a given orthogonal
-            rotation method. Must return a dictionary
-            with `grad` (gradient) and `criterion`
-            (value of the objective criterion).
-        max_iter : int, optional
-            The maximum number of iterations.
-            Defaults to `1000`.
-        tolerance : float, optional
-            The convergence threshold.
-            Defaults to `1e-5`.
-        kwargs
-            Additional key word arguments
-            are passed to the `objective`
-            function.
+        loadings : array-like
+            The loading matrix
+        method : str
+            The obligue rotation method to use.
 
-        Return
-        ------
-        loadings : pd.DataFrame
+        Returns
+        -------
+        loadings : numpy array, shape (n_features, n_factors)
             The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
+        rotation_mtx : numpy array, shape (n_factors, n_factors)
             The rotation matrix
-            (n_factors, n_factors)
-        psi : np.array or None
+        psi : numpy array or None, shape (n_factors, n_factors)
             The factor correlations
             matrix. This only exists
             if the rotation is oblique.
         """
-        df = loadings.copy()
 
-        column_names = df.columns.values
-        index_names = df.index.values
+        if method == 'oblimin':
+            objective = self._oblimin_obj
+        elif method == 'quartimin':
+            objective = self._quartimin_obj
 
         # initialize the rotation matrix
         n_rows, n_cols = loadings.shape
@@ -250,24 +293,23 @@ class Rotator:
 
         # default alpha level
         alpha = 1
-
         rotation_matrix_inv = np.linalg.inv(rotation_matrix)
         new_loadings = np.dot(loadings, rotation_matrix_inv.T)
 
-        obj = objective(new_loadings, **kwargs)
+        obj = objective(new_loadings)
         gradient = -np.dot(new_loadings.T, np.dot(obj['grad'], rotation_matrix_inv)).T
         criterion = obj['criterion']
 
-        obj_t = objective(new_loadings, **kwargs)
+        obj_t = objective(new_loadings)
 
         # main iteration loop, up to `max_iter`, calculate the gradient
-        for i in range(0, max_iter + 1):
+        for i in range(0, self.max_iter + 1):
             gradient_new = gradient - np.dot(rotation_matrix,
                                              np.diag(np.dot(np.ones(gradient.shape[0]),
                                                             rotation_matrix * gradient)))
             s = np.sqrt(np.sum(np.diag(np.dot(gradient_new.T, gradient_new))))
 
-            if (s < tolerance):
+            if (s < self.tol):
                 break
 
             alpha = 2 * alpha
@@ -280,7 +322,7 @@ class Rotator:
                 new_rotation_matrix = np.dot(X, np.diag(v))
                 new_loadings = np.dot(loadings, np.linalg.inv(new_rotation_matrix).T)
 
-                obj_t = objective(new_loadings, **kwargs)
+                obj_t = objective(new_loadings)
                 improvement = criterion - obj_t['criterion']
 
                 if (improvement > 0.5 * s**2 * alpha):
@@ -297,18 +339,10 @@ class Rotator:
         phi = np.dot(rotation_matrix.T, rotation_matrix)
 
         # convert loadings matrix to data frame
-        loadings = pd.DataFrame(new_loadings,
-                                columns=column_names,
-                                index=index_names)
-
+        loadings = new_loadings.copy()
         return loadings, rotation_matrix, phi
 
-    def orthogonal(self,
-                   loadings,
-                   objective,
-                   max_iter=1000,
-                   tolerance=1e-5,
-                   **kwargs):
+    def _orthogonal(self, loadings, method):
         """
         A generic function for performing
         all orthogonal rotations, except for
@@ -317,61 +351,50 @@ class Rotator:
 
         Parameters
         ----------
-        loadings : pd.DataFrame
-            The original loadings matrix
-        objective : function
-            The function for a given orthogonal
-            rotation method. Must return a dictionary
-            with `grad` (gradient) and `criterion`
-            (value of the objective criterion).
-        max_iter : int, optional
-            The maximum number of iterations.
-            Defaults to `1000`.
-        tolerance : float, optional
-            The convergence threshold.
-            Defaults to `1e-5`.
-        kwargs
-            Additional key word arguments
-            are passed to the `objective`
-            function.
+        loadings : numpy array
+            The loading matrix
+        method : str
+            The orthogonal rotation method to use.
 
-        Return
-        ------
-        loadings : pd.DataFrame
+        Returns
+        -------
+        loadings : numpy array, shape (n_features, n_factors)
             The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
+        rotation_mtx : numpy array, shape (n_factors, n_factors)
             The rotation matrix
-            (n_factors, n_factors)
         """
-        df = loadings.copy()
 
-        column_names = df.columns.values
-        index_names = df.index.values
+        if method == 'oblimax':
+            objective = self._oblimax_obj
+        elif method == 'quartimax':
+            objective = self._quartimax_obj
+        elif method == 'equamax':
+            objective = self._equamax_obj
+
+        arr = loadings.copy()
 
         # initialize the rotation matrix
-        n_rows, n_cols = df.shape
+        n_rows, n_cols = arr.shape
         rotation_matrix = np.eye(n_cols)
 
         # default alpha level
         alpha = 1
+        new_loadings = np.dot(arr, rotation_matrix)
 
-        new_loadings = np.dot(df, rotation_matrix)
-
-        obj = objective(new_loadings, **kwargs)
-        gradient = np.dot(df.T, obj['grad'])
+        obj = objective(new_loadings)
+        gradient = np.dot(arr.T, obj['grad'])
         criterion = obj['criterion']
 
-        obj_t = objective(new_loadings, **kwargs)
+        obj_t = objective(new_loadings)
 
         # main iteration loop, up to `max_iter`, calculate the gradient
-        for i in range(0, max_iter + 1):
+        for i in range(0, self.max_iter + 1):
             M = np.dot(rotation_matrix.T, gradient)
             S = (M + M.T) / 2
             gradient_new = gradient - np.dot(rotation_matrix, S)
             s = np.sqrt(np.sum(np.diag(np.dot(gradient_new.T, gradient_new))))
 
-            if (s < tolerance):
+            if (s < self.tol):
                 break
 
             alpha = 2 * alpha
@@ -381,9 +404,9 @@ class Rotator:
                 X = rotation_matrix - alpha * gradient_new
                 U, D, V = np.linalg.svd(X)
                 new_rotation_matrix = np.dot(U, V)
-                new_loadings = np.dot(df, new_rotation_matrix)
+                new_loadings = np.dot(arr, new_rotation_matrix)
 
-                obj_t = objective(new_loadings, **kwargs)
+                obj_t = objective(new_loadings)
 
                 if (obj_t['criterion'] < (criterion - 0.5 * s**2 * alpha)):
                     break
@@ -392,67 +415,38 @@ class Rotator:
 
             rotation_matrix = new_rotation_matrix
             criterion = obj_t['criterion']
-            gradient = np.dot(df.T, obj_t['grad'])
+            gradient = np.dot(arr.T, obj_t['grad'])
 
         # convert loadings matrix to data frame
-        loadings = pd.DataFrame(new_loadings,
-                                columns=column_names,
-                                index=index_names)
-
+        loadings = new_loadings.copy()
         return loadings, rotation_matrix
 
-    def varimax(self, loadings, normalize=True, max_iter=500, tolerance=1e-5):
+    def _varimax(self, loadings):
         """
         Perform varimax (orthogonal) rotation, with optional
         Kaiser normalization.
 
         Parameters
         ----------
-        loadings : pd.DataFrame
-            The loadings matrix to rotate.
-        normalize : bool, optional
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to True.
-        max_iter : int, optional
-            Maximum number of iterations.
-            Defaults to 500.
-        tolerance : float, optional
-            The tolerance for convergence.
-            Defaults to 1e-5.
+        loadings : array-like
+            The loading matrix
 
-        Return
-        ------
-        loadings : pd.DataFrame
+        Returns
+        -------
+        loadings : numpy array, shape (n_features, n_factors)
             The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
+        rotation_mtx : numpy array, shape (n_factors, n_factors)
             The rotation matrix
-            (n_factors, n_factors)
         """
-        df = loadings.copy()
-
-        # since we're transposing the matrix
-        # later, we want to reverse the column
-        # names and index names from the original
-        # factor loading matrix at this point
-        column_names = df.index.values
-        index_names = df.columns.values
-
-        n_rows, n_cols = df.shape
-
+        X = loadings.copy()
+        n_rows, n_cols = X.shape
         if n_cols < 2:
-            return df
-
-        X = df.values
+            return X
 
         # normalize the loadings matrix
         # using sqrt of the sum of squares (Kaiser)
-        if normalize:
-            normalized_mtx = df.apply(lambda x: np.sqrt(sum(x**2)),
-                                      axis=1).values
-
+        if self.normalize:
+            normalized_mtx = np.apply_along_axis(lambda x: np.sqrt(np.sum(x**2)), 1, X.copy())
             X = (X.T / normalized_mtx).T
 
         # initialize the rotation matrix
@@ -460,7 +454,7 @@ class Rotator:
         rotation_mtx = np.eye(n_cols)
 
         d = 0
-        for _ in range(max_iter):
+        for _ in range(self.max_iter):
 
             old_d = d
 
@@ -481,7 +475,7 @@ class Rotator:
             d = np.sum(S)
 
             # check convergence
-            if old_d != 0 and d / old_d < 1 + tolerance:
+            if old_d != 0 and d / old_d < 1 + self.tol:
                 break
 
         # take inner product of loading matrix
@@ -489,80 +483,55 @@ class Rotator:
         X = np.dot(X, rotation_mtx)
 
         # de-normalize the data
-        if normalize:
+        if self.normalize:
             X = X.T * normalized_mtx
-
         else:
             X = X.T
 
         # convert loadings matrix to data frame
-        loadings = pd.DataFrame(X,
-                                columns=column_names,
-                                index=index_names).T
-
+        loadings = X.T.copy()
         return loadings, rotation_mtx
 
-    def promax(self, loadings, normalize=False, power=4):
+    def _promax(self, loadings):
         """
         Perform promax (oblique) rotation, with optional
         Kaiser normalization.
 
         Parameters
         ----------
-        data : pd.DataFrame
-            The loadings matrix to rotate.
-        normalize : bool, optional
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to False.
-        power : int, optional
-            The power to which to raise the varimax loadings
-            (minus 1). Numbers should generally range form 2 to 4.
-            Defaults to 4.
+        loadings : array-like
+            The loading matrix
 
-        Return
-        ------
-        loadings : pd.DataFrame
+        Returns
+        -------
+        loadings : numpy array, shape (n_features, n_factors)
             The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
+        rotation_mtx : numpy array, shape (n_factors, n_factors)
             The rotation matrix
-            (n_factors, n_factors)
-        psi : np.array or None
+        psi : numpy array or None, shape (n_factors, n_factors)
             The factor correlations
             matrix. This only exists
             if the rotation is oblique.
         """
-        df = loadings.copy()
-
-        column_names = df.columns.values
-        index_names = df.index.values
-
-        n_rows, n_cols = df.shape
-
+        X = loadings.copy()
+        n_rows, n_cols = X.shape
         if n_cols < 2:
-            return df
+            return X
 
-        if normalize:
-
+        if self.normalize:
             # pre-normalization is done in R's
             # `kaiser()` function when rotate='Promax'.
-            array = df.values
+            array = X.copy()
             h2 = sp.diag(np.dot(array, array.T))
             h2 = np.reshape(h2, (h2.shape[0], 1))
             weights = array / sp.sqrt(h2)
 
-            # convert back to DataFrame for `varimax`
-            weights = pd.DataFrame(weights,
-                                   columns=column_names,
-                                   index=index_names)
         else:
-            weights = df.copy()
+            weights = X.copy()
 
         # first get varimax rotation
-        X, rotation_mtx = self.varimax(weights, normalize=normalize)
-        Y = X * np.abs(X)**(power - 1)
+        X, rotation_mtx = self._varimax(weights)
+        Y = X * np.abs(X)**(self.power - 1)
 
         # fit linear regression model
         coef = np.dot(np.linalg.inv(np.dot(X.T, X)), np.dot(X.T, Y))
@@ -577,8 +546,7 @@ class Rotator:
         coef = sp.dot(coef, sp.diag(sp.sqrt(diag_inv)))
         z = sp.dot(X, coef)
 
-        if normalize:
-
+        if self.normalize:
             # post-normalization is done in R's
             # `kaiser()` function when rotate='Promax'
             z = z * sp.sqrt(h2)
@@ -589,92 +557,107 @@ class Rotator:
         phi = np.dot(coef_inv, coef_inv.T)
 
         # convert loadings matrix to data frame
-        loadings = pd.DataFrame(z,
-                                columns=column_names,
-                                index=index_names)
-
+        loadings = z.copy()
         return loadings, rotation_mtx, phi
 
-    def rotate(self, loadings, method='varimax', **kwargs):
+    def fit(self, X, y=None):
         """
-        Rotate the factor loading matrix.
+        Computes the factor rotation.
 
         Parameters
         ----------
-        loadings : pd.DataFrame
-            The loadings matrix from your factor analysis.
-        method : str, optional
-            The factor rotation method. Options include:
-
-                (a) varimax (orthogonal rotation)
-                (b) promax (oblique rotation)
-                (c) oblimin (oblique rotation)
-                (d) oblimax (orthogonal rotation)
-                (e) quartimin (oblique rotation)
-                (f) quartimax (orthogonal rotation)
-                (g) equamax (orthogonal rotation)
-
-            Defaults to 'varimax'.
-        kwargs
-            Additional key word arguments
-            are passed to the rotation method.
+        X : array-like
+            The factor loading matrix (n_features, n_factors)
+        y : Ignored
 
         Returns
         -------
-        loadings : pd.DataFrame
+        self
+
+        Example
+        -------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer, Rotator
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        >>> rotator = Rotator()
+        >>> rotator.fit(fa.loadings_)
+        """
+        self.fit_transform(X)
+        return self
+
+    def fit_transform(self, X, y=None):
+        """
+        Computes the factor rotation,
+        and returns the new loading matrix.
+
+        Parameters
+        ----------
+        X : array-like
+            The factor loading matrix (n_features, n_factors)
+        y : Ignored
+
+        Returns
+        -------
+        loadings_ : numpy array, shape (n_features, n_factors)
             The loadings matrix
-            (n_cols, n_factors)
-        rotation_mtx : np.array
-            The rotation matrix
-            (n_factors, n_factors)
-        psi : np.array or None
-            The factor correlations
-            matrix. This only exists
-            if the rotation is oblique.
+            (n_features, n_factors)
 
         Raises
         ------
         ValueError
             If the `method` is not in the list of
             acceptable methods.
-        """
 
+        Example
+        -------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer, Rotator
+        >>> df_features = pd.read_csv('test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        >>> rotator = Rotator()
+        >>> rotator.fit_transform(fa.loadings_)
+        array([[-0.07693215,  0.04499572,  0.76211208],
+               [ 0.01842035,  0.05757874,  0.01297908],
+               [ 0.06067925,  0.70692662, -0.03311798],
+               [ 0.11314343,  0.84525117, -0.03407129],
+               [ 0.15307233,  0.5553474 , -0.00121802],
+               [ 0.77450832,  0.1474666 ,  0.20118338],
+               [ 0.7063001 ,  0.17229555, -0.30093981],
+               [ 0.83990851,  0.15058874, -0.06182469],
+               [ 0.76620579,  0.1045194 , -0.22649615],
+               [ 0.81372945,  0.20915845,  0.07479506]])
+        """
         # default phi to None
         # it will only be calculated
         # for oblique rotations
         phi = None
-
-        method = method.lower()
+        method = self.method.lower()
         if method == 'varimax':
             (new_loadings,
-             new_rotation_mtx) = self.varimax(loadings, **kwargs)
+             new_rotation_mtx) = self._varimax(X)
 
         elif method == 'promax':
             (new_loadings,
-             new_rotation_mtx, phi) = self.promax(loadings, **kwargs)
+             new_rotation_mtx,
+             phi) = self._promax(X)
 
-        elif method == 'oblimax':
+        elif method in OBLIQUE_ROTATIONS:
             (new_loadings,
-             new_rotation_mtx) = self.orthogonal(loadings, self._oblimax_obj, **kwargs)
+             new_rotation_mtx,
+             phi) = self._oblique(X, method)
 
-        elif method == 'quartimax':
+        elif method in ORTHOGONAL_ROTATIONS:
             (new_loadings,
-             new_rotation_mtx) = self.orthogonal(loadings, self._quartimax_obj, **kwargs)
-
-        elif method == 'oblimin':
-            (new_loadings,
-             new_rotation_mtx, phi) = self.oblique(loadings, self._oblimin_obj, **kwargs)
-
-        elif method == 'quartimin':
-            (new_loadings,
-             new_rotation_mtx, phi) = self.oblique(loadings, self._quartimin_obj, **kwargs)
-
-        elif method == 'equamax':
-            (new_loadings,
-             new_rotation_mtx) = self.orthogonal(loadings, self._equamax_obj, **kwargs)
+             new_rotation_mtx) = self._orthogonal(X, method)
 
         else:
             raise ValueError("The value for `method` must be one of the "
                              "following: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
 
-        return new_loadings, new_rotation_mtx, phi
+        (self.loadings_,
+         self.rotation_,
+         self.phi_) = new_loadings, new_rotation_mtx, phi
+        return self.loadings_

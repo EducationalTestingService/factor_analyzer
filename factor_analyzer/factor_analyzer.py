@@ -7,22 +7,36 @@ with optional rotation using Varimax or Promax.
 :organization: ETS
 """
 
-import logging
 import warnings
 
 import numpy as np
 import scipy as sp
 import pandas as pd
 
-from scipy.stats import chi2
+from scipy.stats import chi2, pearsonr
 from scipy.optimize import minimize
 
-from factor_analyzer.utils import partial_correlations
+from sklearn.base import BaseEstimator, TransformerMixin
+
+from factor_analyzer.utils import (corr,
+                                   impute_values,
+                                   partial_correlations,
+                                   smc)
 from factor_analyzer.rotator import Rotator
 from factor_analyzer.rotator import POSSIBLE_ROTATIONS, OBLIQUE_ROTATIONS
 
 
-def calculate_kmo(data):
+from sklearn.utils.extmath import randomized_svd
+from sklearn.utils import check_array
+from sklearn.utils.validation import check_is_fitted
+
+
+POSSIBLE_IMPUTATIONS = ['mean', 'median', 'drop']
+
+POSSIBLE_METHODS = ['ml', 'mle', 'uls', 'minres', 'principal']
+
+
+def calculate_kmo(x):
     """
     Calculate the Kaiser-Meyer-Olkin criterion
     for items and overall. This statistic represents
@@ -33,49 +47,44 @@ def calculate_kmo(data):
 
     Parameters
     ----------
-    data : pd.DataFrame
-        The data frame from which to calculate KMOs.
+    x : array-like
+        The array from which to calculate KMOs.
 
     Returns
     -------
-    kmo_per_variable : pd.DataFrame
+    kmo_per_variable : numpy array
         The KMO score per item.
     kmo_total : float
         The KMO score overall.
     """
 
     # calculate the partial correlations
-    partial_corr = partial_correlations(data)
-    partial_corr = partial_corr.values
+    partial_corr = partial_correlations(x)
 
     # calcualte the pair-wise correlations
-    corr = data.corr()
-    corr = corr.values
+    x_corr = corr(x)
 
     # fill matrix diagonals with zeros
     # and square all elements
-    np.fill_diagonal(corr, 0)
+    np.fill_diagonal(x_corr, 0)
     np.fill_diagonal(partial_corr, 0)
 
     partial_corr = partial_corr**2
-    corr = corr**2
+    x_corr = x_corr**2
 
     # calculate KMO per item
-    partial_corr_sum = partial_corr.sum(0)
-    corr_sum = corr.sum(0)
+    partial_corr_sum = np.sum(partial_corr, axis=0)
+    corr_sum = np.sum(x_corr, axis=0)
     kmo_per_item = corr_sum / (corr_sum + partial_corr_sum)
-    kmo_per_item = pd.DataFrame(kmo_per_item,
-                                index=data.columns,
-                                columns=['KMO'])
 
     # calculate KMO overall
-    corr_sum_total = corr.sum()
-    partial_corr_sum_total = partial_corr.sum()
+    corr_sum_total = np.sum(x_corr)
+    partial_corr_sum_total = np.sum(partial_corr)
     kmo_total = corr_sum_total / (corr_sum_total + partial_corr_sum_total)
     return kmo_per_item, kmo_total
 
 
-def calculate_bartlett_sphericity(data):
+def calculate_bartlett_sphericity(x):
     """
     Test the hypothesis that the correlation matrix
     is equal to the identity matrix.identity
@@ -92,8 +101,8 @@ def calculate_bartlett_sphericity(data):
 
     Parameters
     ----------
-    data : pd.DataFrame
-        The data frame from which to calculate sphericity.
+    x : array-like
+        The array from which to calculate sphericity.
 
     Returns
     -------
@@ -102,22 +111,21 @@ def calculate_bartlett_sphericity(data):
     p_value : float
         The associated p-value for the test.
     """
-    n, p = data.shape
+    n, p = x.shape
+    x_corr = corr(x)
 
-    corr = data.corr()
-
-    corr_det = np.linalg.det(corr)
+    corr_det = np.linalg.det(x_corr)
     statistic = -np.log(corr_det) * (n - 1 - (2 * p + 5) / 6)
     degrees_of_freedom = p * (p - 1) / 2
     p_value = chi2.pdf(statistic, degrees_of_freedom)
     return statistic, p_value
 
 
-class FactorAnalyzer:
+class FactorAnalyzer(BaseEstimator, TransformerMixin):
     """
     A FactorAnalyzer class, which -
-        (1) Fits a factor analysis model using minres or maximum likelihood,
-            and returns the loading matrix
+        (1) Fits a factor analysis model using minres, maximum likelihood,
+            or principal factor extraction and returns the loading matrix
         (2) Optionally performs a rotation, with method including:
 
             (a) varimax (orthogonal rotation)
@@ -130,32 +138,73 @@ class FactorAnalyzer:
 
     Parameters
     ----------
-    log_warnings : bool, optional
-        Whether to log warnings, such as failure to
-        converge.
+    n_factors : int, optional
+        The number of factors to select.
+        Defaults to 3.
+    rotation : str, optional
+        The type of rotation to perform after
+        fitting the factor analysis model.
+        If set to None, no rotation will be performed,
+        nor will any associated Kaiser normalization.
+
+        Methods include:
+
+            (a) varimax (orthogonal rotation)
+            (b) promax (oblique rotation)
+            (c) oblimin (oblique rotation)
+            (d) oblimax (orthogonal rotation)
+            (e) quartimin (oblique rotation)
+            (f) quartimax (orthogonal rotation)
+            (g) equamax (orthogonal rotation)
+
+        Defaults to 'promax'.
+
+    method : {'minres', 'ml', 'principal'}, optional
+        The fitting method to use, either MINRES or
+        Maximum Likelihood.
+        Defaults to 'minres'.
+    use_smc : bool, optional
+        Whether to use squared multiple correlation
+        as starting guesses for factor analysis.
+        Defaults to True.
+    bounds : tuple, optional
+        The lower and upper bounds on the variables
+        for "L-BFGS-B" optimization.
+        Defaults to (0.005, 1).
+    impute : {'drop', 'mean', 'median'}, optional
+        If missing values are present in the data, either use
+        list-wise deletion ('drop') or impute the column median
+        ('median') or column mean ('mean').
+    use_corr_matrix : bool, optional
+        Set to true if the `data` is the correlation
+        matrix.
         Defaults to False.
+    rotation_kwargs, optional
+        Additional key word arguments
+        are passed to the rotation method.
 
     Attributes
     ----------
-    loadings : pd.DataFrame
+    loadings : numpy array
         The factor loadings matrix.
         Default to None, if `analyze()` has not
         been called.
-    corr : pd.DataFrame
+    corr : numpy array
         The original correlation matrix.
         Default to None, if `analyze()` has not
         been called.
-    rotation_matrix : np.array
+    rotation_matrix : numpy array
         The rotation matrix, if a rotation
         has been performed.
-    structure : np.array or None
+    structure :numpy array or None
         The structure loading matrix.
         This only exists if the rotation
         is promax.
-    psi : np.array or None
+    psi : numpy array or None
         The factor correlations
         matrix. This only exists
         if the rotation is oblique.
+
     Notes
     -----
     This code was partly derived from the excellent R package
@@ -169,38 +218,76 @@ class FactorAnalyzer:
     --------
     >>> import pandas as pd
     >>> from factor_analyzer import FactorAnalyzer
-    >>> df_features = pd.read_csv('test02.csv')
-    >>> fa = FactorAnalyzer()
-    >>> fa.analyze(df_features, 3, rotation=None)
-    >>> fa.loadings
-               Factor1   Factor2   Factor3
-    sex      -0.129912 -0.163982  0.738235
-    zygosity  0.038996 -0.046584  0.011503
-    moed      0.348741 -0.614523 -0.072557
-    faed      0.453180 -0.719267 -0.075465
-    faminc    0.366888 -0.443773 -0.017371
-    english   0.741414  0.150082  0.299775
-    math      0.741675  0.161230 -0.207445
-    socsci    0.829102  0.205194  0.049308
-    natsci    0.760418  0.237687 -0.120686
-    vocab     0.815334  0.124947  0.176397
+    >>> df_features = pd.read_csv('tests/data/test02.csv')
+    >>> fa = FactorAnalyzer(rotation=None)
+    >>> fa.fit(df_features)
+    FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+            method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+            use_smc=True)
+    >>> fa.loadings_
+    array([[-0.12991218,  0.16398154,  0.73823498],
+           [ 0.03899558,  0.04658425,  0.01150343],
+           [ 0.34874135,  0.61452341, -0.07255667],
+           [ 0.45318006,  0.71926681, -0.07546472],
+           [ 0.36688794,  0.44377343, -0.01737067],
+           [ 0.74141382, -0.15008235,  0.29977512],
+           [ 0.741675  , -0.16123009, -0.20744495],
+           [ 0.82910167, -0.20519428,  0.04930817],
+           [ 0.76041819, -0.23768727, -0.1206858 ],
+           [ 0.81533404, -0.12494695,  0.17639683]])
+    >>> fa.get_communalities()
+    array([0.588758  , 0.00382308, 0.50452402, 0.72841183, 0.33184336,
+           0.66208428, 0.61911036, 0.73194557, 0.64929612, 0.71149718])
     """
 
     def __init__(self,
-                 log_warnings=False):
+                 n_factors=3,
+                 rotation='promax',
+                 method='minres',
+                 use_smc=True,
+                 is_corr_matrix=False,
+                 bounds=(0.005, 1),
+                 impute='median',
+                 rotation_kwargs=None):
 
-        self.log_warnings = log_warnings
+        rotation = rotation.lower() if isinstance(rotation, str) else rotation
+        if rotation not in POSSIBLE_ROTATIONS + [None]:
+            raise ValueError('The rotation must be None, or in the following set: '
+                             '\{{}\}'.format(', '.join(POSSIBLE_ROTATIONS)))
+
+        method = method.lower()
+        if method not in POSSIBLE_METHODS:
+            raise ValueError('The method must be in the following set: '
+                             '\{{}\}'.format(', '.join(POSSIBLE_METHODS)))
+
+        impute = impute.lower()
+        if impute not in POSSIBLE_IMPUTATIONS:
+            raise ValueError('The imputation must be in the following set: '
+                             '\{{}\}'.format(', '.join(POSSIBLE_IMPUTATIONS)))
+
+        if method == 'principal' and is_corr_matrix:
+            raise ValueError('The principal method is only implemented using '
+                             'the full data set, not the correlation matrix.')
+
+        self.n_factors = n_factors
+        self.rotation = rotation
+        self.method = method
+        self.use_smc = use_smc
+        self.bounds = bounds
+        self.impute = impute
+        self.is_corr_matrix = is_corr_matrix
+        self.rotation_kwargs = {} if rotation_kwargs is None else rotation_kwargs
 
         # default matrices to None
-        self.phi = None
-        self.structure = None
+        self.mean_ = None
+        self.std_ = None
 
-        self.corr = None
-        self.loadings = None
-        self.rotation_matrix = None
+        self.phi_ = None
+        self.structure_ = None
 
-        self._scale_mean = None
-        self._scale_std = None
+        self.corr_ = None
+        self.loadings_ = None
+        self.rotation_matrix_ = None
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -209,9 +296,9 @@ class FactorAnalyzer:
 
         Parameters
         ----------
-        psi : np.array
+        psi : array-like
             Value passed to minimize the objective function.
-        corr_mtx : np.array
+        corr_mtx : array-like
             The correlation matrix.
         n_factors : int
             The number of factors to select.
@@ -239,13 +326,12 @@ class FactorAnalyzer:
 
         # calculate the loadings
         if n_factors > 1:
-            loadings = np.dot(vectors,
-                              np.diag(np.sqrt(values)))
+            loadings = np.dot(vectors, np.diag(np.sqrt(values)))
         else:
             loadings = vectors * np.sqrt(values[0])
 
         # calculate the error from the loadings model
-        model = sp.dot(loadings, loadings.T)
+        model = np.dot(loadings, loadings.T)
 
         # note that in a more recent version of the `fa()` source
         # code on GitHub, the minres objective function only sums the
@@ -257,15 +343,49 @@ class FactorAnalyzer:
         return error
 
     @staticmethod
+    def _normalize_uls(solution, corr_mtx, n_factors):
+        """
+        Weighted least squares normalization for loadings
+        estimated using MINRES.
+
+        Parameters
+        ----------
+        solution : array-like
+            The solution from the L-BFGS-B optimization.
+        corr_mtx : array-like
+            The correlation matrix.
+        n_factors : int
+            The number of factors to select.
+
+        Returns
+        -------
+        loadings : numpy array
+            The factor loading matrix
+        """
+        np.fill_diagonal(corr_mtx, 1 - solution)
+
+        # get the eigenvalues and vectors for n_factors
+        values, vectors = np.linalg.eigh(corr_mtx)
+
+        # sort the values and vectors in ascending order
+        values = values[::-1][:n_factors]
+        vectors = vectors[:, ::-1][:, :n_factors]
+
+        # calculate loadings
+        # if values are smaller than 0, set them to zero
+        loadings = np.dot(vectors, np.diag(np.sqrt(np.maximum(values, 0))))
+        return loadings
+
+    @staticmethod
     def _fit_ml_objective(psi, corr_mtx, n_factors):
         """
         The objective function passed to `minimize()` for ML.
 
         Parameters
         ----------
-        psi : np.array
+        psi : array-like
             Value passed to minimize the objective function.
-        corr_mtx : np.array
+        corr_mtx : array-like
             The correlation matrix.
         n_factors : int
             The number of factors to select.
@@ -290,7 +410,7 @@ class FactorAnalyzer:
         sstar = np.dot(np.dot(sc, corr_mtx), sc)
 
         # get the eigenvalues and eigenvectors for n_factors
-        values, _ = sp.linalg.eigh(sstar)
+        values, _ = np.linalg.eigh(sstar)
         values = values[::-1][n_factors:]
 
         # calculate the error
@@ -299,63 +419,29 @@ class FactorAnalyzer:
         return error
 
     @staticmethod
-    def _normalize_wls(solution, corr_mtx, n_factors):
-        """
-        Weighted least squares normalization for loadings
-        estimated using MINRES.
-
-        Parameters
-        ----------
-        solution : np.array
-            The solution from the L-BFGS-B optimization.
-        corr_mtx : np.array
-            The correlation matrix.
-        n_factors : int
-            The number of factors to select.
-
-        Returns
-        -------
-        loadings : pd.DataFrame
-            The factor loading matrix
-        """
-        sp.fill_diagonal(corr_mtx, 1 - solution)
-
-        # get the eigenvalues and vectors for n_factors
-        values, vectors = sp.linalg.eigh(corr_mtx)
-
-        # sort the values and vectors in ascending order
-        values = values[::-1][:n_factors]
-        vectors = vectors[:, ::-1][:, :n_factors]
-
-        # calculate loadings
-        # if values are smaller than 0, set them to zero
-        loadings = sp.dot(vectors, sp.diag(sp.sqrt(np.maximum(values, 0))))
-        return loadings
-
-    @staticmethod
     def _normalize_ml(solution, corr_mtx, n_factors):
         """
         Normalization for loadings estimated using ML.
 
         Parameters
         ----------
-        solution : np.array
+        solution : array-like
             The solution from the L-BFGS-B optimization.
-        corr_mtx : np.array
+        corr_mtx : array-like
             The correlation matrix.
         n_factors : int
             The number of factors to select.
 
         Returns
         -------
-        loadings : pd.DataFrame
+        loadings : numpy array
             The factor loading matrix
         """
         sc = np.diag(1 / np.sqrt(solution))
         sstar = np.dot(np.dot(sc, corr_mtx), sc)
 
         # get the eigenvalues for n_factors
-        values, vectors = sp.linalg.eigh(sstar)
+        values, vectors = np.linalg.eigh(sstar)
 
         # sort the values and vectors in ascending order
         values = values[::-1][:n_factors]
@@ -364,135 +450,48 @@ class FactorAnalyzer:
         values = np.maximum(values - 1, 0)
 
         # get the loadings
-        loadings = np.dot(vectors,
-                          np.diag(np.sqrt(values)))
+        loadings = np.dot(vectors, np.diag(np.sqrt(values)))
 
         return np.dot(np.diag(np.sqrt(solution)), loadings)
 
-    @staticmethod
-    def smc(data, sort=False, use_corr_matrix=False):
+    def _fit_principal(self, X):
         """
-        Calculate the squared multiple correlations.
-        This is equivalent to regressing each variable
-        on all others and calculating the r-squared values.
+        Fit the factor analysis model using a principal
+        factor analysis solution.
 
         Parameters
         ----------
-        data : pd.DataFrame
-            The dataframe used to calculate SMC.
-        sort : bool, optional
-            Whether to sort the values for SMC
-            before returning.
-            Defaults to False.
-        use_corr_matrix : bool, optional
-            Set to true if the `data` is the correlation
-            matrix.
-            Defaults to False.
+        X : array-like
+            The full data set.
 
         Returns
         -------
-        smc : pd.DataFrame
-            The squared multiple correlations matrix.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from factor_analyzer import FactorAnalyzer
-        >>> df_features = pd.read_csv('test02.csv')
-        >>> FactorAnalyzer.smc(df_features)
-                       SMC
-        sex       0.212047
-        zygosity  0.010857
-        moed      0.385399
-        faed      0.453161
-        faminc    0.273753
-        english   0.566065
-        math      0.547790
-        socsci    0.677035
-        natsci    0.576016
-        vocab     0.660264
+        loadings : numpy array
+            The factor loadings matrix.
         """
-        if use_corr_matrix:
-            corr = data.copy()
-        else:
-            corr = data.corr()
+        # standardize the data
+        X = X.copy()
+        X = (X - X.mean(0)) / X.std(0)
 
-        columns = data.columns
+        # perform the randomized singular value decomposition
+        U, S, V = randomized_svd(X, self.n_factors)
+        corr_mtx = np.dot(X, V.T)
+        loadings = np.array([[pearsonr(x, c)[0] for c in corr_mtx.T] for x in X.T])
+        return loadings
 
-        corr_inv = sp.linalg.inv(corr)
-        smc = 1 - 1 / sp.diag(corr_inv)
-
-        smc = pd.DataFrame(smc,
-                           index=columns,
-                           columns=['SMC'])
-        if sort:
-            smc = smc.sort_values('SMC')
-        return smc
-
-    def remove_non_numeric(self, data):
-        """
-        Remove non-numeric columns from data,
-        as these columns cannot be used in
-        factor analysis.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            The dataframe from which to remove
-            non-numeric columns.
-
-        Returns
-        -------
-        data : pd.DataFrame
-            The dataframe with non-numeric columns removed.
-        """
-        old_column_names = data.columns.values
-        data = data.loc[:, data.applymap(sp.isreal).all() == True].copy()
-
-        # report any non-numeric columns removed
-        non_numeric_columns = set(old_column_names) - set(data.columns)
-        if non_numeric_columns and self.log_warnings:
-            logging.warning('The following non-numeric columns '
-                            'were removed: {}.'.format(', '.join(non_numeric_columns)))
-        return data
-
-    def fit_factor_analysis(self,
-                            data,
-                            n_factors,
-                            use_smc=True,
-                            bounds=(0.005, 1),
-                            method='minres',
-                            use_corr_matrix=False):
+    def _fit_factor_analysis(self, corr_mtx):
         """
         Fit the factor analysis model using either
         minres or ml solutions.
 
         Parameters
         ----------
-        data : pd.DataFrame
-            The data to fit.
-        n_factors : int
-            The number of factors to select.
-        use_smc : bool
-            Whether to use squared multiple correlation
-            as starting guesses for factor analysis.
-            Defaults to True.
-        bounds : tuple
-            The lower and upper bounds on the variables
-            for "L-BFGS-B" optimization.
-            Defaults to (0.005, 1).
-        method : {'minres', 'ml'}
-            The fitting method to use, either MINRES or
-            Maximum Likelihood.
-            Defaults to 'minres'.
-        use_corr_matrix : bool, optional
-            Set to true if the `data` is the correlation
-            matrix.
-            Defaults to False.
+        corr_mtx : array-like
+            The correlation matrix.
 
         Returns
         -------
-        loadings : pd.DataFrame
+        loadings : numpy array
             The factor loadings matrix.
 
         Raises
@@ -501,213 +500,119 @@ class FactorAnalyzer:
             If any of the correlations are null, most likely due
             to having zero standard deviation.
         """
-        if method not in ['ml', 'minres'] and self.log_warnings:
-            logging.warning("You have selected a method other than 'minres' or 'ml'. "
-                            "MINRES will be used by default, as {} is not a valid "
-                            "option.".format(method))
-
-        if use_corr_matrix:
-            corr = data.copy()
-        else:
-            corr = data.corr()
-
-        # if any variables have zero standard deviation, then
-        # the correlation will be NaN, as you cannot divide by zero:
-        # corr(i, j) = cov(i, j) / (stdev(i) * stdev(j))
-        if corr.isnull().any().any():
-            raise ValueError('The correlation matrix cannot have '
-                             'features that are null or infinite. '
-                             'Check to make sure you do not have any '
-                             'features with zero standard deviation.')
-
-        corr = corr.copy().values
 
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
-        if use_smc:
-            smc_mtx = self.smc(data, use_corr_matrix).values
-            start = (np.diag(corr) - smc_mtx.T).squeeze()
-
+        if self.use_smc:
+            smc_mtx = smc(corr_mtx)
+            start = (np.diag(corr_mtx) - smc_mtx.T).squeeze()
         # otherwise, just start with a guess of 0.5 for everything
         else:
-            start = [0.5 for _ in range(corr.shape[0])]
+            start = [0.5 for _ in range(corr_mtx.shape[0])]
 
         # if `bounds`, set initial boundaries for all variables;
         # this must be a list passed to `minimize()`
-        if bounds is not None:
-            bounds = [bounds for _ in range(corr.shape[0])]
+        if self.bounds is not None:
+            bounds = [self.bounds for _ in range(corr_mtx.shape[0])]
+        else:
+            bounds = self.bounds
 
         # minimize the appropriate objective function
         # and the L-BFGS-B algorithm
-        if method == 'ml':
+        if self.method == 'ml' or self.method == 'mle':
             objective = self._fit_ml_objective
-        else:
+        elif self.method == 'uls' or self.method == 'minres':
             objective = self._fit_uls_objective
 
+        # use scipy to perform the actual minimization
         res = minimize(objective,
                        start,
                        method='L-BFGS-B',
                        bounds=bounds,
                        options={'maxiter': 1000},
-                       args=(corr, n_factors))
+                       args=(corr_mtx, self.n_factors))
 
-        if not res.success and self.log_warnings:
-            logging.warning('Failed to converge: {}'.format(res.message))
-
-        # get factor column names
-        columns = ['Factor{}'.format(i) for i in range(1, n_factors + 1)]
+        if not res.success:
+            warnings.warn('Failed to converge: {}'.format(res.message))
 
         # transform the final loading matrix (using wls for MINRES,
         # and ml normalization for ML), and convert to DataFrame
-        if method == 'ml' or method == 'mle':
-            loadings = self._normalize_ml(res.x, corr, n_factors)
-        else:
-            loadings = self._normalize_wls(res.x, corr, n_factors)
-
-        loadings = pd.DataFrame(loadings,
-                                index=data.columns.values,
-                                columns=columns)
+        if self.method == 'ml' or self.method == 'mle':
+            loadings = self._normalize_ml(res.x, corr_mtx, self. n_factors)
+        elif self.method == 'uls' or self.method == 'minres':
+            loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
         return loadings
 
-    def analyze(self,
-                data,
-                n_factors=3,
-                rotation='promax',
-                method='minres',
-                use_smc=True,
-                bounds=(0.005, 1),
-                normalize=True,
-                impute='median',
-                remove_non_numeric=True,
-                use_corr_matrix=False,
-                **kwargs):
+    def fit(self, X, y=None):
         """
         Fit the factor analysis model using either
-        minres or ml solutions. By default, use SMC
-        as starting guesses and perform Kaiser normalization.
+        minres, ml, or principal solutions. By default, use SMC
+        as starting guesses.
 
         Parameters
         ----------
-        data : pd.DataFrame
+        X : array-like
             The data to analyze.
-        n_factors : int, optional
-            The number of factors to select.
-            Defaults to 3.
-        rotation : str, optional
-            The type of rotation to perform after
-            fitting the factor analysis model.
-            If set to None, no rotation will be performed,
-            nor will any associated Kaiser normalization.
+        y : ignored
 
-            Methods include:
-
-                (a) varimax (orthogonal rotation)
-                (b) promax (oblique rotation)
-                (c) oblimin (oblique rotation)
-                (d) oblimax (orthogonal rotation)
-                (e) quartimin (oblique rotation)
-                (f) quartimax (orthogonal rotation)
-                (g) equamax (orthogonal rotation)
-
-            Defaults to 'promax'.
-
-        method : {'minres', 'ml'}, optional
-            The fitting method to use, either MINRES or
-            Maximum Likelihood.
-            Defaults to 'minres'.
-        use_smc : bool, optional
-            Whether to use squared multiple correlation
-            as starting guesses for factor analysis.
-            Defaults to True.
-        bounds : tuple, optional
-            The lower and upper bounds on the variables
-            for "L-BFGS-B" optimization.
-            Defaults to (0.005, 1).
-        normalize : bool, optional
-            Whether to perform Kaiser normalization
-            and de-normalization prior to and following
-            rotation.
-            Defaults to True.
-        impute : {'drop', 'mean', 'median'}, optional
-            If missing values are present in the data, either use
-            list-wise deletion ('drop') or impute the column median
-            ('median') or column mean ('mean').
-            Defaults to 'median'.
-        remove_non_numeric : bool, optional
-            Remove any non-numeric data. If `use_corr_matrix` is True,
-            no non-numeric data will be removed.
-            Defaults to True.
-        use_corr_matrix : bool, optional
-            Set to true if the `data` is the correlation
-            matrix.
-            Defaults to False.
-        kwargs, optional
-            Additional key word arguments
-            are passed to the rotation method.
-
-        Raises
-        ------
-        ValueError
-            If rotation not `None` or in `POSSIBLE_ROTATIONS`.
-        ValueError
-            If missing values present and `missing_values` is
-            not set to either 'drop' or 'impute'.
-
-        Notes
-        -----
-        varimax is an orthogonal rotation, while promax
-        is an oblique rotation. For more details on promax
-        rotations, see here:
-
-        References
-        ----------
-        [1] https://www.rdocumentation.org/packages/psych/versions/1.7.8/topics/Promax
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> fa.loadings_
+        array([[-0.12991218,  0.16398154,  0.73823498],
+               [ 0.03899558,  0.04658425,  0.01150343],
+               [ 0.34874135,  0.61452341, -0.07255667],
+               [ 0.45318006,  0.71926681, -0.07546472],
+               [ 0.36688794,  0.44377343, -0.01737067],
+               [ 0.74141382, -0.15008235,  0.29977512],
+               [ 0.741675  , -0.16123009, -0.20744495],
+               [ 0.82910167, -0.20519428,  0.04930817],
+               [ 0.76041819, -0.23768727, -0.1206858 ],
+               [ 0.81533404, -0.12494695,  0.17639683]])
         """
 
-        if rotation not in POSSIBLE_ROTATIONS + [None]:
-            raise ValueError("The value for `rotation` must `None` or in the "
-                             "set: {}.".format(', '.join(POSSIBLE_ROTATIONS)))
+        # check if the data is a data frame,
+        # so we can convert it to an array
+        if isinstance(X, pd.DataFrame):
+            X = X.copy().values
+        else:
+            X = X.copy()
 
-        df = data.copy()
+        # now check the array, and make sure it
+        # meets all of our expected criteria
+        X = check_array(X,
+                        force_all_finite='allow-nan',
+                        estimator=self,
+                        copy=True)
 
-        # remove non-numeric columns
-        if remove_non_numeric and not use_corr_matrix:
-            df = self.remove_non_numeric(df)
+        # check to see if there are any null values, and if
+        # so impute using the desired imputation approach
+        if np.isnan(X).any() and not self.is_corr_matrix:
+            X = impute_values(X, how=self.impute)
 
-        if df.isnull().any().any() and not use_corr_matrix:
-
-            # impute median, if `impute` is set to 'median'
-            if impute == 'median':
-                df = df.apply(lambda x: x.fillna(x.median()), axis=0)
-
-            # impute mean, if `impute` is set to 'mean'
-            elif impute == 'mean':
-                df = df.apply(lambda x: x.fillna(x.mean()), axis=0)
-
-            # drop missing if `impute` is set to 'drop'
-            elif impute == 'drop':
-                df = df.dropna()
-
-            else:
-                raise ValueError("You have missing values in your data, but "
-                                 "`impute` was not set to either 'drop', "
-                                 "'mean', or 'median'.")
+        # get the correlation matrix
+        if self.is_corr_matrix:
+            corr_mtx = X
+        else:
+            corr_mtx = corr(X)
+            self.std_ = np.std(X, axis=0)
+            self.mean_ = np.mean(X, axis=0)
 
         # save the original correlation matrix
-        if use_corr_matrix:
-            self.corr = df.copy()
-        else:
-            self.corr = df.corr()
-            self._scale_mean = df.mean(0)
-            self._scale_std = df.std(0)
+        self.corr_ = corr_mtx.copy()
 
         # fit factor analysis model
-        loadings = self.fit_factor_analysis(df.copy(),
-                                            n_factors,
-                                            use_smc,
-                                            bounds,
-                                            method,
-                                            use_corr_matrix)
+        if self.method == 'principal':
+            loadings = self._fit_principal(X)
+        else:
+            loadings = self._fit_factor_analysis(corr_mtx)
 
         # only used if we do an oblique rotations;
         # default rotation matrix to None
@@ -716,336 +621,306 @@ class FactorAnalyzer:
         rotation_mtx = None
 
         # whether to rotate the loadings matrix
-        if rotation is not None:
-
-            if loadings.shape[1] > 1:
-                rotator = Rotator()
-                loadings, rotation_mtx, phi = rotator.rotate(loadings,
-                                                             rotation,
-                                                             normalize=normalize,
-                                                             **kwargs)
-
-                # update the rotation matrix for everything except promax
-                if rotation != 'promax':
-                    rotation_mtx = np.linalg.inv(rotation_mtx).T
-
-            else:
+        if self.rotation is not None:
+            if loadings.shape[1] <= 1:
                 warnings.warn('No rotation will be performed when '
                               'the number of factors equals 1.')
+            else:
+                if 'method' in self.rotation_kwargs:
+                    warnings.warn('You cannot pass a rotation method to '
+                                  '`rotation_kwargs`. This will be ignored.')
+                    self.rotation_kwargs.pop('method')
+                rotator = Rotator(method=self.rotation, **self.rotation_kwargs)
+                loadings = rotator.fit_transform(loadings)
+                rotation_mtx = rotator.rotation_
+                phi = rotator.phi_
+                # update the rotation matrix for everything, except promax
+                if self.rotation != 'promax':
+                    rotation_mtx = np.linalg.inv(rotation_mtx).T
 
-        if n_factors > 1:
-
+        if self.n_factors > 1:
             # update loading signs to match column sums
             # this is to ensure that signs align with R
             signs = np.sign(loadings.sum(0))
             signs[(signs == 0)] = 1
-            loadings = pd.DataFrame(np.dot(loadings, np.diag(signs)),
-                                    index=loadings.index,
-                                    columns=loadings.columns)
+            loadings = np.dot(loadings, np.diag(signs))
 
             if phi is not None:
-
                 # update phi, if it exists -- that is, if the rotation is oblique
                 # create the structure matrix for any oblique rotation
                 phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
-                structure = np.dot(loadings, phi) if rotation in OBLIQUE_ROTATIONS else None
-                structure = pd.DataFrame(structure, columns=loadings.columns, index=loadings.index)
+                structure = np.dot(loadings, phi) if self.rotation in OBLIQUE_ROTATIONS else None
 
-        self.phi = phi
-        self.structure = structure
+        # resort the factors according to their variance
+        variance = self._get_factor_variance(loadings)[0]
+        loadings = loadings[:, list(reversed(np.argsort(variance)))].copy()
 
-        self.loadings = loadings
-        self.rotation_matrix = rotation_mtx
+        self.phi_ = phi
+        self.structure_ = structure
 
-    def get_eigenvalues(self):
+        self.loadings_ = loadings
+        self.rotation_matrix_ = rotation_mtx
+        return self
+
+    def transform(self, X):
         """
-        Calculate the eigenvalues, given the
-        factor correlation matrix.
-
-        Return
-        ------
-        e_values : pd.DataFrame
-            A dataframe with original eigenvalues.
-        values : pd.DataFrame
-            A dataframe with common-factor eigenvalues.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from factor_analyzer import FactorAnalyzer
-        >>> df_features = pd.read_csv('test02.csv')
-        >>> fa = FactorAnalyzer()
-        >>> fa.analyze(df_features, 3, rotation=None)
-        >>> ev, v = fa.get_eigenvalues()
-        >>> ev
-           Original_Eigenvalues
-        0              3.510189
-        1              1.283710
-        2              0.737395
-        3              0.133471
-        4              0.034456
-        5              0.010292
-        6             -0.007400
-        7             -0.036948
-        8             -0.059591
-        9             -0.074281
-        >>> v
-           Common_Factor_Eigenvalues
-        0                   3.510189
-        1                   1.283710
-        2                   0.737395
-        3                   0.133471
-        4                   0.034456
-        5                   0.010292
-        6                  -0.007400
-        7                  -0.036948
-        8                  -0.059591
-        9                  -0.074281
-        """
-        if (self.corr is not None and self.loadings is not None):
-
-            corr = self.corr.copy().values
-
-            e_values, _ = sp.linalg.eigh(corr)
-            e_values = pd.DataFrame(e_values[::-1],
-                                    columns=['Original_Eigenvalues'])
-
-            communalities = self.get_communalities()
-            np.fill_diagonal(corr, communalities)
-
-            values, _ = sp.linalg.eigh(corr)
-            values = pd.DataFrame(values[::-1],
-                                  columns=['Common_Factor_Eigenvalues'])
-
-            return e_values, values
-
-    def get_communalities(self):
-        """
-        Calculate the communalities, given the
-        factor loading matrix.
-
-        Return
-        ------
-        communalities : pd.DataFrame
-            A dataframe with communalities information.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from factor_analyzer import FactorAnalyzer
-        >>> df_features = pd.read_csv('test02.csv')
-        >>> fa = FactorAnalyzer()
-        >>> fa.analyze(df_features, 3, rotation=None)
-        >>> fa.get_communalities()
-                  Communalities
-        sex            0.588758
-        zygosity       0.003823
-        moed           0.504524
-        faed           0.728412
-        faminc         0.331843
-        english        0.662084
-        math           0.619110
-        socsci         0.731946
-        natsci         0.649296
-        vocab          0.711497
-        """
-        if self.loadings is not None:
-
-            communalities = (self.loadings ** 2).sum(axis=1)
-            communalities = pd.DataFrame(communalities,
-                                         columns=['Communalities'])
-
-            return communalities
-
-    def get_uniqueness(self):
-        """
-        Calculate the uniquenesses, given the
-        factor loading matrix.
-
-        Return
-        ------
-        uniqueness : pd.DataFrame
-            A dataframe with uniqueness information.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from factor_analyzer import FactorAnalyzer
-        >>> df_features = pd.read_csv('test02.csv')
-        >>> fa = FactorAnalyzer()
-        >>> fa.analyze(df_features, 3, rotation=None)
-        >>> fa.get_uniqueness()
-                  Uniqueness
-        sex         0.411242
-        zygosity    0.996177
-        moed        0.495476
-        faed        0.271588
-        faminc      0.668157
-        english     0.337916
-        math        0.380890
-        socsci      0.268054
-        natsci      0.350704
-        vocab       0.288503
-        """
-        if self.loadings is not None:
-
-            communalities = self.get_communalities()
-            uniqueness = (1 - communalities)
-            uniqueness.columns = ['Uniqueness']
-            return uniqueness
-
-    def get_factor_variance(self):
-        """
-        Calculate the factor variance information,
-        including variance, proportional variance
-        and cumulative variance.
-
-        Return
-        ------
-        variance_info : pd.DataFrame
-            A dataframe with variance information.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from factor_analyzer import FactorAnalyzer
-        >>> df_features = pd.read_csv('test02.csv')
-        >>> fa = FactorAnalyzer()
-        >>> fa.analyze(df_features, 3, rotation=None)
-        >>> fa.get_factor_variance()
-                         Factor1   Factor2   Factor3
-        SS Loadings     3.510189  1.283710  0.737395
-        Proportion Var  0.351019  0.128371  0.073739
-        Cumulative Var  0.351019  0.479390  0.553129
-        """
-        if self.loadings is not None:
-
-            loadings = self.loadings
-
-            n_rows = loadings.shape[0]
-
-            # calculate variance
-            loadings = loadings ** 2
-            variance = loadings.sum(axis=0)
-
-            # calculate proportional variance
-            proportional_variance = variance / n_rows
-
-            # calculate cumulative variance
-            cumulative_variance = proportional_variance.cumsum(axis=0)
-
-            # package variance info
-            variance_info = pd.DataFrame([variance,
-                                          proportional_variance,
-                                          cumulative_variance],
-                                         index=['SS Loadings',
-                                                'Proportion Var',
-                                                'Cumulative Var'])
-
-            return variance_info
-
-    def get_scores(self,
-                   data,
-                   scale_mean=None,
-                   scale_std=None):
-        """
-        Get the factor scores, given the data.
+        Get the factor scores for new data set.
 
         Parameters
         ----------
-        data : pd.DataFrame
-            The data to calculate factor scores.
-        scale_mean : float or None
-            The mean of the original
-            data set used to fit the
-            factor model. If None, attempt
-            to retrieve the mean from the
-            original `analyze()` method,
-            if it was saved.
-            Defaults to None.
-        scale_std : float or None
-            The standard deviation of the original
-            data set used to fit the
-            factor model. If None, attempt
-            to retrieve the standard deviation from the
-            original `analyze()` method,
-            if it was saved.
-            Defaults to None.
+        X : array-like, shape (n_samples, n_features)
+            The data to score using the fitted factor model.
 
         Returns
         -------
-        scores : pd.DataFrame
-            The factor scores.
-
-        Raises
-        ------
-        ValueError
-            If either scale_std or scale_mean
-            is None, and the original mean or standard
-            deviation were not saved during fitting.
+        X_new : numpy array, shape (n_samples, n_components)
+            The latent variables of X.
 
         Examples
         --------
         >>> import pandas as pd
         >>> from factor_analyzer import FactorAnalyzer
         >>> df_features = pd.read_csv('tests/data/test02.csv')
-        >>> fa = FactorAnalyzer()
-        >>> fa.analyze(df_features, 3, rotation='varimax')
-        >>> fa.get_scores(df_features).head()
-            Factor1   Factor2   Factor3
-        0 -1.158106  0.081212  0.342195
-        1 -1.799933  0.155316  0.311530
-        2 -0.557422 -1.596457  0.548574
-        3 -0.973182 -1.530071  0.543792
-        4 -1.450108 -1.553214  0.446574
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> fa.transform(df_features)
+        array([[-1.05141425,  0.57687826,  0.1658788 ],
+               [-1.59940101,  0.89632125,  0.03824552],
+               [-1.21768164, -1.16319406,  0.57135189],
+               ...,
+               [ 0.13601554,  0.03601086,  0.28813877],
+               [ 1.86904519, -0.3532394 , -0.68170573],
+               [ 0.86133386,  0.18280695, -0.79170903]])
         """
-        if self.loadings is not None:
 
-            df = data.copy()
-            corr = self.corr.copy()
+        # check if the data is a data frame,
+        # so we can convert it to an array
+        if isinstance(X, pd.DataFrame):
+            X = X.copy().values
+        else:
+            X = X.copy()
 
-            error_msg = ('The `{}` argument is None, but no scaled {} '
-                         'was saved when fitting your original factor '
-                         'model. This most likely because you used a '
-                         'correlation matrix, rather than the full data '
-                         'set. Please either pass a value for `{}` '
-                         'or re-fit your model using the full data set.')
+        # now check the array, and make sure it
+        # meets all of our expected criteria
+        X = check_array(X,
+                        force_all_finite=True,
+                        estimator=self,
+                        copy=True)
 
-            # if no scaled mean is passed, use the mean from the
-            # original fitting procedure; otherwise, raise an error
-            if scale_mean is None and self._scale_mean is not None:
-                scale_mean = self._scale_mean
-            elif scale_mean is None and self._scale_mean is None:
-                raise ValueError(error_msg.format('scale_mean',
-                                                  'mean',
-                                                  'scale_mean'))
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
 
-            # if no scaled std is passed, use the std from the
-            # original fitting procedure; otherwise, raise an error
-            if scale_std is None and self._scale_std is not None:
-                scale_std = self._scale_std
-            elif scale_std is None and self._scale_std is None:
-                raise ValueError(error_msg.format('scale_std',
-                                                  'standard deviation',
-                                                  'scale_std'))
+        # see if we saved the original mean and std
+        if self.mean_ is None or self.std_ is None:
+            warnings.warn('Could not find original mean and standard deviation; using'
+                          'the mean and standard deviation from the current data set.')
+            mean = np.mean(X, axis=0)
+            std = np.std(X, axis=0)
+        else:
+            mean = self.mean_
+            std = self.std_
 
-            # scale the data
-            X = (df - scale_mean) / scale_std
+        # get the scaled data
+        X_scale = (X - mean) / std
 
-            # use the structure matrix, if it exists;
-            # otherwise, just use the loadings matrix
-            if self.structure is not None:
-                structure = self.structure
-            else:
-                structure = self.loadings
+        # use the structure matrix, if it exists;
+        # otherwise, just use the loadings matrix
+        if self.structure_ is not None:
+            structure = self.structure_
+        else:
+            structure = self.loadings_
 
-            try:
-                weights = np.linalg.solve(corr, structure)
-            except Exception as error:
-                warnings.warn('Unable to calculate the factor score weights; '
-                              'factor loadings used instead: {}'.format(error))
-                weights = self.loadings
+        try:
+            weights = np.linalg.solve(self.corr_, structure)
+        except Exception as error:
+            warnings.warn('Unable to calculate the factor score weights; '
+                          'factor loadings used instead: {}'.format(error))
+            weights = self.loadings_
 
-            scores = np.dot(X, weights)
-            scores = pd.DataFrame(scores, columns=structure.columns)
-            return scores
+        scores = np.dot(X_scale, weights)
+        return scores
+
+    def get_eigenvalues(self):
+        """
+        Calculate the eigenvalues, given the
+        factor correlation matrix.
+
+        Returns
+        -------
+        original_eigen_values : numpy array
+            The original eigen values
+        common_factor_eigen_values : numpy array
+            The common factor eigen values
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> fa.get_eigenvalues()
+        (array([ 3.51018854,  1.28371018,  0.73739507,  0.1334704 ,  0.03445558,
+                0.0102918 , -0.00740013, -0.03694786, -0.05959139, -0.07428112]),
+         array([ 3.51018905,  1.2837105 ,  0.73739508,  0.13347082,  0.03445601,
+                0.01029184, -0.0074    , -0.03694834, -0.05959057, -0.07428059]))
+        """
+        # meets all of our expected criteria
+        check_is_fitted(self, ['loadings_', 'corr_'])
+        corr_mtx = self.corr_.copy()
+
+        e_values, _ = np.linalg.eigh(corr_mtx)
+        e_values = e_values[::-1]
+
+        communalities = self.get_communalities()
+        communalities = communalities.copy()
+        np.fill_diagonal(corr_mtx, communalities)
+
+        values, _ = np.linalg.eigh(corr_mtx)
+        values = values[::-1]
+        return e_values, values
+
+    def get_communalities(self):
+        """
+        Calculate the communalities, given the
+        factor loading matrix.
+
+        Returns
+        -------
+        communalities : numpy array
+            The communalities from the factor loading
+            matrix.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> fa.get_communalities()
+        array([0.588758  , 0.00382308, 0.50452402, 0.72841183, 0.33184336,
+               0.66208428, 0.61911036, 0.73194557, 0.64929612, 0.71149718])
+        """
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
+        loadings = self.loadings_.copy()
+        communalities = (loadings ** 2).sum(axis=1)
+        return communalities
+
+    def get_uniquenesses(self):
+        """
+        Calculate the uniquenesses, given the
+        factor loading matrix.
+
+        Returns
+        -------
+        uniquenesses : numpy array
+            The uniquenesses from the factor loading
+            matrix.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> fa.get_uniquenesses()
+        array([0.411242  , 0.99617692, 0.49547598, 0.27158817, 0.66815664,
+               0.33791572, 0.38088964, 0.26805443, 0.35070388, 0.28850282])
+        """
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
+        communalities = self.get_communalities()
+        communalities = communalities.copy()
+        uniqueness = (1 - communalities)
+        return uniqueness
+
+    @staticmethod
+    def _get_factor_variance(loadings):
+        """
+        A helper method to get the factor variances,
+        because sometimes we need them even before the
+        model is fitted.
+
+        Parameters
+        ----------
+        loadings : array-like
+            The factor loading matrix,
+            in whatever state.
+
+        Returns
+        -------
+        variance : numpy array
+            The factor variances.
+        proportional_variance : numpy array
+            The proportional factor variances.
+        cumulative_variances : numpy array
+            The cumulative factor variances.
+        """
+        n_rows = loadings.shape[0]
+
+        # calculate variance
+        loadings = loadings ** 2
+        variance = np.sum(loadings, axis=0)
+
+        # calculate proportional variance
+        proportional_variance = variance / n_rows
+
+        # calculate cumulative variance
+        cumulative_variance = np.cumsum(proportional_variance, axis=0)
+
+        return (variance,
+                proportional_variance,
+                cumulative_variance)
+
+    def get_factor_variance(self):
+        """
+        Calculate the factor variance information,
+        including variance, proportional variance
+        and cumulative variance for each factor
+
+        Returns
+        -------
+        variance : numpy array
+            The factor variances.
+        proportional_variance : numpy array
+            The proportional factor variances.
+        cumulative_variances : numpy array
+            The cumulative factor variances.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test02.csv')
+        >>> fa = FactorAnalyzer(rotation=None)
+        >>> fa.fit(df_features)
+        FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
+                method='minres', n_factors=3, rotation=None, rotation_kwargs={},
+                use_smc=True)
+        >>> # 1. Sum of squared loadings (variance)
+        ... # 2. Proportional variance
+        ... # 3. Cumulative variance
+        >>> fa.get_factor_variance()
+        (array([3.51018854, 1.28371018, 0.73739507]),
+         array([0.35101885, 0.12837102, 0.07373951]),
+         array([0.35101885, 0.47938987, 0.55312938]))
+        """
+        # meets all of our expected criteria
+        check_is_fitted(self, 'loadings_')
+        loadings = self.loadings_.copy()
+        return self._get_factor_variance(loadings)

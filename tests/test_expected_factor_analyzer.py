@@ -445,3 +445,19 @@ def test_10_promax_minres_3_factors():
                                 ignore_value=True,
                                 ignore_communalities=True):
         assert check > THRESHOLD
+
+
+def test_02_none_principal():
+
+    test_name = 'test02'
+    factors = 3
+    method = 'principal'
+    rotation = 'none'
+
+    for check in check_scenario(test_name,
+                                factors,
+                                method,
+                                rotation,
+                                ignore_value=True,
+                                ignore_communalities=True):
+        assert check > THRESHOLD

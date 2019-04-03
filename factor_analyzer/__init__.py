@@ -11,7 +11,8 @@ from .factor_analyzer import (FactorAnalyzer,
                               calculate_kmo)
 
 from .confirmatory_factor_analyzer import (ConfirmatoryFactorAnalyzer,
-                                           ModelParser)
+                                           ModelSpecificationParser,
+                                           ModelSpecification)
 
 from .utils import (fill_lower_diag,
                     merge_variance_covariance,

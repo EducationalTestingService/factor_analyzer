@@ -10,8 +10,10 @@ import numpy as np
 import pandas as pd
 
 from nose.tools import raises
-from pandas.util.testing import assert_frame_equal, assert_almost_equal
+from numpy.testing import assert_array_almost_equal
+from pandas.util.testing import assert_almost_equal
 
+from factor_analyzer.utils import smc
 from factor_analyzer.factor_analyzer import FactorAnalyzer
 from factor_analyzer.factor_analyzer import (calculate_kmo,
                                              calculate_bartlett_sphericity)
@@ -21,7 +23,7 @@ def test_calculate_bartlett_sphericity():
 
     path = 'tests/data/test01.csv'
     data = pd.read_csv(path)
-    s, p = calculate_bartlett_sphericity(data)
+    s, p = calculate_bartlett_sphericity(data.values)
 
     assert_almost_equal(s, 14185)
     assert_almost_equal(p, 0)
@@ -34,21 +36,15 @@ def test_calculate_kmo():
 
     expected_overall = 0.81498469767761361
 
-    index = ['sex', 'zygosity', 'moed', 'faed',
-             'faminc', 'english', 'math', 'socsci',
-             'natsci', 'vocab']
-
     values = [0.405516, 0.560049, 0.700033,
               0.705446, 0.829063, 0.848425,
               0.863502, 0.841143, 0.877076,
               0.839272]
 
-    expected_by_item = pd.DataFrame(values,
-                                    columns=['KMO'],
-                                    index=index)
+    expected_by_item = np.array(values)
 
     (kmo_by_item,
-     kmo_overall) = calculate_kmo(data)
+     kmo_overall) = calculate_kmo(data.values)
 
     assert_almost_equal(kmo_by_item, expected_by_item)
     assert_almost_equal(kmo_overall, expected_overall)
@@ -65,10 +61,11 @@ class TestFactorAnalyzer:
         expected = data.copy()
         expected.iloc[2, 1] = np.mean([4, 8, 10, 16, 18])
         expected_corr = expected.corr()
+        expected_corr = expected_corr.values
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, rotation=None, impute='mean')
-        assert_frame_equal(fa.corr, expected_corr)
+        fa = FactorAnalyzer(rotation=None, impute='mean', n_factors=1)
+        fa.fit(data)
+        assert_array_almost_equal(fa.corr_, expected_corr)
 
     def test_analyze_impute_median(self):
 
@@ -79,10 +76,11 @@ class TestFactorAnalyzer:
         expected = data.copy()
         expected.iloc[2, 1] = np.median([4, 8, 10, 16, 18])
         expected_corr = expected.corr()
+        expected_corr = expected_corr.values
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, rotation=None, impute='median')
-        assert_frame_equal(fa.corr, expected_corr)
+        fa = FactorAnalyzer(rotation=None, impute='median', n_factors=1)
+        fa.fit(data)
+        assert_array_almost_equal(fa.corr_, expected_corr)
 
     def test_analyze_impute_drop(self):
 
@@ -93,10 +91,11 @@ class TestFactorAnalyzer:
         expected = data.copy()
         expected = expected.dropna()
         expected_corr = expected.corr()
+        expected_corr = expected_corr.values
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, rotation=None, impute='drop')
-        assert_frame_equal(fa.corr, expected_corr)
+        fa = FactorAnalyzer(rotation=None, impute='drop', n_factors=1)
+        fa.fit(data)
+        assert_array_almost_equal(fa.corr_, expected_corr)
 
     @raises(ValueError)
     def test_analyze_impute_value_error(self):
@@ -105,8 +104,8 @@ class TestFactorAnalyzer:
                              'B': [4, 8, np.nan, 10, 16, 18],
                              'C': [6, 12, 15, 12, 26, 27]})
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, rotation=None, impute='blah')
+        fa = FactorAnalyzer(rotation=None, impute='blah', n_factors=1)
+        fa.fit(data)
 
     @raises(ValueError)
     def test_analyze_rotation_value_error(self):
@@ -115,8 +114,8 @@ class TestFactorAnalyzer:
                              'B': [4, 8, np.nan, 10, 16, 18],
                              'C': [6, 12, 15, 12, 26, 27]})
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, rotation='blah')
+        fa = FactorAnalyzer(rotation='blah', n_factors=1)
+        fa.fit(data)
 
     @raises(ValueError)
     def test_analyze_infinite(self):
@@ -126,39 +125,8 @@ class TestFactorAnalyzer:
                              'C': [0.5, float('inf'), 1.0]},
                             index=['A', 'B', 'C'])
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 1, impute='drop', use_corr_matrix=True)
-
-    def test_remove_all_columns(self):
-        # test that columns with string values are removed.
-
-        data = pd.DataFrame({'A': ['1', 2, 3, 4, 5],
-                             'B': [6, 7, 8, 9, '10']})
-
-        result = FactorAnalyzer().remove_non_numeric(data)
-
-        assert result.empty
-
-    def test_remove_no_columns(self):
-        # test that no numeric columns are removed.
-
-        data = pd.DataFrame({'A': [1, 2, 3, 4, 5],
-                             'B': [6.1, 7.2, 8.4, 9.2, 10.1]})
-
-        result = FactorAnalyzer().remove_non_numeric(data)
-
-        assert_frame_equal(data, result)
-
-    def test_remove_one_column(self):
-        # test that only column with string is removed.
-
-        data = pd.DataFrame({'A': ['1', 2, 3, 4, 5],
-                             'B': [6, 7, 8, 9, 10]})
-
-        expected = pd.DataFrame({'B': [6, 7, 8, 9, 10]})
-
-        result = FactorAnalyzer().remove_non_numeric(data)
-        assert_frame_equal(expected, result)
+        fa = FactorAnalyzer(impute='drop', n_factors=1, is_corr_matrix=True)
+        fa.fit(data)
 
     def test_smc_is_r_squared(self):
         # test that SMC is roughly equivalent to R-squared values.
@@ -168,34 +136,29 @@ class TestFactorAnalyzer:
                              'C': [0.45, 0.90, 0.22, 0.34, .045]})
 
         expected_r2 = [0.478330, 0.196223, 0.484519]
-        expected_r2 = pd.DataFrame(expected_r2,
-                                   index=['A', 'B', 'C'],
-                                   columns=['SMC'])
+        expected_r2 = np.array(expected_r2)
 
-        smc_result = FactorAnalyzer.smc(data)
+        smc_result = smc(data.corr().values)
 
-        assert_frame_equal(smc_result, expected_r2, check_less_precise=2)
+        assert_array_almost_equal(smc_result, expected_r2)
 
     def test_factor_variance(self):
 
         path = 'tests/data/test01.csv'
         data = pd.read_csv(path)
 
-        fa = FactorAnalyzer()
-        fa.analyze(data, 3, rotation=None)
-        loadings = fa.loadings
+        fa = FactorAnalyzer(n_factors=3, rotation=None)
+        fa.fit(data)
+        loadings = fa.loadings_
 
         n_rows = loadings.shape[0]
 
         # calculate variance
         loadings = loadings ** 2
-        variance = loadings.sum(axis=0)
+        variance = np.sum(loadings, axis=0)
 
         # calculate proportional variance
         proportional_variance_expected = variance / n_rows
-        proportional_variance = fa.get_factor_variance().loc['Proportion Var']
-
-        proportional_variance_expected.name = ''
-        proportional_variance.name = ''
+        proportional_variance = fa.get_factor_variance()[1]
 
         assert_almost_equal(proportional_variance_expected, proportional_variance)
