@@ -58,7 +58,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'factor_analyzer'
-copyright = '2017, Jeremy Biggs'
+copyright = '2019, Jeremy Biggs'
 author = 'Jeremy Biggs'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -183,8 +183,6 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
@@ -204,8 +202,6 @@ epub_copyright = copyright
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
-
-
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}

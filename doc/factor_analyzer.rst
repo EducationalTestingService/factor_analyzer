@@ -15,6 +15,13 @@ factor\_analyzer package
     :undoc-members:
     :show-inheritance:
 
+:py:mod:`factor\_analyzer\.confirmatory\_factor\_analyzer` Module
+--------------------------------------------------------
+.. automodule:: factor_analyzer.confirmatory_factor_analyzer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :py:mod:`factor\_analyzer\.rotator` Module
 --------------------------------------------------------
 .. automodule:: factor_analyzer.rotator
