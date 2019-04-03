@@ -44,6 +44,12 @@ class ModelSpecification:
         The error variance specification
     factor_covs : array-like
         The factor covariance specification.
+    factor_names : list of str or None
+        A list of factor names, if available.
+        Defaults to None.
+    variable_names : list of str or None
+        A list of variable names, if available.
+        Defaults to None.
 
     Attributes
     ----------
@@ -67,12 +73,18 @@ class ModelSpecification:
         The indexes of "free" error variance parameters.
     factor_covs_free : numpy array
         The indexes of "free" factor covariance parameters.
+    factor_names : list of str or None
+        A list of factor names, if available.
+    variable_names : list of str or None
+        A list of variable names, if available.
     """
 
     def __init__(self,
                  loadings,
                  n_factors,
-                 n_variables):
+                 n_variables,
+                 factor_names=None,
+                 variable_names=None):
 
         assert isinstance(loadings, np.ndarray)
         assert loadings.shape[0] == n_variables
@@ -81,6 +93,8 @@ class ModelSpecification:
         self._loadings = loadings
         self._n_factors = n_factors
         self._n_variables = n_variables
+        self._factor_names = factor_names
+        self._variable_names = variable_names
 
         self._n_lower_diag = get_symmetric_lower_idxs(n_factors, False).shape[0]
 
@@ -134,6 +148,14 @@ class ModelSpecification:
     def n_lower_diag(self):
         return self._n_lower_diag
 
+    @property
+    def factor_names(self):
+        return self._factor_names
+
+    @property
+    def variable_names(self):
+        return self._variable_names
+
     def get_model_specification_as_dict(self):
         """
         Get the model specification as a dictionary.
@@ -141,7 +163,7 @@ class ModelSpecification:
         Returns
         -------
         model_specification : dict
-            The model specification parameters,
+            The model specification keys and values,
             as a dictionary.
         """
         return {'loadings': self._loadings.copy(),
@@ -152,7 +174,9 @@ class ModelSpecification:
                 'factor_covs_free': self._factor_covs_free.copy(),
                 'n_variables': self._n_variables,
                 'n_factors': self._n_factors,
-                'n_lower_diag': self._n_lower_diag}
+                'n_lower_diag': self._n_lower_diag,
+                'variable_names': self._variable_names,
+                'factor_names': self._factor_names}
 
 
 class ModelSpecificationParser:
@@ -169,7 +193,10 @@ class ModelSpecificationParser:
         Generate the model specification from a
         dictionary. The keys in the dictionary
         should be the factor names, and the values
-        should be the feature names.
+        should be the feature names. If this method
+        is used to create the ``ModelSpecification``,
+        then factor names and variable names will
+        be added as properties to that object.
 
         Parameters
         ----------
@@ -201,6 +228,7 @@ class ModelSpecificationParser:
         >>> model_spec = ModelSpecificationParser.parse_model_specification_from_dict(X, model_dict)
         """
         if specification is None:
+            factor_names, variable_names = None, None
             n_variables, n_factors = X.shape[1], X.shape[1]
             loadings = np.ones((n_factors, n_factors), dtype=int)
         elif isinstance(specification, dict):
@@ -219,7 +247,9 @@ class ModelSpecificationParser:
 
         return ModelSpecification(**{'loadings': loadings,
                                      'n_variables': n_variables,
-                                     'n_factors': n_factors})
+                                     'n_factors': n_factors,
+                                     'factor_names': factor_names,
+                                     'variable_names': variable_names})
 
     @staticmethod
     def parse_model_specification_from_array(X, specification=None):
@@ -227,7 +257,10 @@ class ModelSpecificationParser:
         Generate the model specification from
         an array. The columns should correspond to
         the factors, and the rows should correspond to
-        the variables.
+        the variables. If this method is used to create
+        the ``ModelSpecification``, then no factor names
+        and variable names will be added as properties
+        to that object.
 
         Parameters
         ----------
@@ -285,21 +318,21 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
     Parameters
     ----------
     specification : ModelSpecificaition object or None, optional
-        A model specification. This must be an ModelSpecificaiton object
+        A model specification. This must be a ``ModelSpecificaiton`` object
         or None. If None, the ModelSpecification will be generated assuming
         that n_factors == n_variables, and that all variables load on all
-        factors.
+        factors. Note that this could mean the factor model is not
+        identified, and the optimization could fail.
         Defaults to None.
     n_obs : int or None, optional
         The number of observations in the original
-        data set. If this is not passed and `is_cov=True`,
-        then a reduced form of the objective function will
-        be used.
+        data set. If this is not passed and `is_cov_matrix=True`,
+        then an error will be raised.
         Defaults to None.
     is_cov_matrix : bool, optional
-        Whether the input `data` is a
+        Whether the input `X` is a
         covariance matrix. If False,
-        assume it is the full data set
+        assume it is the full data set.
         Defaults to False.
     bounds : list of tuples or None, optional
         A list of minimum and maximum
@@ -307,10 +340,10 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         input array. This must equal `x0`,
         which is the input array from your
         parsed and combined model specification.
-        The length is ((n_factors * n_variables) +
-        n_variables + n_factors + (((n_factors * n_factors) -
-        n_factors) // 2)
-        If None, noting will be bounded.
+        The length is:
+          ((n_factors * n_variables) + n_variables + n_factors + 
+          (((n_factors * n_factors) - n_factors) // 2)
+        If None, nothing will be bounded.
         Defaults to None.
     max_iter : int, optional
         The maximum number of iterations
@@ -328,7 +361,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
     Raises
     ------
     ValueError
-        If is_cov_matrix is True, and n_obs
+        If ``is_cov_matrix`` is True, and n_obs
         is not provided.
 
     Attributes
@@ -581,7 +614,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Parameters
         ----------
-        X : numpy array
+        X : array-like
             The data to use for confirmatory
             factor analysis. If this is just a
             covariance matrix, make sure `is_cov_matrix`
@@ -590,12 +623,14 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Raises
         ------
+        ValueError
+            If the specification is not None or a
+            ``ModelSpecification`` object
+        AssertionError
+            If ``is_cov_matrix=True`` and the matrix
+            is not square.
         AssertionError
             If len(bounds) != len(x0)
-            If `is_cov=True` and the shame is not square or equal to the
-            number of variables.
-        ValueError
-            If `fix_first=True` and `factor_vars` exists in the model.
 
         Examples
         --------
@@ -734,7 +769,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        X_new : numpy array, shape (n_samples, n_components)
+        scores : numpy array, shape (n_samples, n_components)
             The latent variables of X.
 
         Examples
@@ -852,7 +887,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         error = np.diag(self.error_vars_.flatten())
         return self.loadings_.dot(self.factor_varcovs_).dot(self.loadings_.T) + error
 
-    def get_derivatives_implied_cov(self):
+    def _get_derivatives_implied_cov(self):
         """
         Compute the derivatives for the implied covariance
         matrix (sigma).
@@ -913,7 +948,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
                 error_covs_dx[:, self.model.error_vars_free].copy(),
                 intercept_dx)
 
-    def get_derivatives_implied_mu(self):
+    def _get_derivatives_implied_mu(self):
         """
         Compute the "derivatives" for the implied means.
         Note that the derivatives of the implied means
@@ -1002,12 +1037,12 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         (loadings_dx,
          factor_covs_dx,
          error_covs_dx,
-         intercept_dx) = self.get_derivatives_implied_cov()
+         intercept_dx) = self._get_derivatives_implied_cov()
 
         (loadings_dx_mu,
          factor_covs_dx_mu,
          error_covs_dx_mu,
-         intercept_dx_mu) = self.get_derivatives_implied_mu()
+         intercept_dx_mu) = self._get_derivatives_implied_mu()
 
         # combine all of our derivatives; below we will  merge all of these
         # together in a single matrix, delta, to use the delta rule

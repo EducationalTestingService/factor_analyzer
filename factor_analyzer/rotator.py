@@ -105,6 +105,7 @@ class Rotator(BaseEstimator):
            [ 0.76620579,  0.1045194 , -0.22649615],
            [ 0.81372945,  0.20915845,  0.07479506]])
     """
+
     def __init__(self,
                  method='varimax',
                  normalize=True,
@@ -437,17 +438,15 @@ class Rotator(BaseEstimator):
         rotation_mtx : numpy array, shape (n_factors, n_factors)
             The rotation matrix
         """
-        arr = loadings.copy()
-        n_rows, n_cols = arr.shape
+        X = loadings.copy()
+        n_rows, n_cols = X.shape
         if n_cols < 2:
-            return arr
-
-        X = arr
+            return X
 
         # normalize the loadings matrix
         # using sqrt of the sum of squares (Kaiser)
         if self.normalize:
-            normalized_mtx = np.apply_along_axis(lambda x: np.sqrt(np.sum(x**2)), 1, arr)
+            normalized_mtx = np.apply_along_axis(lambda x: np.sqrt(np.sum(x**2)), 1, X.copy())
             X = (X.T / normalized_mtx).T
 
         # initialize the rotation matrix
@@ -514,21 +513,21 @@ class Rotator(BaseEstimator):
             matrix. This only exists
             if the rotation is oblique.
         """
-        arr = loadings.copy()
-        n_rows, n_cols = arr.shape
+        X = loadings.copy()
+        n_rows, n_cols = X.shape
         if n_cols < 2:
-            return arr
+            return X
 
         if self.normalize:
             # pre-normalization is done in R's
             # `kaiser()` function when rotate='Promax'.
-            array = arr.copy()
+            array = X.copy()
             h2 = sp.diag(np.dot(array, array.T))
             h2 = np.reshape(h2, (h2.shape[0], 1))
             weights = array / sp.sqrt(h2)
 
         else:
-            weights = arr.copy()
+            weights = X.copy()
 
         # first get varimax rotation
         X, rotation_mtx = self._varimax(weights)

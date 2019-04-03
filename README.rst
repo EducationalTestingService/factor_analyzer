@@ -12,14 +12,17 @@ FactorAnalyzer
     :target: https://anaconda.org/desilinguist/factor_analyzer/
 
 
-This is a Python module to perform confirmatory and exploratory and factor
-analysis, with several optional rotations. With exploratory factor analysis,
-estimation can be performed using a minimum residual (minres) solution
-(identitical to unweighted least squares), or maximum likelihood estimation (MLE).
-Confirmatory factor analysis can only be performed using a MLE solution.
-This code is fully compatible with `sklearn`.
+This is a Python module to perform exploratory and factor analysis (EFA), with several 
+optional rotations. It also includes a class to perform confirmatory factor
+analysis (CFA), with certain pre-defined constraints. In expoloratory factor analysis,
+factor extraction can be performed using a variety of estimation techniques. The
+``factor_analyzer`` package allows users to perfrom EFA using either (1) a minimum
+residual (MINRES) solution, (2) a maximum likelihood (ML) solution, or (3) a principal
+factor solution. However, CFA can only be performe using an ML solution.
 
-Portions of this code are ported from the excellent R library `psych`.
+Both the EFA and CFA classes within this package are fully compatible with `scikit-learn`.
+Portions of this code are ported from the excellent R library `psych`, and the `sem`
+package provided inspiration for the CFA class.
 
 Please see the `official documentation <http://factor-analyzer.readthedocs.io/en/latest/index.html>`__ for additional details.
 
@@ -38,12 +41,13 @@ variable and the latent factors.
 Confirmatory factor analysis (CFA), a closely associated technique, is
 used to test an a priori hypothesis about latent relationships among sets
 of observed variables. In CFA, the researcher specifies the expected pattern
-of factor loadings, and other possible constraints on the model.
+of factor loadings (and possibly other constraints), and fits a model according
+to this specification.
 
 Typically, a number of factors (K) in an EFA or CFA model is selected
 such that it is substantially smaller than the number of variables. The
 factor analysis model can be estimated using a variety of standard
-estimation methods, including but not limited to OLS, minres, or MLE.
+estimation methods, including but not limited MINRES or ML.
 
 Factor loadings are similar to standardized regression coefficients, and
 variables with higher loadings on a particular factor can be interpreted
@@ -63,14 +67,13 @@ Two common types of rotations are:
    correlated.
 
 This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer`` class. The class includes a ``fit()`` method that
-allows users to perform factor analysis using either minres or MLE, with
-optional rotations on the factor loading matrices. The package also offers
-a stand-alone ``Rotator`` class to perform common rotations on an unrotated
-loading matrix.
+``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()`` 
+methods that enable users to perform factor analysis and score new data
+using the fitted factor model. Users can also perform optional otations
+on a factor loading matrix using the ``Rotator`` class.
 
-The following rotations options are available in both `FactorAnalyzer`
-and `Rotator`:
+The following `rotations options are available in both ``FactorAnalyzer``
+and ``Rotator``:
 
     (a) varimax (orthogonal rotation)
     (b) promax (oblique rotation)
@@ -82,10 +85,11 @@ and `Rotator`:
 
 In adddition, the package includes a ``confirmatory_factor_analyzer``
 module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
-class includes a ``fit()`` method that allows users to perform
-confirmatory factor analysis using MLE. Performing CFA requires users
-to specify a model with the expected factor loading relationships. This
-can be done using the ``ModelSpecificationParser`` class.
+class includes ``fit()`` and ``transform()``  that enable users to perform
+confirmatory factor analysis and score new data using the fitted model.
+Performing CFA requires users to specify in advance a model specification
+with the expected factor loading relationships. This can be done using
+the ``ModelSpecificationParser`` class.
 
 Examples
 --------
@@ -177,7 +181,7 @@ Requirements
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``
--  ``scikit-learn==0.20.1``
+-  ``scikit-learn``
 
 Contributing
 ------------
@@ -194,7 +198,7 @@ You can install this package via ``pip`` with:
 
 Alternatively, you can install via ``conda`` with:
 
-``$ conda install -c desilinguist factor_analyzer``
+``$ conda install -c ets factor_analyzer``
 
 License
 -------
