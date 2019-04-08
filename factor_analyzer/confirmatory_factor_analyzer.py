@@ -757,6 +757,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         self.aic_ = 2 * res.fun + 2 * (x0.shape[0] + self.model.n_variables)
         if self.n_obs is not None:
             self.bic_ = 2 * res.fun + np.log(self.n_obs) * (x0.shape[0] + self.model.n_variables)
+        return self
 
     def transform(self, X):
         """
