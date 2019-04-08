@@ -1,4 +1,4 @@
 pandas
-scipy==1.2.1
-numpy==1.16.2
-scikit-learn==0.20.1
+scipy
+numpy
+scikit-learn
