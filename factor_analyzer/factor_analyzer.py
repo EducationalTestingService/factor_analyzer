@@ -742,7 +742,52 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         scores = np.dot(X_scale, weights)
         return scores
+      
 
+    def inverse_transform(self,X):
+        """
+        Calculate parameter values in the original data space
+
+        Returns
+        -------
+        X_ori: numpy array
+            Inverse transformation of reduced data
+        """
+        # check if the data is a data frame
+        # so we can convert it to an array
+        if isinstance(X,pd.DataFrame):
+            X = X.copy().values()
+        else:
+            X = X.copy()
+        
+        # now check the array, and make sure it 
+        # meets all of our expected criteria
+        X = check_array(X,force_all_finite=True,
+                        estimator=self,
+                        copy=True)
+        
+        # check the existence of the orignal mean and std
+        if self.mean_ is None or self.std is None:
+            warnings.warn('Could not find original mean and standard deviation; using'
+                          'the mean and standard deviation from the current dataset')
+            mean = np.mean(X,axis=0)
+            std = np.std(X,axis=0)
+        else:
+            mean = self.mean_
+            std = self.std_
+        
+        # check if factor analysis is performed on a dataset
+        if self.loadings_ is None:
+            raise Exception('Could not find factor loadings; Cannot perform inverse transform'
+                            ' before a factor analysis is performed on the original data space')
+        else:
+            loads = self.loadings_
+        
+        # apply inverse transformation
+        X_ori = np.dot(X.loads.T)*std+mean
+
+        return X_ori
+        
     def get_eigenvalues(self):
         """
         Calculate the eigenvalues, given the
