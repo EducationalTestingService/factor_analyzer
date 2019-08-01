@@ -7,9 +7,21 @@ the confirmatory factor analysis module.
 :organization: ETS
 """
 import numpy as np
+import warnings
+from scipy.linalg import cholesky
 
 
-def cov(x):
+def inv_chol(x, logdet=False):
+    chol = cholesky(x, lower=True)
+    chol_inv = np.linalg.inv(chol)
+    chol_inv = np.dot(chol_inv.T, chol_inv)
+    if logdet:
+        chol_diag = np.diag(chol)
+        return np.sum(np.log(chol_diag * chol_diag))
+    return chol_inv
+
+
+def cov(x, ddof=0):
     """
     Calculate the covariance matrix.
 
@@ -19,13 +31,17 @@ def cov(x):
         A 1-D or 2-D array containing multiple variables
         and observations. Each column of x represents a variable,
         and each row a single observation of all those variables.
+    ddof : int, optional
+        Means Delta Degrees of Freedom. The divisor used in calculations
+        is N - ddof, where N represents the number of elements.
+        Defaults to 0.
 
     Returns
     -------
     r : numpy array
         The covariance matrix of the variables.
     """
-    r = np.cov(x, rowvar=False, ddof=0)
+    r = np.cov(x, rowvar=False, ddof=ddof)
     return r
 
 
@@ -185,7 +201,7 @@ def partial_correlations(x):
         variables.
     """
     numrows, numcols = x.shape
-    x_cov = cov(x)
+    x_cov = cov(x, ddof=1)
     # create empty array for when we cannot compute the
     # matrix inversion
     empty_array = np.empty((numcols, numcols))
@@ -193,12 +209,21 @@ def partial_correlations(x):
     if numcols > numrows:
         icvx = empty_array
     else:
-        # we also return nans if there is singularity in the data
-        # (e.g. all human scores are the same)
+        # if the determinant is less than the lowest representable
+        # 32 bit integer, then we use the try the pseudo-inverse;
+        # otherwise, we try the inverse; if neither works, we
+        # set the entire matrix to NaNs
         try:
-            icvx = np.linalg.inv(x_cov)
-        except np.linalg.LinAlgError:
+            if np.linalg.det(x_cov) < np.finfo(np.float32).eps:
+                icvx = np.linalg.pinv(x_cov)
+                warnings.warn('The inverse of the variance-covariance matrix was calculated '
+                              'using the Moore-Penrose generalized matrix inversion, due '
+                              'to its determinant being at or very close to zero.')
+            else:
+                icvx = np.linalg.inv(x_cov)
+        except:
             icvx = empty_array
+
     pcor = -1 * covariance_to_correlation(icvx)
     np.fill_diagonal(pcor, 1.0)
     return pcor
