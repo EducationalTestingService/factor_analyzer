@@ -242,10 +242,14 @@ def test_partial_correlations_with_zero_det():
                          [20, 20, 20, 20],
                          [11, 11, 11, 11]])
 
-    expected = [[1.0, -0.9999999999999998, -0.9999999999999998, -0.9999999999999998],
+    expected = [[1.0,
+                 -0.9999999999999998,
+                 -0.9999999999999998,
+                 -0.9999999999999998],
                 [-1.0000000000000004, 1.0, -1.0, -1.0],
                 [-1.0000000000000004, -1.0, 1.0, -1.0],
                 [-1.0000000000000004, -1.0, -1.0, 1.0]]
+    expected = pd.DataFrame(expected)
 
     result = partial_correlations(data)
     assert_almost_equal(result, expected.values)
