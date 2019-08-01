@@ -233,7 +233,7 @@ def test_partial_correlations_num_columns_greater():
     assert_almost_equal(result, expected.values)
 
 
-def test_partial_correlations_catch_linalgerror():
+def test_partial_correlations_with_zero_det():
 
     # Covariance matrix that will be singular
     data = pd.DataFrame([[10, 10, 10, 10],
@@ -242,13 +242,10 @@ def test_partial_correlations_catch_linalgerror():
                          [20, 20, 20, 20],
                          [11, 11, 11, 11]])
 
-    empty_array = np.empty((4, 4))
-    empty_array[:] = np.nan
-    np.fill_diagonal(empty_array, 1.0)
-
-    expected = pd.DataFrame(empty_array,
-                            columns=[0, 1, 2, 3],
-                            index=[0, 1, 2, 3])
+    expected = [[1.0, -0.9999999999999998, -0.9999999999999998, -0.9999999999999998],
+                [-1.0000000000000004, 1.0, -1.0, -1.0],
+                [-1.0000000000000004, -1.0, 1.0, -1.0],
+                [-1.0000000000000004, -1.0, -1.0, 1.0]]
 
     result = partial_correlations(data)
     assert_almost_equal(result, expected.values)
