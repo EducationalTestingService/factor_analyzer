@@ -12,6 +12,25 @@ from scipy.linalg import cholesky
 
 
 def inv_chol(x, logdet=False):
+    """
+    Calculate inverse using cholesky.
+    Optionally, calculate the log determinant
+
+    Parameters
+    ----------
+    x : array-like
+        The matrix to invert.
+    logdet : bool, optional
+        Whether to calculate the
+        log determinant, instead of
+        the inverse.
+        Defaults to False.
+
+    Returns
+    -------
+    chol_inv (or logdet) : array-like
+        The inverted matrix
+    """
     chol = cholesky(x, lower=True)
     chol_inv = np.linalg.inv(chol)
     chol_inv = np.dot(chol_inv.T, chol_inv)
