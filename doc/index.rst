@@ -60,7 +60,7 @@ Two common types of rotations are:
 This package includes a ``factor_analyzer`` module with a stand-alone
 ``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()`` 
 methods that enable users to perform factor analysis and score new data
-using the fitted factor model. Users can also perform optional otations
+using the fitted factor model. Users can also perform optional rotations
 on a factor loading matrix using the ``Rotator`` class.
 
 The following rotation options are available in both ``FactorAnalyzer`` 
