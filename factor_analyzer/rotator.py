@@ -191,9 +191,9 @@ class Rotator(BaseEstimator):
                 The value of the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
-        if (0 != self.gamma):
+        if (self.gamma != 0):
             p = loadings.shape[0]
-            X = np.diag(1, p) - np.dot(np.zeros((p, p)), X)
+            X = np.diag(np.full(1, p)) - np.dot(np.zeros((p, p)), X)
         gradient = loadings * X
         criterion = np.sum(loadings**2 * X) / 4
         return {'grad': gradient, 'criterion': criterion}

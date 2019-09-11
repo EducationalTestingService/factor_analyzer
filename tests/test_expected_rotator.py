@@ -175,3 +175,15 @@ def test_07_equamax_minres_2_factors():
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
+
+
+def test_07_oblimin_minres_2_factors_gamma():
+
+    test_name = 'test07_gamma'
+    factors = 2
+    method = 'uls'
+    rotation = 'oblimin'
+    gamma = 0.5
+
+    check = check_rotation(test_name, factors, method, rotation, gamma=gamma)
+    assert check > THRESHOLD
