@@ -2,7 +2,7 @@ language: python
 python:
   - 3.7
 env:
-  - TESTFILES="tests/test_expected_confirmatory_factor_analyer.py tests/test_factor_analyzer.py"
+  - TESTFILES="tests/test_expected_confirmatory_factor_analyzer.py tests/test_factor_analyzer.py"
   - TESTFILES="tests/test_expected_factor_analyzer.py tests/test_expected_rotator.py tests/test_utils.py"
 
 # run on the new Travis infrastructure
