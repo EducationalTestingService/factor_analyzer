@@ -340,7 +340,8 @@ def check_rotation(test_name,
                    method,
                    rotation,
                    rel_tol=0,
-                   abs_tol=0.1):
+                   abs_tol=0.1,
+                   **kwargs):
     """
     Check the rotation results.
 
@@ -373,8 +374,8 @@ def check_rotation(test_name,
     r_loading = r_input['loading']
     r_loading = normalize(r_loading, absolute=False)
 
-    rotator = Rotator(method=rotation)
-    rotated_loading = rotator.fit_transform(r_loading, rotation)
+    rotator = Rotator(method=rotation, **kwargs)
+    rotated_loading = rotator.fit_transform(r_loading)
 
     r_output = collect_r_output(test_name, factors, method, rotation,
                                 output_types=['loading'])
