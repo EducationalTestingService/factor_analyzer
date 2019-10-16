@@ -1,0 +1,31 @@
+language: python
+python:
+  - 3.7
+env:
+  - TESTFILES="tests/test_expected_confirmatory_factor_analyzer.py tests/test_factor_analyzer.py"
+  - TESTFILES="tests/test_expected_factor_analyzer.py tests/test_expected_rotator.py tests/test_utils.py"
+
+# run on the new Travis infrastructure
+sudo: false
+
+# Install stuff
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda3/bin:$PATH
+  - conda install -c anaconda --yes setuptools
+install:
+  - conda install --yes -c conda-forge python=${TRAVIS_PYTHON_VERSION} codecov --file requirements.txt
+  # Have to use pip for nose-cov because its entry points are not supported by conda yet
+  - pip install nose nose-cov
+  - python setup.py install
+
+# Run test
+script:
+  - nosetests -v --with-cov --cov factor_analyzer --cov-config .coveragerc --logging-level=DEBUG ${TESTFILES}
+
+# Calculate coverage
+after_success:
+  - codecov
+
