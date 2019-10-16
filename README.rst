@@ -1,15 +1,15 @@
 FactorAnalyzer
 --------------
 
-.. image:: https://circleci.com/gh/EducationalTestingService/factor_analyzer/tree/master.svg?style=shield
-    :alt: Build status
-    :target: https://circleci.com/gh/EducationalTestingService/factor_analyzer
+.. image:: https://img.shields.io/travis/EducationalTestingService/factor_analyzer/master.svg
+   :alt: Build status
+   :target: https://travis-ci.org/EducationalTestingService/factor_analyzer
 
-.. image:: https://coveralls.io/repos/github/EducationalTestingService/factor_analyzer/badge.svg?branch=master
-    :target: https://coveralls.io/github/EducationalTestingService/factor_analyzer?branch=master
+.. image:: https://codecov.io/gh/EducationalTestingService/factor_analyzer/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
 
-.. image:: https://anaconda.org/desilinguist/factor_analyzer/badges/installer/conda.svg
-    :target: https://anaconda.org/desilinguist/factor_analyzer/
+.. image:: https://anaconda.org/ets/factor_analyzer/badges/installer/conda.svg
+    :target: https://anaconda.org/ets/factor_analyzer/
 
 
 This is a Python module to perform exploratory and factor analysis (EFA), with several 
