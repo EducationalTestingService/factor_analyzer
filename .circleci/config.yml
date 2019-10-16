@@ -22,29 +22,18 @@ jobs:
             wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
             chmod +x miniconda.sh
             ./miniconda.sh -b -f
-            ~/miniconda3/bin/conda install --file requirements.txt --yes
+            export PATH=~/miniconda3/bin/conda
+            conda install -c anaconda --yes setuptools
+            ~/miniconda3/bin/conda install python=3.6.8 --file requirements.txt --yes
             ~/miniconda3/bin/pip install nose nose-cov python-coveralls
-
-      - save_cache:
-          paths:
-            - "~/miniconda3/pkgs"
-          key: deps
-
-      # install factor analyzer
-      - run:
-          name: Install factor analyzer
-          command: |
             ~/miniconda3/bin/pip install -e .
 
       # run all of the tests
       - run:
-          name: Run tests
-          command: ~/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
-
-      # change to factor analyzer directory and run coveralls
-      - run:
-          name: Run coveralls
-          command: cd ~/repo/factor_analyzer && ~/miniconda3/bin/coveralls
+          name: Run tests and coveralls
+          command: |
+            ~/miniconda3/bin/nosetests -v tests --with-coverage --cover-package=factor_analyzer --cov-config .coveragerc
+            cd ~/repo/factor_analyzer && ~/miniconda3/bin/coveralls
 
       - store_artifacts:
           path:  ~/repo/artifacts
