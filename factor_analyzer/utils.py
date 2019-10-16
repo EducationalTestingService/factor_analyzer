@@ -15,6 +15,7 @@ def inv_chol(x, logdet=False):
     """
     Calculate inverse using cholesky.
     Optionally, calculate the log determinant
+    of the cholesky.
 
     Parameters
     ----------
@@ -28,16 +29,23 @@ def inv_chol(x, logdet=False):
 
     Returns
     -------
-    chol_inv (or logdet) : array-like
+    chol_inv : array-like
         The inverted matrix
+    chol_logdet : array-like or None
+        The log determinant, if `logdet=True`;
+        otherwise, None.
     """
     chol = cholesky(x, lower=True)
+
     chol_inv = np.linalg.inv(chol)
     chol_inv = np.dot(chol_inv.T, chol_inv)
+    chol_logdet = None
+
     if logdet:
         chol_diag = np.diag(chol)
-        return np.sum(np.log(chol_diag * chol_diag))
-    return chol_inv
+        chol_logdet = np.sum(np.log(chol_diag * chol_diag))
+
+    return chol_inv, chol_logdet
 
 
 def cov(x, ddof=0):
