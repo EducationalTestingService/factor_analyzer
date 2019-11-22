@@ -91,6 +91,9 @@ Performing CFA requires users to specify in advance a model specification
 with the expected factor loading relationships. This can be done using
 the ``ModelSpecificationParser`` class.
 
+Note that the ``ConfirmatoryFactorAnalyzer`` class is very experimental at this point,
+so use it with caution, especially if your data are highly non-normal.
+
 Examples
 --------
 
