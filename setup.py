@@ -26,8 +26,6 @@ setup(name='factor_analyzer',
       url="https://github.com/EducationalTestingService/factor_analyzer",
       install_requires=requirements(),
       include_package_data=True,
-      entry_points={'console_scripts':
-                    ['factor_analyzer = factor_analyzer.analyze:main']},
       classifiers=['Intended Audience :: Science/Research',
                    'Intended Audience :: Developers',
                    'Programming Language :: Python',

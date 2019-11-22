@@ -13,11 +13,10 @@ source:
 
 build:
   number: 0
-  entry_points:
-    - factor_analyzer = factor_analyzer.analyze:main
+  noarch: python
   script:
     - cd $SRC_DIR
-    - $PYTHON setup.py install
+    - "{{ PYTHON }} -m pip install . --no-deps -vv"
 
 requirements:
   build:
