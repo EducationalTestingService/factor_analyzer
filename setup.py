@@ -16,7 +16,7 @@ def requirements():
 
 
 setup(name='factor_analyzer',
-      version='0.3.1',
+      version='0.3.2',
       description='A Factor Analysis class',
       long_description=readme(),
       keywords='factor analysis',
@@ -40,5 +40,6 @@ setup(name='factor_analyzer',
                    'Programming Language :: Python :: 3.4',
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6',
+                   'Programming Language :: Python :: 3.7',
                    ],
       zip_safe=True)
