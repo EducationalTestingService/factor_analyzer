@@ -36,8 +36,6 @@ requirements:
 test:
   imports:
     - factor_analyzer
-  commands:
-    - factor_analyzer --help
 
 about:
   home: https://github.com/EducationalTestingService/factor_analyzer
