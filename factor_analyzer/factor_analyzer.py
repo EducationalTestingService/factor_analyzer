@@ -655,8 +655,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         variance = self._get_factor_variance(loadings)[0]
         new_order = list(reversed(np.argsort(variance)))
         loadings = loadings[:, new_order].copy()
-        structure = structure[:, new_order].copy()
-
+        
+        if structure is not None: 
+            structure = structure[:, new_order].copy()
         
         self.phi_ = phi
         self.structure_ = structure
