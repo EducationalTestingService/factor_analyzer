@@ -204,6 +204,10 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         The factor correlations
         matrix. This only exists
         if the rotation is oblique.
+    weights : numpy array
+        The score coefficient component matrix.
+        Default to None, if `fit()` has not been
+        called.
 
     Notes
     -----
@@ -288,6 +292,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         self.corr_ = None
         self.loadings_ = None
         self.rotation_matrix_ = None
+        self.weights_ = None
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -734,13 +739,13 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             structure = self.loadings_
 
         try:
-            weights = np.linalg.solve(self.corr_, structure)
+            self.weights_ = np.linalg.solve(self.corr_, structure)
         except Exception as error:
             warnings.warn('Unable to calculate the factor score weights; '
                           'factor loadings used instead: {}'.format(error))
-            weights = self.loadings_
+            self.weights_  = self.loadings_
 
-        scores = np.dot(X_scale, weights)
+        scores = np.dot(X_scale, self.weights_ )
         return scores
 
     def get_eigenvalues(self):
