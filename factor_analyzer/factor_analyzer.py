@@ -187,11 +187,11 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
     ----------
     loadings : numpy array
         The factor loadings matrix.
-        Default to None, if `analyze()` has not
+        Default to None, if `fit()` has not
         been called.
     corr : numpy array
         The original correlation matrix.
-        Default to None, if `analyze()` has not
+        Default to None, if `fit()` has not
         been called.
     rotation_matrix : numpy array
         The rotation matrix, if a rotation
