@@ -52,6 +52,20 @@ def test_calculate_kmo():
 
 class TestFactorAnalyzer:
 
+    def test_analyze_weights(self):
+
+        data = pd.DataFrame({'A': [2, 4, 5, 6, 8, 9],
+                             'B': [4, 8, 9, 10, 16, 18],
+                             'C': [6, 12, 15, 12, 26, 27]})
+
+        fa = FactorAnalyzer(rotation=None)
+        fa.fit(data)
+        _ = fa.transform(data)
+        expected_weights = np.array(([[0.33536334, -2.72509646, 0],
+                                      [0.33916605, -0.29388849, 0],
+                                      [0.33444588, 3.03060826, 0]]))
+        assert_array_almost_equal(expected_weights, fa.weights_)
+
     def test_analyze_impute_mean(self):
 
         data = pd.DataFrame({'A': [2, 4, 5, 6, 8, 9],
