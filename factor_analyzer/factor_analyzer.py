@@ -3,6 +3,7 @@ Factor analysis using MINRES or ML,
 with optional rotation using Varimax or Promax.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
+:author: Nitin Madnani (nmadnani@ets.org)
 :date: 10/25/2017
 :organization: ETS
 """
@@ -288,6 +289,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         self.corr_ = None
         self.loadings_ = None
         self.rotation_matrix_ = None
+        self.weights_ = None
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -734,13 +736,13 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             structure = self.loadings_
 
         try:
-            weights = np.linalg.solve(self.corr_, structure)
+            self.weights_ = np.linalg.solve(self.corr_, structure)
         except Exception as error:
             warnings.warn('Unable to calculate the factor score weights; '
                           'factor loadings used instead: {}'.format(error))
-            weights = self.loadings_
+            self.weights_ = self.loadings_
 
-        scores = np.dot(X_scale, weights)
+        scores = np.dot(X_scale, self.weights_)
         return scores
 
     def get_eigenvalues(self):
