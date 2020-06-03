@@ -253,18 +253,15 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         rotation = rotation.lower() if isinstance(rotation, str) else rotation
         if rotation not in POSSIBLE_ROTATIONS + [None]:
-            raise ValueError('The rotation must be None, or in the following set: '
-                             '\{{}\}'.format(', '.join(POSSIBLE_ROTATIONS)))
+            raise ValueError(f"The rotation must be one of the following: {POSSIBLE_ROTATIONS + [None]}")
 
         method = method.lower()
         if method not in POSSIBLE_METHODS:
-            raise ValueError('The method must be in the following set: '
-                             '\{{}\}'.format(', '.join(POSSIBLE_METHODS)))
+            raise ValueError(f"The method must be one of the following: {POSSIBLE_METHODS + [None]}")
 
         impute = impute.lower()
         if impute not in POSSIBLE_IMPUTATIONS:
-            raise ValueError('The imputation must be in the following set: '
-                             '\{{}\}'.format(', '.join(POSSIBLE_IMPUTATIONS)))
+            raise ValueError(f"The imputation must be one of the following: {POSSIBLE_IMPUTATIONS + [None]}")
 
         if method == 'principal' and is_corr_matrix:
             raise ValueError('The principal method is only implemented using '
