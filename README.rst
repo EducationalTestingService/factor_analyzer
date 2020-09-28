@@ -82,6 +82,8 @@ and ``Rotator``:
     (e) quartimin (oblique rotation)
     (f) quartimax (orthogonal rotation)
     (g) equamax (orthogonal rotation)
+    (h) geomin_obl (oblique rotation)
+    (i) geomin_ort (orthogonal rotation)
 
 In adddition, the package includes a ``confirmatory_factor_analyzer``
 module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
