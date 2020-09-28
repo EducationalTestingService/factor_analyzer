@@ -187,3 +187,65 @@ def test_07_oblimin_minres_2_factors_gamma():
 
     check = check_rotation(test_name, factors, method, rotation, gamma=gamma)
     assert check > THRESHOLD
+
+
+def test_02_geomin_obl_minres_2_factors():
+
+    test_name = 'test02'
+    factors = 2
+    method = 'uls'
+    rotation = 'geomin_obl'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+def test_02_geomin_obl_minres_3_factors():
+
+    test_name = 'test02'
+    factors = 3
+    method = 'uls'
+    rotation = 'geomin_obl'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+def test_02_geomin_obl_ml_3_factors():
+
+    test_name = 'test02'
+    factors = 3
+    method = 'ml'
+    rotation = 'geomin_obl'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+def test_02_geomin_ort_minres_2_factors():
+
+    test_name = 'test02'
+    factors = 2
+    method = 'uls'
+    rotation = 'geomin_ort'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+def test_02_geomin_ort_minres_3_factors():
+
+    test_name = 'test02'
+    factors = 3
+    method = 'uls'
+    rotation = 'geomin_ort'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+
+def test_02_geomin_ort_ml_3_factors():
+
+    test_name = 'test02'
+    factors = 3
+    method = 'ml'
+    rotation = 'geomin_ort'
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1

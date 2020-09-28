@@ -12,9 +12,9 @@ import scipy as sp
 
 from sklearn.base import BaseEstimator
 
-ORTHOGONAL_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax']
+ORTHOGONAL_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax', 'geomin_ort']
 
-OBLIQUE_ROTATIONS = ['promax', 'oblimin', 'quartimin']
+OBLIQUE_ROTATIONS = ['promax', 'oblimin', 'quartimin', 'geomin_obl']
 
 POSSIBLE_ROTATIONS = ORTHOGONAL_ROTATIONS + OBLIQUE_ROTATIONS
 
@@ -36,6 +36,8 @@ class Rotator(BaseEstimator):
             (e) quartimin (oblique rotation)
             (f) quartimax (orthogonal rotation)
             (g) equamax (orthogonal rotation)
+            (h) geomin_obl (oblique rotation)
+            (i) geomin_ort (orthogonal rotation)
         Defaults to 'varimax'.
     normalize : bool or None, optional
         Whether to perform Kaiser normalization
@@ -56,6 +58,10 @@ class Rotator(BaseEstimator):
         The gamma level for the oblimin objective.
         Ignored if the method is not 'oblimin'.
         Defaults to 0.
+    delta : float, optional
+        The delta level for geomin objectives.
+         Ignored if the method is not 'geomin_*'.
+        Defaults to 0.01.
     max_iter : int, optional
         The maximum number of iterations.
         Used for varimax and oblique rotations.
@@ -112,6 +118,7 @@ class Rotator(BaseEstimator):
                  power=4,
                  kappa=0,
                  gamma=0,
+                 delta=0.01,
                  max_iter=500,
                  tol=1e-5):
 
@@ -120,6 +127,7 @@ class Rotator(BaseEstimator):
         self.power = power
         self.kappa = kappa
         self.gamma = gamma
+        self.delta = delta
         self.max_iter = max_iter
         self.tol = tol
 
@@ -256,6 +264,35 @@ class Rotator(BaseEstimator):
         criterion = f1 + f2
         return {'grad': gradient, 'criterion': criterion}
 
+    def _geomin_obj(self, loadings):
+        """
+        Geomin function objective
+
+        Parameters
+        ----------
+        loadings : array-like
+            The loading matrix
+
+        Returns
+        -------
+        gradient_dict : dict
+            A dictionary with
+            - grad : np.array
+                The gradient.
+            - criterion : float
+                The value of the criterion for the objective.
+        """
+        p, k = loadings.shape
+
+        loadings2 = loadings**2 + self.delta
+
+        pro = np.exp(np.log(loadings2).sum(1) / k)
+        rep = np.repeat(pro, k, axis=0).reshape(p, k)
+
+        gradient = (2 / k) * (loadings / loadings2) * rep
+        criterion = np.sum(pro)
+        return {'grad': gradient, 'criterion': criterion}
+
     def _oblique(self, loadings, method):
         """
         A generic function for performing
@@ -286,6 +323,8 @@ class Rotator(BaseEstimator):
             objective = self._oblimin_obj
         elif method == 'quartimin':
             objective = self._quartimin_obj
+        elif method == 'geomin_obl':
+            objective = self._geomin_obj
 
         # initialize the rotation matrix
         n_rows, n_cols = loadings.shape
@@ -370,6 +409,8 @@ class Rotator(BaseEstimator):
             objective = self._quartimax_obj
         elif method == 'equamax':
             objective = self._equamax_obj
+        elif method == 'geomin_ort':
+            objective = self._geomin_obj
 
         arr = loadings.copy()
 

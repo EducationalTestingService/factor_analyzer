@@ -228,9 +228,6 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
         data1 = normalize(data1, absolute)
         data2 = normalize(data2, absolute)
 
-    # print(data1)
-    # print(data2)
-
     err_msg = 'r - py: {} != {}'
     assert data1.shape == data2.shape, err_msg.format(data1.shape, data2.shape)
 
