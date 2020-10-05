@@ -118,7 +118,7 @@ def calculate_bartlett_sphericity(x):
     corr_det = np.linalg.det(x_corr)
     statistic = -np.log(corr_det) * (n - 1 - (2 * p + 5) / 6)
     degrees_of_freedom = p * (p - 1) / 2
-    p_value = chi2.pdf(statistic, degrees_of_freedom)
+    p_value = chi2.sf(statistic, degrees_of_freedom)
     return statistic, p_value
 
 
