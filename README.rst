@@ -1,11 +1,11 @@
 FactorAnalyzer
 --------------
 
-.. image:: https://img.shields.io/travis/EducationalTestingService/factor_analyzer/master.svg
+.. image:: https://img.shields.io/travis/EducationalTestingService/factor_analyzer/main.svg
    :alt: Build status
    :target: https://travis-ci.org/EducationalTestingService/factor_analyzer
 
-.. image:: https://codecov.io/gh/EducationalTestingService/factor_analyzer/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/EducationalTestingService/factor_analyzer/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
 
 .. image:: https://anaconda.org/ets/factor_analyzer/badges/installer/conda.svg
