@@ -1,0 +1,35 @@
+image: continuumio/miniconda3:latest
+
+stages:
+  - test
+
+variables:
+  PYVERSION: "3.8"
+  NOSE_WITH_COV: "1"
+  NOSE_COVER_PACKAGE: "factor_analyzer"
+  LOGCAPTURE_LEVEL: "DEBUG"
+  CODECOV_TOKEN: "034f0bb1-e590-406f-820c-4e7c41b17712"
+
+# set up the basic job
+.runtests:
+  before_script:
+    - "conda create --prefix /root/factordev --channel conda-forge --file conda_requirements.txt python=${PYVERSION} codecov nose nose-cov --yes --quiet"
+    - /root/factordev/bin/pip install -e .
+  script:
+    - "/root/factordev/bin/nosetests ${TESTFILES}"
+  after_script:
+    - /root/factordev/bin/codecov
+
+# first set of test files
+testset1:
+  extends: ".runtests"
+  variables:
+    TESTFILES: "tests/test_expected_confirmatory_factor_analyzer.py tests/test_factor_analyzer.py"
+  stage: "test"
+
+# second set of test files
+testset2:
+  extends: ".runtests"
+  variables:
+    TESTFILES: "tests/test_expected_factor_analyzer.py tests/test_expected_rotator.py tests/test_utils.py"
+  stage: "test"
