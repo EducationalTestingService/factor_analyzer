@@ -1,9 +1,9 @@
 FactorAnalyzer
 --------------
 
-.. image:: https://img.shields.io/travis/EducationalTestingService/factor_analyzer/main.svg
+.. image:: https://gitlab.com/EducationalTestingService/factor_analyzer/badges/main/pipeline.svg
    :alt: Build status
-   :target: https://travis-ci.org/EducationalTestingService/factor_analyzer
+   :target: https://gitlab.com/EducationalTestingService/factor_analyzer/-/pipelines
 
 .. image:: https://codecov.io/gh/EducationalTestingService/factor_analyzer/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
