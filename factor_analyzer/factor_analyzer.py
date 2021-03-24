@@ -31,6 +31,7 @@ from sklearn.utils.extmath import randomized_svd
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
+POSSIBLE_SVDS = ['randomized', 'lapack']
 
 POSSIBLE_IMPUTATIONS = ['mean', 'median', 'drop']
 
@@ -176,10 +177,19 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         If missing values are present in the data, either use
         list-wise deletion ('drop') or impute the column median
         ('median') or column mean ('mean').
+        Defaults to 'median'
     use_corr_matrix : bool, optional
         Set to true if the `data` is the correlation
         matrix.
         Defaults to False.
+    svd_method : {‘lapack’, ‘randomized’}
+        The SVD method to use when ``method='principal'``.
+        If 'lapack', use standard SVD from ``scipy.linalg``.
+        If 'randomized', use faster ``randomized_svd``
+        function from scikit-learn. The latter should only
+        be used if the number of columns is greater than or
+        equal to the number of rows in in the dataset. 
+        Defaults to 'randomized'
     rotation_kwargs, optional
         Additional key word arguments
         are passed to the rotation method.
@@ -249,23 +259,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                  is_corr_matrix=False,
                  bounds=(0.005, 1),
                  impute='median',
+                 svd_method='randomized',
                  rotation_kwargs=None):
-
-        rotation = rotation.lower() if isinstance(rotation, str) else rotation
-        if rotation not in POSSIBLE_ROTATIONS + [None]:
-            raise ValueError(f"The rotation must be one of the following: {POSSIBLE_ROTATIONS + [None]}")
-
-        method = method.lower()
-        if method not in POSSIBLE_METHODS:
-            raise ValueError(f"The method must be one of the following: {POSSIBLE_METHODS + [None]}")
-
-        impute = impute.lower()
-        if impute not in POSSIBLE_IMPUTATIONS:
-            raise ValueError(f"The imputation must be one of the following: {POSSIBLE_IMPUTATIONS + [None]}")
-
-        if method == 'principal' and is_corr_matrix:
-            raise ValueError('The principal method is only implemented using '
-                             'the full data set, not the correlation matrix.')
 
         self.n_factors = n_factors
         self.rotation = rotation
@@ -274,7 +269,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         self.bounds = bounds
         self.impute = impute
         self.is_corr_matrix = is_corr_matrix
-        self.rotation_kwargs = {} if rotation_kwargs is None else rotation_kwargs
+        self.svd_method = svd_method
+        self.rotation_kwargs = rotation_kwargs
 
         # default matrices to None
         self.mean_ = None
@@ -287,6 +283,34 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         self.loadings_ = None
         self.rotation_matrix_ = None
         self.weights_ = None
+
+    def _arg_checker(self):
+        """
+        Check the input parameters to make sure they're properly formattted.
+        We need to do this to ensure that the FactorAnalyzer class can be properly
+        cloned when used with grid search CV, for example.
+        """
+        self.rotation = self.rotation.lower() if isinstance(self.rotation, str) else self.rotation
+        if self.rotation not in POSSIBLE_ROTATIONS + [None]:
+            raise ValueError(f"The rotation must be one of the following: {POSSIBLE_ROTATIONS + [None]}")
+
+        self.method = self.method.lower() if isinstance(self.method, str) else self.method
+        if self.method not in POSSIBLE_METHODS:
+            raise ValueError(f"The method must be one of the following: {POSSIBLE_METHODS}")
+
+        self.impute = self.impute.lower() if isinstance(self.impute, str) else self.impute
+        if self.impute not in POSSIBLE_IMPUTATIONS:
+            raise ValueError(f"The imputation must be one of the following: {POSSIBLE_IMPUTATIONS}")
+
+        self.svd_method = self.svd_method.lower() if isinstance(self.svd_method, str) else self.svd_method
+        if self.svd_method not in POSSIBLE_SVDS:
+            raise ValueError(f"The SVD method must be one of the following: {POSSIBLE_SVDS}")
+
+        if self.method == 'principal' and self.is_corr_matrix:
+            raise ValueError('The principal method is only implemented using '
+                             'the full data set, not the correlation matrix.')
+
+        self.rotation_kwargs = {} if self.rotation_kwargs is None else self.rotation_kwargs
 
     @staticmethod
     def _fit_uls_objective(psi, corr_mtx, n_factors):
@@ -472,8 +496,21 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         X = X.copy()
         X = (X - X.mean(0)) / X.std(0)
 
+        # if the number of rows is less than the number of columns,
+        # warn the user that the number of factors will be constrained
+        nrows, ncols = X.shape
+        if nrows < ncols and self.n_factors >= nrows:
+            warnings.warn('The number of factors will be '
+                          'constrained to min(n_samples, n_features)'
+                          '={}.'.format(min(nrows, ncols)))
+
         # perform the randomized singular value decomposition
-        U, S, V = randomized_svd(X, self.n_factors)
+        if self.svd_method == 'randomized':
+            U, S, V = randomized_svd(X, self.n_factors)
+        # otherwise, perform the full SVD
+        else:
+            U, S, V = np.linalg.svd(X, full_matrices=False)
+
         corr_mtx = np.dot(X, V.T)
         loadings = np.array([[pearsonr(x, c)[0] for c in corr_mtx.T] for x in X.T])
         return loadings
@@ -577,6 +614,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                [ 0.81533404, -0.12494695,  0.17639683]])
         """
 
+        # check the input arguments
+        self._arg_checker()
+
         # check if the data is a data frame,
         # so we can convert it to an array
         if isinstance(X, pd.DataFrame):
@@ -650,11 +690,14 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                 phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
                 structure = np.dot(loadings, phi) if self.rotation in OBLIQUE_ROTATIONS else None
 
-        # resort the factors according to their variance
-        variance = self._get_factor_variance(loadings)[0]
-        new_order = list(reversed(np.argsort(variance)))
-        loadings = loadings[:, new_order].copy()
+        # resort the factors according to their variance,
+        # unless the method is principal
+        if self.method != 'principal':
+            variance = self._get_factor_variance(loadings)[0]
+            new_order = list(reversed(np.argsort(variance)))
+            loadings = loadings[:, new_order].copy()
         
+        # if the structure matrix exists, reorder
         if structure is not None: 
             structure = structure[:, new_order].copy()
         

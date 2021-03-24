@@ -13,6 +13,10 @@ from nose.tools import raises
 from numpy.testing import assert_array_almost_equal
 from pandas.util.testing import assert_almost_equal
 
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import make_pipeline
+from sklearn.tree import DecisionTreeClassifier
+
 from factor_analyzer.utils import smc
 from factor_analyzer.factor_analyzer import FactorAnalyzer
 from factor_analyzer.factor_analyzer import (calculate_kmo,
@@ -48,6 +52,28 @@ def test_calculate_kmo():
 
     assert_almost_equal(kmo_by_item, expected_by_item)
     assert_almost_equal(kmo_overall, expected_overall)
+
+
+def test_gridsearch():
+    # make sure this doesn't fail
+
+    X = pd.DataFrame(np.random.randn(1000).reshape(100, 10))
+    y = pd.Series(np.random.choice([1, 0], size=100))
+
+    grid = {'factoranalyzer__n_factors': [5, 7],
+            'factoranalyzer__rotation': [None, 'varimax'],
+            'decisiontreeclassifier__max_depth': [2, 5]}
+
+    fa = FactorAnalyzer()
+    decisiontree = DecisionTreeClassifier(random_state=123)
+    pipe = make_pipeline(fa, decisiontree)
+
+    gridsearch = GridSearchCV(pipe,
+                              grid,
+                              scoring='f1',
+                              cv=3,
+                              verbose=0)
+    gridsearch.fit(X, y)
 
 
 class TestFactorAnalyzer:
@@ -112,24 +138,19 @@ class TestFactorAnalyzer:
         assert_array_almost_equal(fa.corr_, expected_corr)
 
     @raises(ValueError)
+    def test_analyze_bad_svd_method(self):
+        fa = FactorAnalyzer(svd_method='foo')
+        fa.fit(np.random.randn(500).reshape(100, 5))
+
+    @raises(ValueError)
     def test_analyze_impute_value_error(self):
-
-        data = pd.DataFrame({'A': [2, 4, 5, 6, 8, 9],
-                             'B': [4, 8, np.nan, 10, 16, 18],
-                             'C': [6, 12, 15, 12, 26, 27]})
-
         fa = FactorAnalyzer(rotation=None, impute='blah', n_factors=1)
-        fa.fit(data)
+        fa.fit(np.random.randn(500).reshape(100, 5))
 
     @raises(ValueError)
     def test_analyze_rotation_value_error(self):
-
-        data = pd.DataFrame({'A': [2, 4, 5, 6, 8, 9],
-                             'B': [4, 8, np.nan, 10, 16, 18],
-                             'C': [6, 12, 15, 12, 26, 27]})
-
         fa = FactorAnalyzer(rotation='blah', n_factors=1)
-        fa.fit(data)
+        fa.fit(np.random.randn(500).reshape(100, 5))
 
     @raises(ValueError)
     def test_analyze_infinite(self):

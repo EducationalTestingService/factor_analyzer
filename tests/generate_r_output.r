@@ -2,7 +2,8 @@
 packages <- c('argparse', 'psych', 'GPArotation')
 new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) {
-  install.packages(new_packages)
+  install.packages(new_packages,
+                   repos = "http://cran.us.r-project.org")
 }
 
 library('argparse')
@@ -19,18 +20,20 @@ mapping2 <- list(geominT = 'geomin_ort',
 # argument parser
 parser <- ArgumentParser(description='Fit some factor models')
 
-parser$add_argument('-n', '--n_factors', type='integer', nargs='+',
+parser$add_argument('-n', '--n_factors', type='integer',
                     default=2, help='integer(s) specifying the number of factors')
 
-parser$add_argument('-f', '--fit_methods', type='character', nargs='+',
+parser$add_argument('-f', '--fit_methods', type='character',
                     default='minres', help='Fit method(s)')
 
-parser$add_argument('-r', '--rotations', type="character", nargs='+',
+parser$add_argument('-r', '--rotations', type="character",
                     default='promax', help='Rotaton(s)')
 
-parser$add_argument('-t', '--test_file', type="character", nargs='+',
+parser$add_argument('-t', '--test_file', type="character",
                     default='test02.csv', help='Test file')
 
+parser$add_argument('-o', '--output_dir', type="character",
+                    default=NULL, help='Output directory')
 
 
 # parse the arguments into a list
@@ -38,7 +41,13 @@ args <- parser$parse_args()
 
 # get the input path and directory
 path <- args$test_file
-dir <- dirname(path)
+if (is.null(args$output_dir)) {
+  dir <- dirname(path)
+} else {
+  dir <- args$output_dir
+  dir.create(dir, showWarnings = FALSE)
+}
+
 filename <- basename(path)
 
 # read in the data
@@ -63,25 +72,29 @@ for (n in args$n_factors) {
           rot_name <- mapping2[[rot]]
           rot_name <- if (length(rot_name) == 0) rot else rot_name
 
-          # write out the loadings
-          loadings_file <- paste('loading',
-                                 fm_name,
-                                 rot_name,
-                                 as.character(n),
-                                 filename,
-                                 sep='_')
-          loadings_file <- file.path(dir, loadings_file)
-          write.csv(res$loadings, loadings_file)
-
-          # write out the communalities
-          communalities_file <- paste('communalities',
-                                      fm_name,
-                                      rot_name,
-                                      as.character(n),
-                                      filename,
-                                      sep='_')
-          communalities_file <- file.path(dir, communalities_file)
-          write.csv(res$communalities, communalities_file)
+          # get outputs
+          loadings <- res$loadings;
+          values <- res$values;
+          evalues <- res$e.values;
+          uniquenesses <- res$uniquenesses;
+          communalities <- res$communalities;
+          
+          info <- list('loading' = loadings,
+                       'value' = values,
+                       'evalues' = evalues, 
+                       'uniquenesses' = uniquenesses,
+                       'communalities' = communalities)
+          for (name in names(info)) {
+            df_temp <- info[[name]]
+            out <- paste(name,
+                         fm_name,
+                         rot_name,
+                         toString(n),
+                         filename,
+                         sep='_')
+            out_file <- file.path(dir, out)
+            write.csv(df_temp, out_file)
+          }
         }
     }
 }
