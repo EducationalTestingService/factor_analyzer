@@ -461,3 +461,20 @@ def test_02_none_principal():
                                 ignore_value=True,
                                 ignore_communalities=True):
         assert check > THRESHOLD
+
+def test_15_none_principal():
+
+    test_name = 'test15'
+    factors = 20
+    method = 'principal'
+    rotation = 'none'
+    svd_method = 'lapack'
+
+    for check in check_scenario(test_name,
+                                factors,
+                                method,
+                                rotation,
+                                svd_method=svd_method,
+                                ignore_value=True,
+                                ignore_communalities=True):
+        assert check > THRESHOLD

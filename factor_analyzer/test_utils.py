@@ -38,6 +38,7 @@ def calculate_py_output(test_name,
                         factors,
                         method,
                         rotation,
+                        svd_method='randomized',
                         use_corr_matrix=False,
                         top_dir=None):
     """
@@ -54,6 +55,9 @@ def calculate_py_output(test_name,
         The rotation method
     rotation : str
         The type of rotation
+    svd_method : str, optional
+        The SVD method to use
+        Defaults to 'randomized'
     use_corr_matrix : bool, optional
         Whether to use the correlation matrix.
         Defaults to False.
@@ -81,7 +85,7 @@ def calculate_py_output(test_name,
     rotation = None if rotation == 'none' else rotation
     method = {'uls': 'minres'}.get(method, method)
 
-    fa = FactorAnalyzer(n_factors=factors, method=method,
+    fa = FactorAnalyzer(n_factors=factors, method=method, svd_method=svd_method,
                         rotation=rotation, is_corr_matrix=use_corr_matrix)
     fa.fit(X)
 
@@ -228,6 +232,11 @@ def check_close(data1, data2, rel_tol=0.0, abs_tol=0.1,
         data1 = normalize(data1, absolute)
         data2 = normalize(data2, absolute)
 
+    print(data1)
+    print()
+    print(data2)
+    print('------')
+
     err_msg = 'r - py: {} != {}'
     assert data1.shape == data2.shape, err_msg.format(data1.shape, data2.shape)
 
@@ -253,6 +262,7 @@ def check_scenario(test_name,
                    check_scores=False,
                    check_structure=False,
                    use_corr_matrix=False,
+                   svd_method='randomized',
                    data_dir=None,
                    expected_dir=None,
                    rel_tol=0,
@@ -321,8 +331,10 @@ def check_scenario(test_name,
     if check_structure:
         output_types.append('structure')
 
-    r_output = collect_r_output(test_name, factors, method, rotation, output_types, expected_dir)
-    py_output = calculate_py_output(test_name, factors, method, rotation, use_corr_matrix, data_dir)
+    r_output = collect_r_output(test_name, factors, method, rotation,
+                                output_types, expected_dir)
+    py_output = calculate_py_output(test_name, factors, method, rotation, svd_method,
+                                    use_corr_matrix, data_dir)
 
     for output_type in output_types:
 
