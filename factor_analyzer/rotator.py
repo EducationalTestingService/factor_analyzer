@@ -503,9 +503,10 @@ class Rotator(BaseEstimator):
             # and rotation matrix
             basis = np.dot(X, rotation_mtx)
 
-            # transform data for singular value decomposition
-            transformed = np.dot(X.T, basis**3 - (1.0 / n_rows) *
-                                 np.dot(basis, np.diag(np.diag(np.dot(basis.T, basis)))))
+            # transform data for singular value decomposition using updated formula :
+            # B <- t(x) %*% (z^3 - z %*% diag(drop(rep(1, p) %*% z^2))/p)
+            diagonal = np.diag(np.squeeze(np.repeat(1, n_rows).dot(basis**2)))
+            transformed = X.T.dot(basis**3 - basis.dot(diagonal) / n_rows)
 
             # perform SVD on
             # the transformed matrix
@@ -516,7 +517,7 @@ class Rotator(BaseEstimator):
             d = np.sum(S)
 
             # check convergence
-            if old_d != 0 and d / old_d < 1 + self.tol:
+            if d < old_d * (1 + self.tol):
                 break
 
         # take inner product of loading matrix
