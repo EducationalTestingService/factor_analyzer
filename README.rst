@@ -11,6 +11,10 @@ FactorAnalyzer
 .. image:: https://anaconda.org/ets/factor_analyzer/badges/installer/conda.svg
     :target: https://anaconda.org/ets/factor_analyzer/
 
+.. image:: https://img.shields.io/readthedocs/factor_analyzer/latest.svg
+   :target: https://factor-analyzer.readthedocs.io/
+   :alt: Docs
+
 
 This is a Python module to perform exploratory and factor analysis (EFA), with several 
 optional rotations. It also includes a class to perform confirmatory factor
@@ -24,7 +28,7 @@ Both the EFA and CFA classes within this package are fully compatible with `scik
 Portions of this code are ported from the excellent R library `psych`, and the `sem`
 package provided inspiration for the CFA class.
 
-Please see the `official documentation <http://factor-analyzer.readthedocs.io/en/latest/index.html>`__ for additional details.
+Please see the `official documentation <https://factor-analyzer.readthedocs.io/en/latest/index.html>`__ for additional details.
 
 
 Description
