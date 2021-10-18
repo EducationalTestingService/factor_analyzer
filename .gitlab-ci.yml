@@ -4,7 +4,7 @@ stages:
   - test
 
 variables:
-  PYVERSION: "3.8"
+  PYVERSION: "3.9"
   NOSE_WITH_COV: "1"
   NOSE_COVER_PACKAGE: "factor_analyzer"
   LOGCAPTURE_LEVEL: "DEBUG"
