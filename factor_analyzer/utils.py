@@ -1,13 +1,14 @@
 """
-Utility functions, used primarily by
-the confirmatory factor analysis module.
+Utility functions, used primarily by the confirmatory factor analysis module.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-:date: 2/05/2019
-:organization: ETS
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
-import numpy as np
 import warnings
+
+import numpy as np
 from scipy.linalg import cholesky
 
 

@@ -1,25 +1,21 @@
 """
-Testing utilities
+Utility functions used for testing.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-:date: 05/21/2018
-:organization: ETS
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
 
-import os
-import math
 import json
+import math
+import os
+from os.path import join
 
 import numpy as np
 import pandas as pd
-from os.path import join
-
+from factor_analyzer import ConfirmatoryFactorAnalyzer, FactorAnalyzer, ModelSpecificationParser, Rotator
 from factor_analyzer.utils import unique_elements
-from factor_analyzer import ModelSpecificationParser
-from factor_analyzer import ConfirmatoryFactorAnalyzer
-from factor_analyzer import FactorAnalyzer
-from factor_analyzer import Rotator
-
 
 DATA_DIR = os.path.join('tests', 'data')
 JSON_DIR = os.path.join('tests', 'model')

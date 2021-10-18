@@ -1,35 +1,26 @@
 """
-Factor analysis using MINRES or ML,
-with optional rotation using Varimax or Promax.
+Factor analysis using MINRES or ML, with optional rotation using Varimax or Promax.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
 :author: Nitin Madnani (nmadnani@ets.org)
-:date: 10/25/2017
-:organization: ETS
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
 
 import warnings
 
 import numpy as np
-import scipy as sp
 import pandas as pd
-
-from scipy.stats import chi2, pearsonr
+import scipy as sp
 from scipy.optimize import minimize
-
+from scipy.stats import chi2, pearsonr
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from factor_analyzer.utils import (corr,
-                                   impute_values,
-                                   partial_correlations,
-                                   smc)
-from factor_analyzer.rotator import Rotator
-from factor_analyzer.rotator import POSSIBLE_ROTATIONS, OBLIQUE_ROTATIONS
-
-
-from sklearn.utils.extmath import randomized_svd
 from sklearn.utils import check_array
+from sklearn.utils.extmath import randomized_svd
 from sklearn.utils.validation import check_is_fitted
+
+from .rotator import OBLIQUE_ROTATIONS, POSSIBLE_ROTATIONS, Rotator
+from .utils import corr, impute_values, partial_correlations, smc
 
 POSSIBLE_SVDS = ['randomized', 'lapack']
 
