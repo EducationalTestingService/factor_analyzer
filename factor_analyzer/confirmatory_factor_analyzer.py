@@ -1,33 +1,33 @@
 """
-Confirmatory factor analysis using ML.
+Confirmatory factor analysis using machine learning methods.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-:date: 2/05/2019
-:organization: ETS
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
 
-import pandas as pd
-import numpy as np
 import warnings
-
 from copy import deepcopy
-from scipy.optimize import minimize
-from scipy.linalg import block_diag
 
+import numpy as np
+import pandas as pd
+from scipy.linalg import block_diag
+from scipy.optimize import minimize
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 
-from factor_analyzer.utils import (cov,
-                                   covariance_to_correlation,
-                                   commutation_matrix,
-                                   duplication_matrix_pre_post,
-                                   get_free_parameter_idxs,
-                                   get_symmetric_lower_idxs,
-                                   get_symmetric_upper_idxs,
-                                   impute_values,
-                                   unique_elements,
-                                   merge_variance_covariance)
+from .utils import (commutation_matrix,
+                    cov,
+                    covariance_to_correlation,
+                    duplication_matrix_pre_post,
+                    get_free_parameter_idxs,
+                    get_symmetric_lower_idxs,
+                    get_symmetric_upper_idxs,
+                    impute_values,
+                    merge_variance_covariance,
+                    unique_elements)
 
 
 class ModelSpecification:

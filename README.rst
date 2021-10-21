@@ -187,7 +187,7 @@ Confirmatory factor analysis example.
 Requirements
 ------------
 
--  Python 3.4 or higher
+-  Python 3.7 or higher
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``

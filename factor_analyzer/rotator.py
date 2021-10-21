@@ -1,15 +1,14 @@
 """
-Rotator class to perform various
-rotations of factor loading matrices.
+Class to perform various rotations of factor loading matrices.
 
 :author: Jeremy Biggs (jbiggs@ets.org)
-:date: 05/21/2018
-:organization: ETS
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
 
 import numpy as np
 import scipy as sp
-
 from sklearn.base import BaseEstimator
 
 ORTHOGONAL_ROTATIONS = ['varimax', 'oblimax', 'quartimax', 'equamax', 'geomin_ort']

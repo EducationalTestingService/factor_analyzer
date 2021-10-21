@@ -1,29 +1,24 @@
-# License: GLP2
+# License: GPL2
 """
 :author: Jeremy Biggs (jbiggs@ets.org)
-:organization: ETS
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2021-10-18
 """
 
+from .confirmatory_factor_analyzer import ConfirmatoryFactorAnalyzer, ModelSpecification, ModelSpecificationParser
+from .factor_analyzer import FactorAnalyzer, calculate_bartlett_sphericity, calculate_kmo
 from .rotator import Rotator
-
-from .factor_analyzer import (FactorAnalyzer,
-                              calculate_bartlett_sphericity,
-                              calculate_kmo)
-
-from .confirmatory_factor_analyzer import (ConfirmatoryFactorAnalyzer,
-                                           ModelSpecificationParser,
-                                           ModelSpecification)
-
-from .utils import (cov,
+from .utils import (commutation_matrix,
                     corr,
-                    fill_lower_diag,
-                    impute_values,
-                    smc,
-                    partial_correlations,
-                    merge_variance_covariance,
+                    cov,
+                    covariance_to_correlation,
                     duplication_matrix,
                     duplication_matrix_pre_post,
-                    covariance_to_correlation,
-                    commutation_matrix,
+                    fill_lower_diag,
                     get_symmetric_lower_idxs,
-                    get_symmetric_upper_idxs)
+                    get_symmetric_upper_idxs,
+                    impute_values,
+                    merge_variance_covariance,
+                    partial_correlations,
+                    smc)
