@@ -179,7 +179,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         If 'randomized', use faster ``randomized_svd``
         function from scikit-learn. The latter should only
         be used if the number of columns is greater than or
-        equal to the number of rows in in the dataset. 
+        equal to the number of rows in in the dataset.
         Defaults to 'randomized'
     rotation_kwargs, optional
         Additional key word arguments
@@ -497,7 +497,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # perform the randomized singular value decomposition
         if self.svd_method == 'randomized':
-            U, S, V = randomized_svd(X, self.n_factors)
+            U, S, V = randomized_svd(X, self.n_factors, random_state=0)
         # otherwise, perform the full SVD
         else:
             U, S, V = np.linalg.svd(X, full_matrices=False)
@@ -687,11 +687,11 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             variance = self._get_factor_variance(loadings)[0]
             new_order = list(reversed(np.argsort(variance)))
             loadings = loadings[:, new_order].copy()
-        
+
         # if the structure matrix exists, reorder
-        if structure is not None: 
+        if structure is not None:
             structure = structure[:, new_order].copy()
-        
+
         self.phi_ = phi
         self.structure_ = structure
 
