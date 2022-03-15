@@ -8,6 +8,7 @@ Factor analysis using MINRES or ML, with optional rotation using Varimax or Prom
 """
 
 import warnings
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -15,12 +16,13 @@ import scipy as sp
 from scipy.optimize import minimize
 from scipy.stats import chi2, pearsonr
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.linear_models import LinearRegression
 from sklearn.utils import check_array
 from sklearn.utils.extmath import randomized_svd
 from sklearn.utils.validation import check_is_fitted
 
 from .rotator import OBLIQUE_ROTATIONS, POSSIBLE_ROTATIONS, Rotator
-from .utils import corr, impute_values, partial_correlations, smc
+from .utils import corr, covariance_to_correlation, impute_values, partial_correlations, smc
 
 POSSIBLE_SVDS = ['randomized', 'lapack']
 
@@ -112,6 +114,70 @@ def calculate_bartlett_sphericity(x):
     degrees_of_freedom = p * (p - 1) / 2
     p_value = chi2.sf(statistic, degrees_of_freedom)
     return statistic, p_value
+
+
+def calculate_cng_indices(
+    data: np.ndarray, model: str = "components"
+) -> Tuple[int, pd.DataFrame]:
+    """Calculate the Cattel-Nelson-Gorsuch indices, which are used to determine
+    the appropriate number of factors for a factor analysis.
+
+    Direct port of nCng function from nFactors package:
+    https://rdrr.io/cran/nFactors/man/nCng.html
+
+    Parameters
+    ----------
+    data : array-like
+        The array of samples x observable for which to calculate CNG indices
+    model : str
+        "components" or "factors"
+
+    Returns
+    -------
+    num_factors : int
+        The number of components/factors to retain
+    details : pd.DataFrame
+        The eigenvalues and CNG indices of the dataset
+    """
+    data = corr(data)
+    if model == "factors":
+        data -= np.linalg.pinv(np.diag(np.diag(np.linalg.pinv(data))))
+        # TODO: Should this line be here?
+        data = covariance_to_correlation(data)
+
+    values = np.sort(np.linalg.eigvals(data))[::-1]
+
+    num_variables = len(data)
+    if num_variables < 6:
+        raise ValueError("The number of variables must be at least 6")
+
+    fit_size = 3
+    cng = np.diff(
+        [
+            [
+                LinearRegression()
+                .fit(idx_values[:, np.newaxis], values[idx_values])
+                .coef_
+                for idx_values in [
+                    np.arange(idx_fit, idx_fit + fit_size),
+                    np.arange(idx_fit + fit_size, idx_fit + 2 * fit_size),
+                ]
+            ]
+            for idx_fit in range(num_variables - 2 * fit_size)
+        ],
+        axis=1,
+    ).squeeze(axis=(1, 2))
+
+    num_factors = np.nanargmax(cng) + fit_size
+
+    details = pd.DataFrame(
+        {
+            "data": values[: len(cng)],
+            "cng": cng,
+        }
+    )
+
+    return num_factors, details
 
 
 class FactorAnalyzer(BaseEstimator, TransformerMixin):
