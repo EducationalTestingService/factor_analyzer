@@ -548,7 +548,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # and the L-BFGS-B algorithm
         if self.method == 'ml' or self.method == 'mle':
             objective = self._fit_ml_objective
-        elif self.method == 'uls' or self.method == 'minres':
+        else:
             objective = self._fit_uls_objective
 
         # use scipy to perform the actual minimization
@@ -566,7 +566,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # and ml normalization for ML), and convert to DataFrame
         if self.method == 'ml' or self.method == 'mle':
             loadings = self._normalize_ml(res.x, corr_mtx, self. n_factors)
-        elif self.method == 'uls' or self.method == 'minres':
+        else:
             loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
         return loadings
 
@@ -688,9 +688,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             new_order = list(reversed(np.argsort(variance)))
             loadings = loadings[:, new_order].copy()
 
-        # if the structure matrix exists, reorder
-        if structure is not None:
-            structure = structure[:, new_order].copy()
+            # if the structure matrix exists, reorder
+            if structure is not None:
+                structure = structure[:, new_order].copy()
 
         self.phi_ = phi
         self.structure_ = structure
