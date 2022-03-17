@@ -548,10 +548,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # and the L-BFGS-B algorithm
         if self.method == 'ml' or self.method == 'mle':
             objective = self._fit_ml_objective
-        elif self.method == 'uls' or self.method == 'minres':
-            objective = self._fit_uls_objective
         else:
-            raise ValueError('The `objective` is not defined.')
+            objective = self._fit_uls_objective
 
         # use scipy to perform the actual minimization
         res = minimize(objective,
@@ -568,10 +566,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # and ml normalization for ML), and convert to DataFrame
         if self.method == 'ml' or self.method == 'mle':
             loadings = self._normalize_ml(res.x, corr_mtx, self. n_factors)
-        elif self.method == 'uls' or self.method == 'minres':
-            loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
         else:
-            raise ValueError('The `method` is not defined.')
+            loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
         return loadings
 
     def fit(self, X, y=None):
