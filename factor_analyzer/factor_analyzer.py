@@ -550,6 +550,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             objective = self._fit_ml_objective
         elif self.method == 'uls' or self.method == 'minres':
             objective = self._fit_uls_objective
+        else:
+            raise ValueError('The `objective` is not defined.')
 
         # use scipy to perform the actual minimization
         res = minimize(objective,
@@ -568,6 +570,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             loadings = self._normalize_ml(res.x, corr_mtx, self. n_factors)
         elif self.method == 'uls' or self.method == 'minres':
             loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
+        else:
+            raise ValueError('The `method` is not defined.')
         return loadings
 
     def fit(self, X, y=None):
@@ -688,9 +692,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             new_order = list(reversed(np.argsort(variance)))
             loadings = loadings[:, new_order].copy()
 
-        # if the structure matrix exists, reorder
-        if structure is not None:
-            structure = structure[:, new_order].copy()
+            # if the structure matrix exists, reorder
+            if structure is not None:
+                structure = structure[:, new_order].copy()
 
         self.phi_ = phi
         self.structure_ = structure
