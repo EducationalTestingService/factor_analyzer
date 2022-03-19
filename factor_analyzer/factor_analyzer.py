@@ -142,8 +142,8 @@ def calculate_cng_indices(
     data = corr(data)
     if model == "factors":
         data -= np.linalg.pinv(np.diag(np.diag(np.linalg.pinv(data))))
-        # TODO: Should this line be here?
-        data = covariance_to_correlation(data)
+    elif model != "components":
+        raise ValueError(f"model must be one of 'factors' or 'components'. Received '{model}'")
 
     values = np.sort(np.linalg.eigvals(data))[::-1]
 
