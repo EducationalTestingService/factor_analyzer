@@ -19,12 +19,14 @@ def requirements():  # noqa: D103
 setup(
     name="factor_analyzer",
     version="0.4.0",
-    description="A Factor Analysis class",
+    description="A Factor Analysis tool written in Python",
     long_description=readme(),
     keywords="factor analysis",
     packages=find_packages(),
     author="Jeremy Biggs",
     author_email="jeremy.m.biggs@gmail.com",
+    maintainer="Nitin Madnani",
+    maintainer_email="nmadnani@ets.org",
     url="https://github.com/EducationalTestingService/factor_analyzer",
     install_requires=requirements(),
     include_package_data=True,
@@ -41,6 +43,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
     zip_safe=True,
 )
