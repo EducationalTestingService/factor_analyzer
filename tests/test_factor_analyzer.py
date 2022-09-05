@@ -58,7 +58,7 @@ def test_calculate_kmo():  # noqa: D103
     (kmo_by_item, kmo_overall) = calculate_kmo(data.values)
 
     assert_array_almost_equal(kmo_by_item, expected_by_item)
-    assert_almost_equal(kmo_overall, expected_overall)
+    assert_almost_equal(kmo_overall, expected_overall, places=5)
 
 
 def test_gridsearch():  # noqa: D103
