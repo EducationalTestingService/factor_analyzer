@@ -6,17 +6,18 @@
 Welcome to the FactorAnalyzer documentation!
 ==============================================
 
-This is a Python module to perform exploratory and factor analysis (EFA), with several
-optional rotations. It also includes a class to perform confirmatory factor
-analysis (CFA), with certain pre-defined constraints. In expoloratory factor analysis,
-factor extraction can be performed using a variety of estimation techniques. The
-``factor_analyzer`` package allows users to perfrom EFA using either (1) a minimum
-residual (MINRES) solution, (2) a maximum likelihood (ML) solution, or (3) a principal
-factor solution. However, CFA can only be performe using an ML solution.
+This is a Python module to perform exploratory and factor analysis (EFA), with
+several optional rotations. It also includes a class to perform confirmatory
+factor analysis (CFA), with certain pre-defined constraints. In exploratory
+factor analysis, factor extraction can be performed using a variety of
+estimation techniques. The :ref:`factor_analyzer <factor_analyzer_api>` package
+allows users to perform EFA using either (1) a minimum residual (MINRES)
+solution, (2) a maximum likelihood (ML) solution, or (3) a principal factor
+solution. However, CFA can only be performed using an ML solution.
 
-Both the EFA and CFA classes within this package are fully compatible with `scikit-learn`.
-Portions of this code are ported from the excellent R library `psych`, and the `sem`
-package provided inspiration for the CFA class.
+Both the EFA and CFA classes within this package are fully compatible with
+``scikit-learn``. Portions of this code are ported from the excellent R library
+``psych``, and the ``sem`` package provided inspiration for the CFA class.
 
 Description
 ============
@@ -30,7 +31,7 @@ from an EFA model describes the underlying relationships between each
 variable and the latent factors.
 
 Confirmatory factor analysis (CFA), a closely associated technique, is
-used to test an a priori hypothesis about latent relationships among sets
+used to test a priori hypothesis about latent relationships among sets
 of observed variables. In CFA, the researcher specifies the expected pattern
 of factor loadings (and possibly other constraints), and fits a model according
 to this specification.
@@ -57,14 +58,17 @@ Two common types of rotations are:
    upon the varimax rotation, but ultimately allows factors to become
    correlated.
 
-This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()``
-methods that enable users to perform factor analysis and score new data
-using the fitted factor model. Users can also perform optional rotations
-on a factor loading matrix using the ``Rotator`` class.
+This package includes a :mod:`~factor_analyzer.factor_analyzer` module with a
+stand-alone :class:`~factor_analyzer.factor_analyzer.FactorAnalyzer` class. The
+class includes :meth:`~factor_analyzer.factor_analyzer.FactorAnalyzer.fit()`
+and :meth:`~factor_analyzer.factor_analyzer.FactorAnalyzer.transform()`
+methods that enable users to perform factor analysis and score new data using
+the fitted factor model. Users can also perform optional rotations on a factor
+loading matrix using the :class:`~factor_analyzer.rotator.Rotator` class.
 
-The following rotation options are available in both ``FactorAnalyzer``
-and ``Rotator``:
+The following rotation options are available in both
+:class:`~factor_analyzer.factor_analyzer.FactorAnalyzer` and
+:class:`~factor_analyzer.rotator.Rotator`:
 
     (a) varimax (orthogonal rotation)
     (b) promax (oblique rotation)
@@ -76,21 +80,28 @@ and ``Rotator``:
     (h) geomin_obl (oblique rotation)
     (i) geomin_ort (orthogonal rotation)
 
-In adddition, the package includes a ``confirmatory_factor_analyzer``
-module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
-class includes ``fit()`` and ``transform()``  that enable users to perform
-confirmatory factor analysis and score new data using the fitted model.
-Performing CFA requires users to specify in advance a model specification
-with the expected factor loading relationships. This can be done using
-the ``ModelSpecificationParser`` class.
+In addition, the package includes a
+:mod:`~factor_analyzer.confirmatory_factor_analyzer` module with a stand-alone
+:class:`~factor_analyzer.confirmatory_factor_analyzer.ConfirmatoryFactorAnalyzer`
+class. The class includes
+:meth:`~factor_analyzer.confirmatory_factor_analyzer.ConfirmatoryFactorAnalyzer.fit()`
+and
+:meth:`~factor_analyzer.confirmatory_factor_analyzer.ConfirmatoryFactorAnalyzer.transform()`
+that enable users to perform confirmatory factor analysis and score new data
+using the fitted model. Performing CFA requires users to specify in advance a
+model specification with the expected factor loading relationships. This can be
+done using the
+:class:`~factor_analyzer.confirmatory_factor_analyzer.ModelSpecificationParser`
+class.
 
 Requirements
 ==================
--  Python 3.4 or higher
+-  Python 3.7 or higher
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``
 -  ``scikit-learn``
+-  ``pre-commit``
 
 Installation
 ==================
@@ -108,10 +119,6 @@ Alternatively, you can install via ``conda`` with:
    :caption: Contents:
 
    factor_analyzer
-
-   confirmatory_factor_analyzer
-
-   rotator
 
 
 Indices and tables
