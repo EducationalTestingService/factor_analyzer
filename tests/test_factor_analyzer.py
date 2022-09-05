@@ -120,9 +120,6 @@ class TestFactorAnalyzer:
                              'B': [4, 8, np.nan, 10, 16, 18],
                              'C': [6, 12, 15, 12, 26, 27]})
 
-        # expected = data.copy()
-        # expected.iloc[2, 1] = np.median([4, 8, 10, 16, 18])
-        # expected_corr = expected.corr()
         expected_corr = pd.DataFrame(
             [
                 [1.      , 0.987534, 0.946014],
