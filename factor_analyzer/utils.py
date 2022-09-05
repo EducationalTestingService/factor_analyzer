@@ -89,7 +89,7 @@ def corr(x):
     r : numpy array
         The correlation matrix of the variables.
     """
-    x = (x - x.mean(0)) / x.std(0)
+    x = (x - np.mean(x, axis=0)) / np.std(x, axis=0, ddof=0)
     r = cov(x)
     return r
 
