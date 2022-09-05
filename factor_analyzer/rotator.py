@@ -38,6 +38,7 @@ class Rotator(BaseEstimator):
             (g) equamax (orthogonal rotation)
             (h) geomin_obl (oblique rotation)
             (i) geomin_ort (orthogonal rotation)
+
         Defaults to 'varimax'.
     normalize : bool or None, optional
         Whether to perform Kaiser normalization and de-normalization prior

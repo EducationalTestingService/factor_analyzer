@@ -43,42 +43,16 @@ class ModelSpecification:
     ----------
     loadings : array-like
         The factor loadings specification.
-    error_vars : array-like
-        The error variance specification
-    factor_covs : array-like
-        The factor covariance specification.
-    factor_names : list of str or None
-        A list of factor names, if available.
-        Defaults to None.
-    variable_names : list of str or None
-        A list of variable names, if available.
-        Defaults to ``None``.
-
-    Attributes
-    ----------
-    loadings : numpy array
-        The factor loadings specification.
-    error_vars : numpy array
-        The error variance specification
-    factor_covs : numpy array
-        The factor covariance specification.
     n_factors : int
         The number of factors.
     n_variables : int
         The number of variables.
-    n_lower_diag :int
-        The number of elements in the ``factor_covs`` array, which is
-        equal to the lower diagonal of the factor covariance matrix.
-    loadings_free : numpy array
-        The indices of "free" factor loading parameters.
-    error_vars_free : numpy array
-        The indices of "free" error variance parameters.
-    factor_covs_free : numpy array
-        The indices of "free" factor covariance parameters.
     factor_names : list of str or None
         A list of factor names, if available.
+        Defaults to ``None``.
     variable_names : list of str or None
         A list of variable names, if available.
+        Defaults to ``None``.
     """
 
     def __init__(
@@ -346,11 +320,8 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         A model specification. This must be a :class:`ModelSpecification` object
         or ``None``. If ``None``, a :class:`ModelSpecification` object will be
         generated assuming that ``n_factors`` == ``n_variables``, and that
-        all variables load on all factors.
-
-        Note that this could mean the factor model is not identified, and
-        the optimization could fail.
-
+        all variables load on all factors. Note that this could mean the
+        factor model is not identified, and the optimization could fail.
         Defaults to `None`.
     n_obs : int or None, optional
         The number of observations in the original data set.
@@ -365,9 +336,11 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         A list of minimum and maximum boundaries for each element
         of the input array. This must equal ``x0``, which is the
         input array from your parsed and combined model specification.
+
         The length is:
-          ((n_factors * n_variables) + n_variables + n_factors +
-          (((n_factors * n_factors) - n_factors) // 2)
+        ((n_factors * n_variables) + n_variables + n_factors +
+        (((n_factors * n_factors) - n_factors) // 2)
+
         If `None`, nothing will be bounded.
         Defaults to ``None``.
     max_iter : int, optional
