@@ -6,7 +6,7 @@
 Welcome to the FactorAnalyzer documentation!
 ==============================================
 
-This is a Python module to perform exploratory and factor analysis (EFA), with several 
+This is a Python module to perform exploratory and factor analysis (EFA), with several
 optional rotations. It also includes a class to perform confirmatory factor
 analysis (CFA), with certain pre-defined constraints. In expoloratory factor analysis,
 factor extraction can be performed using a variety of estimation techniques. The
@@ -58,12 +58,12 @@ Two common types of rotations are:
    correlated.
 
 This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()`` 
+``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()``
 methods that enable users to perform factor analysis and score new data
 using the fitted factor model. Users can also perform optional rotations
 on a factor loading matrix using the ``Rotator`` class.
 
-The following rotation options are available in both ``FactorAnalyzer`` 
+The following rotation options are available in both ``FactorAnalyzer``
 and ``Rotator``:
 
     (a) varimax (orthogonal rotation)

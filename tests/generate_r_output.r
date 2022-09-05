@@ -78,10 +78,10 @@ for (n in args$n_factors) {
           evalues <- res$e.values;
           uniquenesses <- res$uniquenesses;
           communalities <- res$communalities;
-          
+
           info <- list('loading' = loadings,
                        'value' = values,
-                       'evalues' = evalues, 
+                       'evalues' = evalues,
                        'uniquenesses' = uniquenesses,
                        'communalities' = communalities)
           for (name in names(info)) {

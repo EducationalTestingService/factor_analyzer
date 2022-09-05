@@ -1,9 +1,9 @@
-"""
-Tests for Rotator class
+"""Tests for ``Rotator`` class.
 
-:author: Jeremy Biggs (jbiggs@ets.org)
-:date: 10/25/2017
-:organization: ETS
+:author: Jeremy Biggs (jeremy.m.biggs@gmail.com)
+:author: Nitin Madnani (nmadnani@ets.org)
+:organization: Educational Testing Service
+:date: 2022-09-05
 """
 
 from factor_analyzer.test_utils import check_rotation
@@ -12,240 +12,244 @@ from factor_analyzer.test_utils import check_rotation
 THRESHOLD = 0.95
 
 
-def test_01_varimax_minres_2_factors():
+def test_01_varimax_minres_2_factors():  # noqa: D103
 
-    test_name = 'test01'
+    test_name = "test01"
     factors = 2
-    method = 'uls'
-    rotation = 'varimax'
+    method = "uls"
+    rotation = "varimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_02_varimax_minres_3_factors():
+def test_02_varimax_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'varimax'
+    method = "uls"
+    rotation = "varimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_02_oblimax_minres_3_factors():
+def test_02_oblimax_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'oblimax'
+    method = "uls"
+    rotation = "oblimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_02_oblimin_minres_3_factors():
+def test_02_oblimin_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'oblimin'
+    method = "uls"
+    rotation = "oblimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_02_quartimax_minres_3_factors():
+def test_02_quartimax_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'quartimax'
+    method = "uls"
+    rotation = "quartimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_02_quartimin_minres_3_factors():
+def test_02_quartimin_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'quartimin'
+    method = "uls"
+    rotation = "quartimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_04_oblimax_minres_3_factors():
+def test_04_oblimax_minres_3_factors():  # noqa: D103
 
-    test_name = 'test04'
+    test_name = "test04"
     factors = 3
-    method = 'uls'
-    rotation = 'oblimax'
+    method = "uls"
+    rotation = "oblimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_04_oblimin_minres_3_factors():
+def test_04_oblimin_minres_3_factors():  # noqa: D103
 
-    test_name = 'test04'
+    test_name = "test04"
     factors = 3
-    method = 'uls'
-    rotation = 'oblimin'
+    method = "uls"
+    rotation = "oblimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_04_quartimax_minres_3_factors():
+def test_04_quartimax_minres_3_factors():  # noqa: D103
 
-    test_name = 'test04'
+    test_name = "test04"
     factors = 3
-    method = 'uls'
-    rotation = 'quartimax'
+    method = "uls"
+    rotation = "quartimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_04_quartimin_minres_3_factors():
+def test_04_quartimin_minres_3_factors():  # noqa: D103
 
-    test_name = 'test04'
+    test_name = "test04"
     factors = 3
-    method = 'uls'
-    rotation = 'quartimin'
+    method = "uls"
+    rotation = "quartimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_oblimax_minres_2_factors():
+def test_07_oblimax_minres_2_factors():  # noqa: D103
 
-    test_name = 'test07'
+    test_name = "test07"
     factors = 2
-    method = 'uls'
-    rotation = 'oblimax'
+    method = "uls"
+    rotation = "oblimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_oblimin_minres_3_factors():
+def test_07_oblimin_minres_3_factors():  # noqa: D103
 
-    test_name = 'test07'
+    test_name = "test07"
     factors = 2
-    method = 'uls'
-    rotation = 'oblimin'
+    method = "uls"
+    rotation = "oblimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_quartimax_minres_2_factors():
+def test_07_quartimax_minres_2_factors():  # noqa: D103
 
-    test_name = 'test07'
+    test_name = "test07"
     factors = 2
-    method = 'uls'
-    rotation = 'quartimax'
+    method = "uls"
+    rotation = "quartimax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_quartimin_minres_2_factors():
+def test_07_quartimin_minres_2_factors():  # noqa: D103
 
-    test_name = 'test07'
+    test_name = "test07"
     factors = 2
-    method = 'uls'
-    rotation = 'quartimin'
+    method = "uls"
+    rotation = "quartimin"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_equamax_minres_2_factors():
+def test_07_equamax_minres_2_factors():  # noqa: D103
 
-    test_name = 'test07'
+    test_name = "test07"
     factors = 2
-    method = 'uls'
-    rotation = 'equamax'
+    method = "uls"
+    rotation = "equamax"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check > THRESHOLD
 
 
-def test_07_oblimin_minres_2_factors_gamma():
+def test_07_oblimin_minres_2_factors_gamma():  # noqa: D103
 
-    test_name = 'test07_gamma'
+    test_name = "test07_gamma"
     factors = 2
-    method = 'uls'
-    rotation = 'oblimin'
+    method = "uls"
+    rotation = "oblimin"
     gamma = 0.5
 
     check = check_rotation(test_name, factors, method, rotation, gamma=gamma)
     assert check > THRESHOLD
 
 
-def test_02_geomin_obl_minres_2_factors():
+def test_02_geomin_obl_minres_2_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 2
-    method = 'uls'
-    rotation = 'geomin_obl'
+    method = "uls"
+    rotation = "geomin_obl"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check == 1
 
-def test_02_geomin_obl_minres_3_factors():
 
-    test_name = 'test02'
+def test_02_geomin_obl_minres_3_factors():  # noqa: D103
+
+    test_name = "test02"
     factors = 3
-    method = 'uls'
-    rotation = 'geomin_obl'
+    method = "uls"
+    rotation = "geomin_obl"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check == 1
 
-def test_02_geomin_obl_ml_3_factors():
 
-    test_name = 'test02'
+def test_02_geomin_obl_ml_3_factors():  # noqa: D103
+
+    test_name = "test02"
     factors = 3
-    method = 'ml'
-    rotation = 'geomin_obl'
+    method = "ml"
+    rotation = "geomin_obl"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check == 1
 
-def test_02_geomin_ort_minres_2_factors():
 
-    test_name = 'test02'
+def test_02_geomin_ort_minres_2_factors():  # noqa: D103
+
+    test_name = "test02"
     factors = 2
-    method = 'uls'
-    rotation = 'geomin_ort'
-
-    check = check_rotation(test_name, factors, method, rotation)
-    assert check == 1
-
-def test_02_geomin_ort_minres_3_factors():
-
-    test_name = 'test02'
-    factors = 3
-    method = 'uls'
-    rotation = 'geomin_ort'
+    method = "uls"
+    rotation = "geomin_ort"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check == 1
 
 
-def test_02_geomin_ort_ml_3_factors():
+def test_02_geomin_ort_minres_3_factors():  # noqa: D103
 
-    test_name = 'test02'
+    test_name = "test02"
     factors = 3
-    method = 'ml'
-    rotation = 'geomin_ort'
+    method = "uls"
+    rotation = "geomin_ort"
+
+    check = check_rotation(test_name, factors, method, rotation)
+    assert check == 1
+
+
+def test_02_geomin_ort_ml_3_factors():  # noqa: D103
+
+    test_name = "test02"
+    factors = 3
+    method = "ml"
+    rotation = "geomin_ort"
 
     check = check_rotation(test_name, factors, method, rotation)
     assert check == 1

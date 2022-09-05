@@ -16,13 +16,13 @@ FactorAnalyzer
    :alt: Docs
 
 
-This is a Python module to perform exploratory and factor analysis (EFA), with several 
+This is a Python module to perform exploratory and factor analysis (EFA), with several
 optional rotations. It also includes a class to perform confirmatory factor
-analysis (CFA), with certain pre-defined constraints. In expoloratory factor analysis,
+analysis (CFA), with certain pre-defined constraints. In exploratory factor analysis,
 factor extraction can be performed using a variety of estimation techniques. The
-``factor_analyzer`` package allows users to perfrom EFA using either (1) a minimum
+``factor_analyzer`` package allows users to perform EFA using either (1) a minimum
 residual (MINRES) solution, (2) a maximum likelihood (ML) solution, or (3) a principal
-factor solution. However, CFA can only be performe using an ML solution.
+factor solution. However, CFA can only be performed using an ML solution.
 
 Both the EFA and CFA classes within this package are fully compatible with `scikit-learn`.
 Portions of this code are ported from the excellent R library `psych`, and the `sem`
@@ -71,12 +71,12 @@ Two common types of rotations are:
    correlated.
 
 This package includes a ``factor_analyzer`` module with a stand-alone
-``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()`` 
+``FactorAnalyzer`` class. The class includes ``fit()`` and ``transform()``
 methods that enable users to perform factor analysis and score new data
-using the fitted factor model. Users can also perform optional otations
+using the fitted factor model. Users can also perform optional rotations
 on a factor loading matrix using the ``Rotator`` class.
 
-The following rotation options are available in both ``FactorAnalyzer`` 
+The following rotation options are available in both ``FactorAnalyzer``
 and ``Rotator``:
 
     (a) varimax (orthogonal rotation)
@@ -89,7 +89,7 @@ and ``Rotator``:
     (h) geomin_obl (oblique rotation)
     (i) geomin_ort (orthogonal rotation)
 
-In adddition, the package includes a ``confirmatory_factor_analyzer``
+In addition, the package includes a ``confirmatory_factor_analyzer``
 module with a stand-alone ``ConfirmatoryFactorAnalyzer`` class. The
 class includes ``fit()`` and ``transform()``  that enable users to perform
 confirmatory factor analysis and score new data using the fitted model.
@@ -107,21 +107,21 @@ Exploratory factor analysis example.
 
 .. code:: python
 
-  In [1]: import pandas as pd 
-     ...: from factor_analyzer import FactorAnalyzer                                                                                                     
+  In [1]: import pandas as pd
+     ...: from factor_analyzer import FactorAnalyzer
 
-  In [2]: df_features = pd.read_csv('tests/data/test02.csv')                                                                                             
+  In [2]: df_features = pd.read_csv('tests/data/test02.csv')
 
-  In [3]: fa = FactorAnalyzer(rotation=None)                                                                                                             
+  In [3]: fa = FactorAnalyzer(rotation=None)
 
-  In [4]: fa.fit(df_features)                                                                                                                            
-  Out[4]: 
+  In [4]: fa.fit(df_features)
+  Out[4]:
   FactorAnalyzer(bounds=(0.005, 1), impute='median', is_corr_matrix=False,
                  method='minres', n_factors=3, rotation=None, rotation_kwargs={},
                  use_smc=True)
 
-  In [5]: fa.loadings_                                                                                                                                   
-  Out[5]: 
+  In [5]: fa.loadings_
+  Out[5]:
   array([[-0.12991218,  0.16398151,  0.73823491],
          [ 0.03899558,  0.04658425,  0.01150343],
          [ 0.34874135,  0.61452341, -0.07255666],
@@ -133,8 +133,8 @@ Exploratory factor analysis example.
          [ 0.76041819, -0.23768727, -0.12068582],
          [ 0.81533404, -0.12494695,  0.17639684]])
 
-  In [6]: fa.get_communalities()                                                                                                                         
-  Out[6]: 
+  In [6]: fa.get_communalities()
+  Out[6]:
   array([0.5887579 , 0.00382308, 0.50452402, 0.72841182, 0.33184336,
          0.66208429, 0.61911037, 0.73194557, 0.64929612, 0.71149718])
 
@@ -142,24 +142,24 @@ Confirmatory factor analysis example.
 
 .. code:: python
 
-  In [1]: import pandas as pd                                                                                                                            
+  In [1]: import pandas as pd
 
-  In [2]: from factor_analyzer import (ConfirmatoryFactorAnalyzer, 
-     ...:                              ModelSpecificationParser)                                                                                         
+  In [2]: from factor_analyzer import (ConfirmatoryFactorAnalyzer,
+     ...:                              ModelSpecificationParser)
 
-  In [3]: df_features = pd.read_csv('tests/data/test11.csv')                                                                                             
+  In [3]: df_features = pd.read_csv('tests/data/test11.csv')
 
-  In [4]: model_dict = {"F1": ["V1", "V2", "V3", "V4"], 
-     ...:               "F2": ["V5", "V6", "V7", "V8"]} 
+  In [4]: model_dict = {"F1": ["V1", "V2", "V3", "V4"],
+     ...:               "F2": ["V5", "V6", "V7", "V8"]}
   In [5]: model_spec = ModelSpecificationParser.parse_model_specification_from_dict(df_features,
      ...:                                                                           model_dict)
 
-  In [6]: cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)                                                                                       
+  In [6]: cfa = ConfirmatoryFactorAnalyzer(model_spec, disp=False)
 
-  In [7]: cfa.fit(df_features.values)                                                                                                                    
+  In [7]: cfa.fit(df_features.values)
 
-  In [8]: cfa.loadings_                                                                                                                                  
-  Out[8]: 
+  In [8]: cfa.loadings_
+  Out[8]:
   array([[0.99131285, 0.        ],
          [0.46074919, 0.        ],
          [0.3502267 , 0.        ],
@@ -169,13 +169,13 @@ Confirmatory factor analysis example.
          [0.        , 0.37602988],
          [0.        , 0.50049507]])
 
-  In [9]: cfa.factor_varcovs_                                                                                                                           
-  Out[9]: 
+  In [9]: cfa.factor_varcovs_
+  Out[9]:
   array([[1.        , 0.17385704],
          [0.17385704, 1.        ]])
 
-  In [10]: cfa.transform(df_features.values)                                                                                                             
-  Out[10]: 
+  In [10]: cfa.transform(df_features.values)
+  Out[10]:
   array([[-0.46852166, -1.08708035],
          [ 2.59025301,  1.20227783],
          [-0.47215977,  2.65697245],
@@ -192,12 +192,13 @@ Requirements
 -  ``pandas``
 -  ``scipy``
 -  ``scikit-learn``
+-  ``pre-commit``
 
 Contributing
 ------------
 
 Contributions to ``factor_analyzer`` are very welcome. Please file an issue
-on GitHub, or contact jbiggs@ets.org if you would like to contribute.
+in the repository if you would like to contribute.
 
 Installation
 ------------

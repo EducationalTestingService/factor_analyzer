@@ -2,3 +2,4 @@ pandas
 scipy
 numpy
 scikit-learn
+pre-commit
