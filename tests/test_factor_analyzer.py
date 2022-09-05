@@ -9,9 +9,8 @@ Tests for the ``FactorAnalyzer`` class.
 
 import numpy as np
 import pandas as pd
-from nose.tools import raises
+from nose.tools import assert_almost_equal, raises
 from numpy.testing import assert_array_almost_equal
-from pandas.util.testing import assert_almost_equal
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
@@ -30,8 +29,8 @@ def test_calculate_bartlett_sphericity():  # noqa: D103
     data = pd.read_csv(path)
     s, p = calculate_bartlett_sphericity(data.values)
 
-    assert_almost_equal(s, 14185)
-    assert_almost_equal(p, 0)
+    assert_almost_equal(s, 14185, places=2)
+    assert_almost_equal(p, 0, places=2)
 
 
 def test_calculate_kmo():  # noqa: D103
@@ -58,7 +57,7 @@ def test_calculate_kmo():  # noqa: D103
 
     (kmo_by_item, kmo_overall) = calculate_kmo(data.values)
 
-    assert_almost_equal(kmo_by_item, expected_by_item)
+    assert_array_almost_equal(kmo_by_item, expected_by_item)
     assert_almost_equal(kmo_overall, expected_overall)
 
 
@@ -231,4 +230,4 @@ class TestFactorAnalyzer:  # noqa: D101
         proportional_variance_expected = variance / n_rows
         proportional_variance = fa.get_factor_variance()[1]
 
-        assert_almost_equal(proportional_variance_expected, proportional_variance)
+        assert_array_almost_equal(proportional_variance_expected, proportional_variance)
