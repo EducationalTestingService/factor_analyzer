@@ -29,7 +29,7 @@ def test_calculate_bartlett_sphericity():
     data = pd.read_csv(path)
     s, p = calculate_bartlett_sphericity(data.values)
 
-    assert_almost_equal(s, 14185)
+    assert_almost_equal(s, 14185.00286)
     assert_almost_equal(p, 0)
 
 
@@ -38,12 +38,19 @@ def test_calculate_kmo():
     path = 'tests/data/test02.csv'
     data = pd.read_csv(path)
 
-    expected_overall = 0.81498469767761361
+    expected_overall = 0.81498
 
-    values = [0.405516, 0.560049, 0.700033,
-              0.705446, 0.829063, 0.848425,
-              0.863502, 0.841143, 0.877076,
-              0.839272]
+    values = [
+        0.40551591065113307,
+        0.56004925345997,
+        0.7000330131087749,
+        0.7054455920793854,
+        0.829063299715461, 
+        0.8484249727243623,
+        0.8635016393452357,
+        0.8411432114912387,
+        0.8770763964694772,
+        0.8392720039048369]
 
     expected_by_item = np.array(values)
 
@@ -87,9 +94,9 @@ class TestFactorAnalyzer:
         fa = FactorAnalyzer(rotation=None)
         fa.fit(data)
         _ = fa.transform(data)
-        expected_weights = np.array(([[0.33536334, -2.72509646, 0],
-                                      [0.33916605, -0.29388849, 0],
-                                      [0.33444588, 3.03060826, 0]]))
+        expected_weights = np.array(([[0.335363, -2.725096,  0.],
+                                      [0.339166, -0.293888,  0.],
+                                      [0.334446,  3.030608, -0.]]))
         assert_array_almost_equal(expected_weights, fa.weights_)
 
     def test_analyze_impute_mean(self):
@@ -113,14 +120,16 @@ class TestFactorAnalyzer:
                              'B': [4, 8, np.nan, 10, 16, 18],
                              'C': [6, 12, 15, 12, 26, 27]})
 
-        expected = data.copy()
-        expected.iloc[2, 1] = np.median([4, 8, 10, 16, 18])
-        expected_corr = expected.corr()
-        expected_corr = expected_corr.values
+        expected_corr = pd.DataFrame(
+            [
+                [1.      , 0.987534, 0.946014],
+                [0.987534, 1.      , 0.983488],
+                [0.946014, 0.983488, 1.      ]
+        ]).values
 
         fa = FactorAnalyzer(rotation=None, impute='median', n_factors=1)
         fa.fit(data)
-        assert_array_almost_equal(fa.corr_, expected_corr)
+        assert_array_almost_equal(expected_corr, fa.corr_)
 
     def test_analyze_impute_drop(self):
 
