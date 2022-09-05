@@ -2,18 +2,24 @@ FactorAnalyzer
 --------------
 
 .. image:: https://gitlab.com/EducationalTestingService/factor_analyzer/badges/main/pipeline.svg
-   :alt: Build status
    :target: https://gitlab.com/EducationalTestingService/factor_analyzer/-/pipelines
+   :alt: Build status
 
 .. image:: https://codecov.io/gh/EducationalTestingService/factor_analyzer/branch/main/graph/badge.svg
-  :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
+   :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
+   :alt: Code coverage
 
 .. image:: https://anaconda.org/ets/factor_analyzer/badges/installer/conda.svg
-    :target: https://anaconda.org/ets/factor_analyzer/
+   :target: https://anaconda.org/ets/factor_analyzer/
+   :alt: Conda version
 
 .. image:: https://img.shields.io/readthedocs/factor_analyzer/latest.svg
    :target: https://factor-analyzer.readthedocs.io/
    :alt: Docs
+
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+   :target: https://github.com/pre-commit/pre-commit
+   :alt: Pre-commit checks
 
 
 This is a Python module to perform exploratory and factor analysis (EFA), with several
