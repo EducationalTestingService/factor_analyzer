@@ -363,11 +363,12 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
     ----------
     model : ModelSpecification
         The model specification object.
-    loadings_ : numpy array
+    loadings_ : np.ndarray
         The factor loadings matrix.
-    error_vars_ : numpy array
+        ``None``, if ``fit()``` has not been called.
+    error_vars_ : np.ndarray
         The error variance matrix
-    factor_varcovs_ : numpy array
+    factor_varcovs_ : np.ndarray
         The factor covariance matrix.
     log_likelihood_ : float
         The log likelihood from the optimization routine.
