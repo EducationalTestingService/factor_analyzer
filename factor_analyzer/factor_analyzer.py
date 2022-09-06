@@ -180,20 +180,20 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     Attributes
     ----------
-    loadings : numpy array
+    loadings_ : np.ndarray
         The factor loadings matrix.
-        None, if ``fit()``` has not been called.
-    corr : numpy array
+        ``None``, if ``fit()``` has not been called.
+    corr_ : np.ndarray
         The original correlation matrix.
         ``None``, if ``fit()`` has not been called.
-    rotation_matrix : numpy array
-        The rotation matrix, if a rotation has been performed.
-    structure :numpy array or None
+    rotation_matrix_ : np.ndarray
+        The rotation matrix, if a rotation has been performed. ``None`` otherwise.
+    structure_ : np.ndarray or None
         The structure loading matrix. This only exists if ``rotation``
-        is 'promax'.
-    psi : numpy array or None
+        is 'promax' and is ``None`` otherwise.
+    phi_ : np.ndarray or None
         The factor correlations matrix. This only exists if ``rotation``
-        is 'oblique'.
+        is 'oblique' and is ``None`` otherwise.
 
     Notes
     -----
