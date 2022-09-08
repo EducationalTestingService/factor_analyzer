@@ -1,7 +1,7 @@
 .. _factor_analyzer_api:
 
-factor\_analyzer package
-========================
+API documentation
+=================
 
 :py:mod:`factor\_analyzer\.factor\_analyzer` Module
 ---------------------------------------------------
