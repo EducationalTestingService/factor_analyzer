@@ -44,7 +44,7 @@ def calculate_kmo(x):
 
     Returns
     -------
-    kmo_per_variable : np.ndarray
+    kmo_per_variable : :obj:`numpy.ndarray`
         The KMO score per item.
     kmo_total : float
         The overall KMO score.
@@ -180,18 +180,18 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     Attributes
     ----------
-    loadings_ : np.ndarray
+    loadings_ : :obj:`numpy.ndarray`
         The factor loadings matrix.
         ``None``, if ``fit()``` has not been called.
-    corr_ : np.ndarray
+    corr_ : :obj:`numpy.ndarray`
         The original correlation matrix.
         ``None``, if ``fit()`` has not been called.
-    rotation_matrix_ : np.ndarray
+    rotation_matrix_ : :obj:`numpy.ndarray`
         The rotation matrix, if a rotation has been performed. ``None`` otherwise.
-    structure_ : np.ndarray or None
+    structure_ : :obj:`numpy.ndarray` or None
         The structure loading matrix. This only exists if ``rotation``
         is 'promax' and is ``None`` otherwise.
-    phi_ : np.ndarray or None
+    phi_ : :obj:`numpy.ndarray` or None
         The factor correlations matrix. This only exists if ``rotation``
         is 'oblique' and is ``None`` otherwise.
 
@@ -384,7 +384,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
             The factor loading matrix
         """
         np.fill_diagonal(corr_mtx, 1 - solution)
@@ -458,7 +458,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
             The factor loading matrix
         """
         sc = np.diag(1 / np.sqrt(solution))
@@ -489,7 +489,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
             The factor loadings matrix.
         """
         # standardize the data
@@ -528,7 +528,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
 
         Raises
         ------
@@ -724,7 +724,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        X_new : np.ndarray, shape (``n_samples``, ``n_components``)
+        X_new : :obj:`numpy.ndarray`, shape (``n_samples``, ``n_components``)
             The latent variables of X.
 
         Examples
@@ -800,9 +800,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        original_eigen_values : np.ndarray
+        original_eigen_values : :obj:`numpy.ndarray`
             The original eigenvalues
-        common_factor_eigen_values : np.ndarray
+        common_factor_eigen_values : :obj:`numpy.ndarray`
             The common factor eigenvalues
 
         Examples
@@ -842,7 +842,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        communalities : np.ndarray
+        communalities : :obj:`numpy.ndarray`
             The communalities from the factor loading matrix.
 
         Examples
@@ -871,7 +871,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        uniquenesses : np.ndarray
+        uniquenesses : :obj:`numpy.ndarray`
             The uniquenesses from the factor loading matrix.
 
         Examples
@@ -910,11 +910,11 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        variance : np.ndarray
+        variance : :obj:`numpy.ndarray`
             The factor variances.
-        proportional_variance : np.ndarray
+        proportional_variance : :obj:`numpy.ndarray`
             The proportional factor variances.
-        cumulative_variances : np.ndarray
+        cumulative_variances : :obj:`numpy.ndarray`
             The cumulative factor variances.
         """
         n_rows = loadings.shape[0]
@@ -940,11 +940,11 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        variance : np.ndarray
+        variance : :obj:`numpy.ndarray`
             The factor variances.
-        proportional_variance : np.ndarray
+        proportional_variance : :obj:`numpy.ndarray`
             The proportional factor variances.
-        cumulative_variances : np.ndarray
+        cumulative_variances : :obj:`numpy.ndarray`
             The cumulative factor variances.
 
         Examples

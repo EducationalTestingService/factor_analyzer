@@ -316,7 +316,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
     Parameters
     ----------
-    specification : ModelSpecification object or None, optional
+    specification : :class:`ModelSpecification` or None, optional
         A model specification. This must be a :class:`ModelSpecification` object
         or ``None``. If ``None``, a :class:`ModelSpecification` object will be
         generated assuming that ``n_factors`` == ``n_variables``, and that
@@ -363,12 +363,12 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
     ----------
     model : ModelSpecification
         The model specification object.
-    loadings_ : np.ndarray
+    loadings_ : :obj:`numpy.ndarray`
         The factor loadings matrix.
         ``None``, if ``fit()``` has not been called.
-    error_vars_ : np.ndarray
+    error_vars_ : :obj:`numpy.ndarray`
         The error variance matrix
-    factor_varcovs_ : np.ndarray
+    factor_varcovs_ : :obj:`numpy.ndarray`
         The factor covariance matrix.
     log_likelihood_ : float
         The log likelihood from the optimization routine.
@@ -503,7 +503,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        array : np.ndarray
+        array : :obj:`numpy.ndarray`
             The combined (X, 1) array.
         """
         loadings = loadings.reshape(n_factors * n_variables, 1, order="F")
@@ -869,7 +869,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        model_implied_cov : np.ndarray
+        model_implied_cov : :obj:`numpy.ndarray`
             The model-implied covariance matrix.
 
         Examples
@@ -912,11 +912,11 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings_dx : np.ndarray
+        loadings_dx : :obj:`numpy.ndarray`
             The derivative of the loadings matrix.
-        factor_covs_dx : np.ndarray
+        factor_covs_dx : :obj:`numpy.ndarray`
             The derivative of the factor covariance matrix.
-        error_covs_dx : np.ndarray
+        error_covs_dx : :obj:`numpy.ndarray`
             The derivative of the error covariance matrix.
         """
         # meets all of our expected criteria
@@ -988,11 +988,11 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings_dx : np.ndarray
+        loadings_dx : :obj:`numpy.ndarray`
             The derivative of the loadings means.
-        factor_covs_dx : np.ndarray
+        factor_covs_dx : :obj:`numpy.ndarray`
             The derivative of the factor covariance means.
-        error_covs_dx : np.ndarray
+        error_covs_dx : :obj:`numpy.ndarray`
             The derivative of the error covariance means.
         """
         # meets all of our expected criteria
@@ -1034,9 +1034,9 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings_se : np.ndarray
+        loadings_se : :obj:`numpy.ndarray`
             The standard errors for the factor loadings.
-        error_vars_se : np.ndarray
+        error_vars_se : :obj:`numpy.ndarray`
             The standard errors for the error variances.
 
         Examples

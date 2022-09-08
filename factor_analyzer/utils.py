@@ -106,7 +106,7 @@ def apply_impute_nan(x, how="mean"):
 
     Returns
     -------
-    x : np.ndarray
+    x : :obj:`numpy.ndarray`
         The array, with the missing values imputed.
     """
     if how == "mean":
@@ -130,7 +130,7 @@ def impute_values(x, how="mean"):
 
     Returns
     -------
-    x : np.ndarray
+    x : :obj:`numpy.ndarray`
         The array, with the missing values imputed or with rows dropped.
     """
     # impute mean or median, if `how` is set to 'mean' or 'median'
@@ -159,7 +159,7 @@ def smc(corr_mtx, sort=False):
 
     Returns
     -------
-    smc : np.ndarray
+    smc : :obj:`numpy.ndarray`
         The squared multiple correlations matrix.
     """
     corr_inv = np.linalg.inv(corr_mtx)
@@ -183,7 +183,7 @@ def covariance_to_correlation(m):
 
     Returns
     -------
-    retval : np.ndarray
+    retval : :obj:`numpy.ndarray`
         The cross-correlation matrix.
 
     Raises
@@ -218,7 +218,7 @@ def partial_correlations(x):
 
     Returns
     -------
-    pcor : np.ndarray
+    pcor : :obj:`numpy.ndarray`
         An array containing the partial correlations of of each
         pair of variables in the given array, excluding all other
         variables.
@@ -285,7 +285,7 @@ def fill_lower_diag(x):
 
     Returns
     -------
-    out : np.ndarray
+    out : :obj:`numpy.ndarray`
         The output square matrix, with the lower diagonal filled by x.
 
     References
@@ -318,7 +318,7 @@ def merge_variance_covariance(variances, covariances=None):
 
     Returns
     -------
-    variance_covariance : np.ndarray
+    variance_covariance : :obj:`numpy.ndarray`
         The variance-covariance matrix.
     """
     variances = (
@@ -383,7 +383,7 @@ def get_free_parameter_idxs(x, eq=1):
 
     Returns
     -------
-    idx : np.ndarray
+    idx : :obj:`numpy.ndarray`
         The free parameter indexes.
     """
     x[np.isnan(x)] = eq
@@ -407,7 +407,7 @@ def duplication_matrix(n=1):
 
     Returns
     -------
-    duplication_matrix : np.ndarray
+    duplication_matrix : :obj:`numpy.ndarray`
         The duplication matrix.
 
     Raises`
@@ -447,7 +447,7 @@ def duplication_matrix_pre_post(x):
 
     Returns
     -------
-    out : np.ndarray
+    out : :obj:`numpy.ndarray`
         The transformed matrix.
 
     Raises
@@ -487,7 +487,7 @@ def commutation_matrix(p, q):
 
     Returns
     -------
-    commutation_matrix : np.ndarray
+    commutation_matrix : :obj:`numpy.ndarray`
         The commutation matrix
 
     References
@@ -513,7 +513,7 @@ def get_symmetric_lower_idxs(n=1, diag=True):
 
     Returns
     -------
-    indices : np.ndarray
+    indices : :obj:`numpy.ndarray`
         The indices for the lower triangle.
     """
     rows = np.repeat(np.arange(n), n).reshape(n, n)
@@ -537,7 +537,7 @@ def get_symmetric_upper_idxs(n=1, diag=True):
 
     Returns
     -------
-    indices : np.ndarray
+    indices : :obj:`numpy.ndarray`
         The indices for the upper triangle.
     """
     rows = np.repeat(np.arange(n), n).reshape(n, n)
