@@ -72,11 +72,11 @@ class Rotator(BaseEstimator):
 
     Attributes
     ----------
-    loadings_ : np.ndarray, shape (``n_features``, ``n_factors``)
+    loadings_ : :obj:`numpy.ndarray`, shape (``n_features``, ``n_factors``)
         The loadings matrix.
-    rotation_ : np.ndarray, shape (``n_factors``, ``n_factors``)
+    rotation_ : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
         The rotation matrix.
-    psi_ : np.ndarray or None
+    phi_ : :obj:`numpy.ndarray` or None
         The factor correlations matrix. This only exists if ``method`` is
         'oblique'.
 
@@ -148,7 +148,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         gradient = -(
@@ -171,7 +171,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         gradient = -(loadings**3)
@@ -191,7 +191,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
@@ -215,7 +215,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         X = np.dot(loadings**2, np.eye(loadings.shape[1]) != 1)
@@ -236,7 +236,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         p, k = loadings.shape
@@ -276,7 +276,7 @@ class Rotator(BaseEstimator):
         -------
         gradient_dict : dict
             A dictionary containing the following keys:
-            (1) ``grad`` : np.ndarray, containing the gradients.
+            (1) ``grad`` : :obj:`numpy.ndarray`, containing the gradients.
             (2) ``criterion`` : float, containing the criterion for the objective.
         """
         p, k = loadings.shape
@@ -306,11 +306,11 @@ class Rotator(BaseEstimator):
 
         Returns
         -------
-        loadings : np.ndarray, shape (``n_features``, ``n_factors``)
+        loadings : :obj:`numpy.ndarray`, shape (``n_features``, ``n_factors``)
             The loadings matrix
-        rotation_mtx : np.ndarray, shape (``n_factors``, ``n_factors``)
+        rotation_mtx : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
             The rotation matrix
-        psi : np.ndarray, shape (``n_factors``, ``n_factors``)
+        phi : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
             The factor correlations matrix. This only exists if the
             rotation is oblique.
         """
@@ -388,16 +388,16 @@ class Rotator(BaseEstimator):
 
         Parameters
         ----------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
             The loading matrix
         method : str
             The orthogonal rotation method to use.
 
         Returns
         -------
-        loadings : np.ndarray
+        loadings : :obj:`numpy.ndarray`
             The loadings matrix
-        rotation_mtx : np.ndarray, shape (``n_factors``, ``n_factors``)
+        rotation_mtx : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
             The rotation matrix
         """
         if method == "oblimax":
@@ -470,9 +470,9 @@ class Rotator(BaseEstimator):
 
         Returns
         -------
-        loadings : np.ndarray, shape (``n_features``, ``n_factors``)
+        loadings : :obj:`numpy.ndarray`, shape (``n_features``, ``n_factors``)
             The loadings matrix.
-        rotation_mtx : np.ndarray, shape (``n_factors``, ``n_factors``)
+        rotation_mtx : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
             The rotation matrix.
         """
         X = loadings.copy()
@@ -543,11 +543,11 @@ class Rotator(BaseEstimator):
 
         Returns
         -------
-        loadings : np.ndarray, shape (``n_features``, ``n_factors``)
+        loadings : :obj:`numpy.ndarray`, shape (``n_features``, ``n_factors``)
             The loadings matrix
-        rotation_mtx : np.ndarray, shape (``n_factors``, ``n_factors``)
+        rotation_mtx : :obj:`numpy.ndarray`, shape (``n_factors``, ``n_factors``)
             The rotation matrix
-        psi : np.ndarray or None, shape (``n_factors``, ``n_factors``)
+        phi : :obj:`numpy.ndarray` or None, shape (``n_factors``, ``n_factors``)
             The factor correlations matrix. This only exists if the rotation
             is oblique.
         """
@@ -637,7 +637,7 @@ class Rotator(BaseEstimator):
 
         Returns
         -------
-        loadings_ : np,ndarray, shape (``n_features``, ``n_factors``)
+        loadings_ : :obj:`numpy,ndarray`, shape (``n_features``, ``n_factors``)
             The loadings matrix.
 
         Raises
