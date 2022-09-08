@@ -1,0 +1,42 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more git_hooks
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+        exclude: .(tsv|csv|json|json)$
+    -   id: check-added-large-files
+        args: [--maxkb=5000]
+    -   id: check-ast
+    -   id: check-json
+    -   id: debug-statements
+    -   id: check-merge-conflict
+-   repo: https://gitlab.com/pycqa/flake8
+    rev: 4.0.1
+    hooks:
+    - id: flake8
+      args: [--max-line-length=101]
+      exclude: ^(factor_analyzer/__init__.py)
+-   repo: https://github.com/PyCQA/isort
+    rev: 5.10.1
+    hooks:
+    -   id: isort
+        args: ["--profile", "black", "--filter-files"]
+-   repo: https://github.com/ikamensh/flynt/
+    rev: '0.76'
+    hooks:
+    -   id: flynt
+-   repo: https://github.com/psf/black
+    rev: 22.3.0
+    hooks:
+    -   id: black
+-   repo: https://github.com/pycqa/pydocstyle
+    rev: 6.1.1
+    hooks:
+    -   id: pydocstyle
+        args:
+        - --convention=pep257
+        additional_dependencies: ["toml"]
