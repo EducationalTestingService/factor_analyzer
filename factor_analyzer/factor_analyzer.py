@@ -508,7 +508,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # perform the randomized singular value decomposition
         if self.svd_method == "randomized":
-            _, _, V = randomized_svd(X, self.n_factors, random_state=0)
+            _, _, V = randomized_svd(X, self.n_factors, random_state=1234567890)
         # otherwise, perform the full SVD
         else:
             _, _, V = np.linalg.svd(X, full_matrices=False)
