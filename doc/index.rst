@@ -21,8 +21,8 @@ Both the EFA and CFA classes within this package are fully compatible with
 
 .. important::
 
-   Please make sure to read the :ref:`important notes <important_notes>` section if you encounter any
-   unexpected results.
+   Please make sure to read the :ref:`important notes <important_notes>`
+   section if you encounter any unexpected results.
 
 
 Documentation
