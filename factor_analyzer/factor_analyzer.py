@@ -8,6 +8,7 @@ Factor analysis using MINRES or ML, with optional rotation using Varimax or Prom
 """
 
 import warnings
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -969,3 +970,30 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         check_is_fitted(self, "loadings_")
         loadings = self.loadings_.copy()
         return self._get_factor_variance(loadings)
+
+    def sufficiency_test(self, nobs: int) -> Tuple[float, int, float]:
+        """Perform sufficiency test
+
+        The test calculates the statistic under the null hypothesis that
+        the selected number of factors is sufficient.
+
+        Parameters
+        ----------
+        nobs: int
+            the number of observations in the input data that this factor analyzer was fit to
+
+        Returns
+        -------
+        statistic: float
+            the test statistic
+        df: int
+            the degrees of freedom
+        pvalue: float
+            the p-value of the test
+        """
+        nvar = self.corr_.shape[0]
+        df = ((nvar - self.n_factors) ** 2 - nvar - self.n_factors) // 2
+        obj = self._fit_ml_objective(self.get_uniquenesses(), self.corr_, self.n_factors)
+        statistic = (nobs - 1 - (2 * nvar + 5) / 6 - (2 * self.n_factors) / 3) * obj
+        pvalue = chi2.sf(statistic, df=df)
+        return statistic, df, pvalue
