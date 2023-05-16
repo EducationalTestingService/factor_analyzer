@@ -234,3 +234,19 @@ class TestFactorAnalyzer:  # noqa: D101
         proportional_variance = fa.get_factor_variance()[1]
 
         assert_array_almost_equal(proportional_variance_expected, proportional_variance)
+
+    def test_sufficiency_test(self):
+        path = "tests/data/test01.csv"
+        data = pd.read_csv(path)
+
+        temp = []
+        factors_range = list(range(1, 16))
+        for n_factors in factors_range:
+            fa = FactorAnalyzer(n_factors=n_factors, rotation=None, method="ml")
+            fa.fit(data)
+            temp.append([n_factors, *fa.sufficiency_test(data.shape[0])])
+        actual = pd.DataFrame(temp, columns=['n_factors', 'statistic', 'df', 'pvalue'])
+
+        expected = pd.read_csv("tests/expected/test01/sufficiency_ml_none_15_test01.csv")
+
+        pd.testing.assert_frame_equal(actual, expected)
