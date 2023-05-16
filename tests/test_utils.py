@@ -10,8 +10,7 @@ Tests utilities.
 import numpy as np
 import pandas as pd
 from nose.tools import eq_, raises
-from numpy.testing import assert_array_equal
-from pandas.util.testing import assert_almost_equal
+from numpy.testing import assert_array_equal, assert_almost_equal
 
 from factor_analyzer.utils import (
     commutation_matrix,
@@ -193,9 +192,9 @@ def test_partial_correlations():  # noqa: D103
     data = pd.DataFrame([[12, 14, 15], [24, 12, 52], [35, 12, 41], [23, 12, 42]])
 
     expected = [
-        [1.0, -0.730955, -0.50616],
-        [-0.730955, 1.0, -0.928701],
-        [-0.50616, -0.928701, 1.0],
+        [1.0, -0.7309547, -0.50616],
+        [-0.7309547, 1.0, -0.9287013],
+        [-0.50616, -0.9287013, 1.0],
     ]
 
     expected = pd.DataFrame(expected, columns=[0, 1, 2], index=[0, 1, 2])
