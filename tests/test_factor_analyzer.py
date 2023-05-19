@@ -24,7 +24,6 @@ from factor_analyzer.utils import smc
 
 
 def test_calculate_bartlett_sphericity():  # noqa: D103
-
     path = "tests/data/test01.csv"
     data = pd.read_csv(path)
     s, p = calculate_bartlett_sphericity(data.values)
@@ -34,7 +33,6 @@ def test_calculate_bartlett_sphericity():  # noqa: D103
 
 
 def test_calculate_kmo():  # noqa: D103
-
     path = "tests/data/test02.csv"
     data = pd.read_csv(path)
 
@@ -83,7 +81,6 @@ def test_gridsearch():  # noqa: D103
 
 class TestFactorAnalyzer:  # noqa: D101
     def test_analyze_weights(self):  # noqa: D102
-
         data = pd.DataFrame(
             {
                 "A": [2, 4, 5, 6, 8, 9],
@@ -107,7 +104,6 @@ class TestFactorAnalyzer:  # noqa: D101
         assert_array_almost_equal(expected_weights, fa.weights_)
 
     def test_analyze_impute_mean(self):  # noqa: D102
-
         data = pd.DataFrame(
             {
                 "A": [2, 4, 5, 6, 8, 9],
@@ -126,7 +122,6 @@ class TestFactorAnalyzer:  # noqa: D101
         assert_array_almost_equal(fa.corr_, expected_corr)
 
     def test_analyze_impute_median(self):  # noqa: D102
-
         data = pd.DataFrame(
             {
                 "A": [2, 4, 5, 6, 8, 9],
@@ -148,7 +143,6 @@ class TestFactorAnalyzer:  # noqa: D101
         assert_array_almost_equal(expected_corr, fa.corr_)
 
     def test_analyze_impute_drop(self):  # noqa: D102
-
         data = pd.DataFrame(
             {
                 "A": [2, 4, 5, 6, 8, 9],
@@ -183,7 +177,6 @@ class TestFactorAnalyzer:  # noqa: D101
 
     @raises(ValueError)
     def test_analyze_infinite(self):  # noqa: D102
-
         data = pd.DataFrame(
             {
                 "A": [1.0, 0.4, 0.5],
@@ -215,7 +208,6 @@ class TestFactorAnalyzer:  # noqa: D101
         assert_array_almost_equal(smc_result, expected_r2)
 
     def test_factor_variance(self):  # noqa: D102
-
         path = "tests/data/test01.csv"
         data = pd.read_csv(path)
 
@@ -235,18 +227,24 @@ class TestFactorAnalyzer:  # noqa: D101
 
         assert_array_almost_equal(proportional_variance_expected, proportional_variance)
 
-    def test_sufficiency_test(self):
+    def test_sufficiency(self):
         path = "tests/data/test01.csv"
         data = pd.read_csv(path)
 
-        temp = []
-        factors_range = list(range(1, 16))
-        for n_factors in factors_range:
+        # compute the sufficiency values for a number of factors
+        computed_values = []
+        for n_factors in range(1, 16):
             fa = FactorAnalyzer(n_factors=n_factors, rotation=None, method="ml")
             fa.fit(data)
-            temp.append([n_factors, *fa.sufficiency_test(data.shape[0])])
-        actual = pd.DataFrame(temp, columns=['n_factors', 'statistic', 'df', 'pvalue'])
+            computed_values.append([n_factors, *fa.sufficiency(data.shape[0])])
 
-        expected = pd.read_csv("tests/expected/test01/sufficiency_ml_none_15_test01.csv")
+        # create a data frame from the computed values
+        df_computed = pd.DataFrame(
+            computed_values, columns=["n_factors", "statistic", "df", "pvalue"]
+        )
 
-        pd.testing.assert_frame_equal(actual, expected)
+        # check against the values we expect
+        df_expected = pd.read_csv(
+            "tests/expected/test01/sufficiency_ml_none_15_test01.csv"
+        )
+        pd.testing.assert_frame_equal(df_computed, df_expected)
