@@ -971,29 +971,35 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         loadings = self.loadings_.copy()
         return self._get_factor_variance(loadings)
 
-    def sufficiency_test(self, nobs: int) -> Tuple[float, int, float]:
-        """Perform sufficiency test
+    def sufficiency(self, num_observations: int) -> Tuple[float, int, float]:
+        """
+        Perform the sufficiency test.
 
-        The test calculates the statistic under the null hypothesis that
+        The test calculates statistics under the null hypothesis that
         the selected number of factors is sufficient.
 
         Parameters
         ----------
-        nobs: int
-            the number of observations in the input data that this factor analyzer was fit to
+        num_observations: int
+            The number of observations in the input data that this factor
+            analyzer was fit using.
 
         Returns
         -------
         statistic: float
-            the test statistic
-        df: int
-            the degrees of freedom
+            The test statistic
+        degrees: int
+            The degrees of freedom
         pvalue: float
-            the p-value of the test
+            The p-value of the test
         """
         nvar = self.corr_.shape[0]
-        df = ((nvar - self.n_factors) ** 2 - nvar - self.n_factors) // 2
-        obj = self._fit_ml_objective(self.get_uniquenesses(), self.corr_, self.n_factors)
-        statistic = (nobs - 1 - (2 * nvar + 5) / 6 - (2 * self.n_factors) / 3) * obj
-        pvalue = chi2.sf(statistic, df=df)
-        return statistic, df, pvalue
+        degrees = ((nvar - self.n_factors) ** 2 - nvar - self.n_factors) // 2
+        obj = self._fit_ml_objective(
+            self.get_uniquenesses(), self.corr_, self.n_factors
+        )
+        statistic = (
+            num_observations - 1 - (2 * nvar + 5) / 6 - (2 * self.n_factors) / 3
+        ) * obj
+        pvalue = chi2.sf(statistic, df=degrees)
+        return statistic, degrees, pvalue
