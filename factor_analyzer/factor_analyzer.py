@@ -992,6 +992,21 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
             The degrees of freedom
         pvalue: float
             The p-value of the test
+
+        References
+        ----------
+        [1] Lawley, D. N. and Maxwell, A. E. (1971). Factor Analysis as a Statistical Method. Second edition.
+        Butterworths. P. 36.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test01.csv')
+        >>> fa = FactorAnalyzer(n_factors=3, rotation=None, method="ml")
+        >>> fa.fit(df_features)
+        >>> fa.sufficiency(df_features.shape[0])
+        (1475.8755629859675, 663, 8.804286459822274e-64)
         """
         nvar = self.corr_.shape[0]
         degrees = ((nvar - self.n_factors) ** 2 - nvar - self.n_factors) // 2
