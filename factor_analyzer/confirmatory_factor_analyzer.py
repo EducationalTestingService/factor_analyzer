@@ -741,7 +741,7 @@ class ConfirmatoryFactorAnalyzer(BaseEstimator, TransformerMixin):
         # so that we can avoid using linear programming methods (e.g. SLSQP)
         res = minimize(
             self._objective,
-            x0,
+            x0.flatten(),
             method="L-BFGS-B",
             options={"maxiter": self.max_iter, "disp": self.disp},
             bounds=self.bounds,
