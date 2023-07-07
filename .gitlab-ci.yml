@@ -16,7 +16,7 @@ variables:
     - /root/factordev/bin/curl -o /root/factordev/bin/codecov https://uploader.codecov.io/latest/linux/codecov
     - chmod +x /root/factordev/bin/codecov
   script:
-    - "/root/factordev/bin/nose2 -s ${TESTFILES}"
+    - "/root/factordev/bin/nose2 -s tests ${TESTFILES}"
     - "/root/factordev/bin/coverage xml"
   after_script:
     - /root/factordev/bin/codecov
@@ -25,12 +25,12 @@ variables:
 testset1:
   extends: ".runtests"
   variables:
-    TESTFILES: "tests/test_expected_confirmatory_factor_analyzer.py tests/test_factor_analyzer.py"
+    TESTFILES: "test_expected_confirmatory_factor_analyzer test_factor_analyzer"
   stage: "test"
 
 # second set of test files
 testset2:
   extends: ".runtests"
   variables:
-    TESTFILES: "tests/test_expected_factor_analyzer.py tests/test_expected_rotator.py tests/test_utils.py"
+    TESTFILES: "test_expected_factor_analyzer test_expected_rotator test_utils"
   stage: "test"
