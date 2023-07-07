@@ -4,21 +4,19 @@ stages:
   - test
 
 variables:
-  PYVERSION: "3.9"
-  NOSE_WITH_COV: "1"
-  NOSE_COVER_PACKAGE: "factor_analyzer"
+  PYVERSION: "3.11"
   LOGCAPTURE_LEVEL: "DEBUG"
   CODECOV_TOKEN: "034f0bb1-e590-406f-820c-4e7c41b17712"
 
 # set up the basic job
 .runtests:
   before_script:
-    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} curl nose nose-cov --yes --quiet"
+    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} curl nose2 coverage --yes --quiet"
     - /root/factordev/bin/pip install -e .
     - /root/factordev/bin/curl -o /root/factordev/bin/codecov https://uploader.codecov.io/latest/linux/codecov
     - chmod +x /root/factordev/bin/codecov
   script:
-    - "/root/factordev/bin/nosetests ${TESTFILES}"
+    - "/root/factordev/bin/nose2 -s ${TESTFILES}"
     - "/root/factordev/bin/coverage xml"
   after_script:
     - /root/factordev/bin/codecov
