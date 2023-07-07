@@ -7,10 +7,12 @@ Tests for the ``FactorAnalyzer`` class.
 :date: 2022-09-05
 """
 
+import unittest
+
 import numpy as np
 import pandas as pd
-from nose.tools import assert_almost_equal, raises
 from numpy.testing import assert_array_almost_equal
+from pandas.testing import assert_frame_equal
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
@@ -23,63 +25,62 @@ from factor_analyzer.factor_analyzer import (
 from factor_analyzer.utils import smc
 
 
-def test_calculate_bartlett_sphericity():  # noqa: D103
-    path = "tests/data/test01.csv"
-    data = pd.read_csv(path)
-    s, p = calculate_bartlett_sphericity(data.values)
+class TestFactorAnalysisOne(unittest.TestCase):
+    def test_calculate_bartlett_sphericity(self):  # noqa: D103
+        path = "tests/data/test01.csv"
+        data = pd.read_csv(path)
+        s, p = calculate_bartlett_sphericity(data.values)
 
-    assert_almost_equal(s, 14185, places=2)
-    assert_almost_equal(p, 0, places=2)
+        self.assertAlmostEqual(s, 14185, places=2)
+        self.assertAlmostEqual(p, 0, places=2)
+
+    def test_calculate_kmo(self):  # noqa: D103
+        path = "tests/data/test02.csv"
+        data = pd.read_csv(path)
+
+        expected_overall = 0.81498
+
+        values = [
+            0.40551591065113307,
+            0.56004925345997,
+            0.7000330131087749,
+            0.7054455920793854,
+            0.829063299715461,
+            0.8484249727243623,
+            0.8635016393452357,
+            0.8411432114912387,
+            0.8770763964694772,
+            0.8392720039048369,
+        ]
+
+        expected_by_item = np.array(values)
+
+        (kmo_by_item, kmo_overall) = calculate_kmo(data.values)
+
+        assert_array_almost_equal(kmo_by_item, expected_by_item)
+        self.assertAlmostEqual(kmo_overall, expected_overall, places=5)
+
+    def test_gridsearch(self):  # noqa: D103
+        # make sure this doesn't fail
+
+        X = pd.DataFrame(np.random.randn(1000).reshape(100, 10))
+        y = pd.Series(np.random.choice([1, 0], size=100))
+
+        grid = {
+            "factoranalyzer__n_factors": [5, 7],
+            "factoranalyzer__rotation": [None, "varimax"],
+            "decisiontreeclassifier__max_depth": [2, 5],
+        }
+
+        fa = FactorAnalyzer()
+        decisiontree = DecisionTreeClassifier(random_state=123)
+        pipe = make_pipeline(fa, decisiontree)
+
+        gridsearch = GridSearchCV(pipe, grid, scoring="f1", cv=3, verbose=0)
+        gridsearch.fit(X, y)
 
 
-def test_calculate_kmo():  # noqa: D103
-    path = "tests/data/test02.csv"
-    data = pd.read_csv(path)
-
-    expected_overall = 0.81498
-
-    values = [
-        0.40551591065113307,
-        0.56004925345997,
-        0.7000330131087749,
-        0.7054455920793854,
-        0.829063299715461,
-        0.8484249727243623,
-        0.8635016393452357,
-        0.8411432114912387,
-        0.8770763964694772,
-        0.8392720039048369,
-    ]
-
-    expected_by_item = np.array(values)
-
-    (kmo_by_item, kmo_overall) = calculate_kmo(data.values)
-
-    assert_array_almost_equal(kmo_by_item, expected_by_item)
-    assert_almost_equal(kmo_overall, expected_overall, places=5)
-
-
-def test_gridsearch():  # noqa: D103
-    # make sure this doesn't fail
-
-    X = pd.DataFrame(np.random.randn(1000).reshape(100, 10))
-    y = pd.Series(np.random.choice([1, 0], size=100))
-
-    grid = {
-        "factoranalyzer__n_factors": [5, 7],
-        "factoranalyzer__rotation": [None, "varimax"],
-        "decisiontreeclassifier__max_depth": [2, 5],
-    }
-
-    fa = FactorAnalyzer()
-    decisiontree = DecisionTreeClassifier(random_state=123)
-    pipe = make_pipeline(fa, decisiontree)
-
-    gridsearch = GridSearchCV(pipe, grid, scoring="f1", cv=3, verbose=0)
-    gridsearch.fit(X, y)
-
-
-class TestFactorAnalyzer:  # noqa: D101
+class TestFactorAnalysisTwo(unittest.TestCase):
     def test_analyze_weights(self):  # noqa: D102
         data = pd.DataFrame(
             {
@@ -160,22 +161,21 @@ class TestFactorAnalyzer:  # noqa: D101
         fa.fit(data)
         assert_array_almost_equal(fa.corr_, expected_corr)
 
-    @raises(ValueError)
     def test_analyze_bad_svd_method(self):  # noqa: D102
         fa = FactorAnalyzer(svd_method="foo")
-        fa.fit(np.random.randn(500).reshape(100, 5))
+        with self.assertRaises(ValueError):
+            fa.fit(np.random.randn(500).reshape(100, 5))
 
-    @raises(ValueError)
     def test_analyze_impute_value_error(self):  # noqa: D102
         fa = FactorAnalyzer(rotation=None, impute="blah", n_factors=1)
-        fa.fit(np.random.randn(500).reshape(100, 5))
+        with self.assertRaises(ValueError):
+            fa.fit(np.random.randn(500).reshape(100, 5))
 
-    @raises(ValueError)
     def test_analyze_rotation_value_error(self):  # noqa: D102
         fa = FactorAnalyzer(rotation="blah", n_factors=1)
-        fa.fit(np.random.randn(500).reshape(100, 5))
+        with self.assertRaises(ValueError):
+            fa.fit(np.random.randn(500).reshape(100, 5))
 
-    @raises(ValueError)
     def test_analyze_infinite(self):  # noqa: D102
         data = pd.DataFrame(
             {
@@ -187,7 +187,8 @@ class TestFactorAnalyzer:  # noqa: D101
         )
 
         fa = FactorAnalyzer(impute="drop", n_factors=1, is_corr_matrix=True)
-        fa.fit(data)
+        with self.assertRaises(ValueError):
+            fa.fit(data)
 
     def test_smc_is_r_squared(self):  # noqa: D102
         # test that SMC is roughly equivalent to R-squared values.
@@ -247,4 +248,4 @@ class TestFactorAnalyzer:  # noqa: D101
         df_expected = pd.read_csv(
             "tests/expected/test01/sufficiency_ml_none_15_test01.csv"
         )
-        pd.testing.assert_frame_equal(df_computed, df_expected)
+        assert_frame_equal(df_computed, df_expected)
