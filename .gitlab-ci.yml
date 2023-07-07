@@ -17,9 +17,9 @@ variables:
     - /root/factordev/bin/pip install -e .
     - /root/factordev/bin/curl -o /root/factordev/bin/codecov https://uploader.codecov.io/latest/linux/codecov
     - chmod +x /root/factordev/bin/codecov
-
   script:
     - "/root/factordev/bin/nosetests ${TESTFILES}"
+    - "/root/factordev/bin/coverage xml"
   after_script:
     - /root/factordev/bin/codecov
 
