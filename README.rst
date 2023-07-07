@@ -9,9 +9,13 @@ FactorAnalyzer
    :target: https://codecov.io/gh/EducationalTestingService/factor_analyzer
    :alt: Code coverage
 
-.. image:: https://anaconda.org/ets/factor_analyzer/badges/installer/conda.svg
+.. image:: https://anaconda.org/ets/factor_analyzer/badges/version.svg
    :target: https://anaconda.org/ets/factor_analyzer/
    :alt: Conda version
+
+.. image:: https://img.shields.io/pypi/v/factor_analyzer
+   :target: https://pypi.org/project/factor-analyzer/
+   :alt: PyPI version
 
 .. image:: https://img.shields.io/readthedocs/factor_analyzer/latest.svg
    :target: https://factor-analyzer.readthedocs.io/

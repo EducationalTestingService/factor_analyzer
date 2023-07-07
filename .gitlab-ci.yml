@@ -4,21 +4,19 @@ stages:
   - test
 
 variables:
-  PYVERSION: "3.9"
-  NOSE_WITH_COV: "1"
-  NOSE_COVER_PACKAGE: "factor_analyzer"
+  PYVERSION: "3.11"
   LOGCAPTURE_LEVEL: "DEBUG"
   CODECOV_TOKEN: "034f0bb1-e590-406f-820c-4e7c41b17712"
 
 # set up the basic job
 .runtests:
   before_script:
-    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} curl nose nose-cov --yes --quiet"
+    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} curl nose2 coverage --yes --quiet"
     - /root/factordev/bin/pip install -e .
     - /root/factordev/bin/curl -o /root/factordev/bin/codecov https://uploader.codecov.io/latest/linux/codecov
     - chmod +x /root/factordev/bin/codecov
   script:
-    - "/root/factordev/bin/nosetests ${TESTFILES}"
+    - "/root/factordev/bin/nose2 -s tests ${TESTFILES}"
     - "/root/factordev/bin/coverage xml"
   after_script:
     - /root/factordev/bin/codecov
@@ -27,12 +25,12 @@ variables:
 testset1:
   extends: ".runtests"
   variables:
-    TESTFILES: "tests/test_expected_confirmatory_factor_analyzer.py tests/test_factor_analyzer.py"
+    TESTFILES: "test_expected_confirmatory_factor_analyzer test_factor_analyzer"
   stage: "test"
 
 # second set of test files
 testset2:
   extends: ".runtests"
   variables:
-    TESTFILES: "tests/test_expected_factor_analyzer.py tests/test_expected_rotator.py tests/test_utils.py"
+    TESTFILES: "test_expected_factor_analyzer test_expected_rotator test_utils"
   stage: "test"
