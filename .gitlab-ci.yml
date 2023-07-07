@@ -13,8 +13,11 @@ variables:
 # set up the basic job
 .runtests:
   before_script:
-    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} codecov nose nose-cov --yes --quiet"
+    - "conda create --prefix /root/factordev --channel conda-forge --file requirements.txt python=${PYVERSION} curl nose nose-cov --yes --quiet"
     - /root/factordev/bin/pip install -e .
+    - /root/factordev/bin/curl -o /root/factordev/bin/codecov https://uploader.codecov.io/latest/linux/codecov
+    - chmod +x /root/factordev/bin/codecov
+
   script:
     - "/root/factordev/bin/nosetests ${TESTFILES}"
   after_script:
