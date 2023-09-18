@@ -211,7 +211,7 @@ in the repository if you would like to contribute.
 
 You can install the development requirements in a virtual environment with:
 
-.. codeblock::
+.. code-block:: bash
 
    python -m pip install -e .[dev]
    pre-commit install
