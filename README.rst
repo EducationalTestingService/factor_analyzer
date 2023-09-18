@@ -202,13 +202,19 @@ Requirements
 -  ``pandas``
 -  ``scipy``
 -  ``scikit-learn``
--  ``pre-commit``
 
 Contributing
 ------------
 
 Contributions to ``factor_analyzer`` are very welcome. Please file an issue
 in the repository if you would like to contribute.
+
+You can install the development requirements in a virtual environment with:
+
+.. codeblock::
+
+   python -m pip install -e .[dev]
+   pre-commit install
 
 Installation
 ------------
