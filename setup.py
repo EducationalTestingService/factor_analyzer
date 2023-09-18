@@ -29,6 +29,7 @@ setup(
     maintainer_email="nmadnani@ets.org",
     url="https://github.com/EducationalTestingService/factor_analyzer",
     install_requires=requirements(),
+    extras_require={"dev": ["pre-commit"]},
     include_package_data=True,
     classifiers=[
         "Intended Audience :: Science/Research",
