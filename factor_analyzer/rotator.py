@@ -494,7 +494,6 @@ class Rotator(BaseEstimator):
 
         d = 0
         for _ in range(self.max_iter):
-
             old_d = d
 
             # take inner product of loading matrix
@@ -560,9 +559,9 @@ class Rotator(BaseEstimator):
             # pre-normalization is done in R's
             # `kaiser()` function when rotate='Promax'.
             array = X.copy()
-            h2 = sp.diag(np.dot(array, array.T))
+            h2 = np.diag(np.dot(array, array.T))
             h2 = np.reshape(h2, (h2.shape[0], 1))
-            weights = array / sp.sqrt(h2)
+            weights = array / np.sqrt(h2)
 
         else:
             weights = X.copy()
@@ -576,20 +575,20 @@ class Rotator(BaseEstimator):
 
         # calculate diagonal of inverse square
         try:
-            diag_inv = sp.diag(sp.linalg.inv(sp.dot(coef.T, coef)))
+            diag_inv = np.diag(sp.linalg.inv(np.dot(coef.T, coef)))
         except np.linalg.LinAlgError:
-            diag_inv = sp.diag(sp.linalg.pinv(sp.dot(coef.T, coef)))
+            diag_inv = np.diag(sp.linalg.pinv(np.dot(coef.T, coef)))
 
         # transform and calculate inner products
-        coef = sp.dot(coef, sp.diag(sp.sqrt(diag_inv)))
-        z = sp.dot(X, coef)
+        coef = np.dot(coef, np.diag(np.sqrt(diag_inv)))
+        z = np.dot(X, coef)
 
         if self.normalize:
             # post-normalization is done in R's
             # `kaiser()` function when rotate='Promax'
-            z = z * sp.sqrt(h2)
+            z = z * np.sqrt(h2)
 
-        rotation_mtx = sp.dot(rotation_mtx, coef)
+        rotation_mtx = np.dot(rotation_mtx, coef)
 
         coef_inv = np.linalg.inv(coef)
         phi = np.dot(coef_inv, coef_inv.T)

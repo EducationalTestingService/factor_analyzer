@@ -366,7 +366,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # implemented here using `np.tril()` when this change is
         # merged into the stable version of `psych`.
         residual = (corr_mtx - model) ** 2
-        error = sp.sum(residual)
+        error = np.sum(residual)
         return error
 
     @staticmethod
@@ -995,8 +995,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         References
         ----------
-        [1] Lawley, D. N. and Maxwell, A. E. (1971). Factor Analysis as a Statistical Method. Second edition.
-        Butterworths. P. 36.
+        [1] Lawley, D. N. and Maxwell, A. E. (1971). Factor Analysis as a
+             Statistical Method. Second edition. Butterworths. P. 36.
 
         Examples
         --------
