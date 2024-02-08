@@ -18,7 +18,7 @@ def requirements():  # noqa: D103
 
 setup(
     name="factor_analyzer",
-    version="0.5.0",
+    version="0.5.1",
     description="A Factor Analysis tool written in Python",
     long_description=readme(),
     keywords="factor analysis",

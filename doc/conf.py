@@ -64,7 +64,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "factor_analyzer"
-copyright = "2023, Educational Testing Service"
+copyright = "2024, Educational Testing Service"
 author = "Jeremy Biggs"
 
 # The version info for the project you're documenting, acts as replacement for
