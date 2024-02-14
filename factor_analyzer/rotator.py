@@ -69,6 +69,10 @@ class Rotator(BaseEstimator):
     tol : float, optional
         The convergence threshold. Used for 'varimax' and 'oblique' rotations.
         Defaults to 1e-5.
+    random_state : int, optional
+        The seed for initializing the rotation matrix. Orthogonal matrix
+        generated from 'scipy.stats.ortho_group'. If ``None``, the default
+        is the identity matrix ('np.eye').
 
     Attributes
     ----------
@@ -120,6 +124,7 @@ class Rotator(BaseEstimator):
         delta=0.01,
         max_iter=500,
         tol=1e-5,
+        random_state=None,
     ):
         """Initialize the rotator class."""
         self.method = method
@@ -130,6 +135,7 @@ class Rotator(BaseEstimator):
         self.delta = delta
         self.max_iter = max_iter
         self.tol = tol
+        self.random_state = random_state
 
         self.loadings_ = None
         self.rotation_ = None
@@ -323,7 +329,10 @@ class Rotator(BaseEstimator):
 
         # initialize the rotation matrix
         _, n_cols = loadings.shape
-        rotation_matrix = np.eye(n_cols)
+        if self.random_state is None:
+            rotation_matrix = np.eye(n_cols)
+        else:
+            rotation_matrix = sp.stats.ortho_group(n_cols, seed=self.random_state).rvs()
 
         # default alpha level
         alpha = 1
@@ -413,7 +422,10 @@ class Rotator(BaseEstimator):
 
         # initialize the rotation matrix
         _, n_cols = arr.shape
-        rotation_matrix = np.eye(n_cols)
+        if self.random_state is None:
+            rotation_matrix = np.eye(n_cols)
+        else:
+            rotation_matrix = sp.stats.ortho_group(n_cols, seed=self.random_state).rvs()
 
         # default alpha level
         alpha = 1
@@ -490,7 +502,10 @@ class Rotator(BaseEstimator):
 
         # initialize the rotation matrix
         # to N x N identity matrix
-        rotation_mtx = np.eye(n_cols)
+        if self.random_state is None:
+            rotation_mtx = np.eye(n_cols)
+        else:
+            rotation_mtx = sp.stats.ortho_group(n_cols, seed=self.random_state).rvs()
 
         d = 0
         for _ in range(self.max_iter):
