@@ -1,5 +1,5 @@
 {% set name = "factor_analyzer" %}
-{% set version = "0.4.0" %}
+{% set version = "0.5.1" %}
 
 package:
   name: '{{ name|lower }}'
@@ -16,15 +16,12 @@ build:
     - "{{ PYTHON }} -m pip install . --no-deps -vv"
 
 requirements:
-  build:
-    - python >=3.6
+  host:
+    - python >=3.8
     - setuptools
-    - pandas
-    - scipy
-    - numpy
-    - scikit-learn
+    - pip
   run:
-    - python >=3.6
+    - python >=3.8
     - pandas
     - scipy
     - numpy

@@ -1,10 +1,10 @@
 """
 Utility functions, used primarily by the confirmatory factor analysis module.
 
-:author: Jeremy Biggs (jbiggs@ets.org)
+:author: Jeremy Biggs (jeremy.m.biggs@gmail.com)
 :author: Nitin Madnani (nmadnani@ets.org)
 :organization: Educational Testing Service
-:date: 2021-10-18
+:date: 2022-09-05
 """
 import warnings
 
@@ -14,27 +14,25 @@ from scipy.linalg import cholesky
 
 def inv_chol(x, logdet=False):
     """
-    Calculate inverse using cholesky.
-    Optionally, calculate the log determinant
-    of the cholesky.
+    Calculate matrix inverse using Cholesky decomposition.
+
+    Optionally, calculate the log determinant of the Cholesky.
 
     Parameters
     ----------
     x : array-like
         The matrix to invert.
     logdet : bool, optional
-        Whether to calculate the
-        log determinant, instead of
-        the inverse.
-        Defaults to False.
+        Whether to calculate the log determinant, instead of the inverse.
+        Defaults to ``False``.
 
     Returns
     -------
     chol_inv : array-like
-        The inverted matrix
+        The inverted matrix.
     chol_logdet : array-like or None
-        The log determinant, if `logdet=True`;
-        otherwise, None.
+        The log determinant, if ``logdet`` was ``True``, otherwise, ``None``.
+
     """
     chol = cholesky(x, lower=True)
 
@@ -89,62 +87,57 @@ def corr(x):
     r : numpy array
         The correlation matrix of the variables.
     """
-    x = (x - x.mean(0)) / x.std(0)
+    x = (x - np.mean(x, axis=0)) / np.std(x, axis=0, ddof=0)
     r = cov(x)
     return r
 
 
-def apply_impute_nan(x, how='mean'):
+def apply_impute_nan(x, how="mean"):
     """
-    Apply a function to impute NaN values
-    with the mean or median.
+    Apply a function to impute ``np.nan`` values with the mean or the median.
 
     Parameters
     ----------
     x : array-like
-        A 1-D array to impute.
+        The 1-D array to impute.
     how : str, optional
-        Whether to impute the 'mean'
-        or 'median'.
+        Whether to impute the 'mean' or 'median'.
         Defaults to 'mean'.
 
     Returns
     -------
-    x : numpy array
-        The array, with missing values imputed.
+    x : :obj:`numpy.ndarray`
+        The array, with the missing values imputed.
     """
-
-    if how == 'mean':
+    if how == "mean":
         x[np.isnan(x)] = np.nanmean(x)
-    elif how == 'median':
+    elif how == "median":
         x[np.isnan(x)] = np.nanmedian(x)
     return x
 
 
-def impute_values(x, how='mean'):
+def impute_values(x, how="mean"):
     """
-    Impute NaN values with the mean or median,
-    or drop rows with NaN values.
+    Impute ``np.nan`` values with the mean or median, or drop the containing rows.
 
     Parameters
     ----------
     x : array-like
         An array to impute.
     how : str, optional
-        Whether to impute the 'mean'
-        or 'median'.
+        Whether to impute the 'mean' or 'median'.
         Defaults to 'mean'.
 
     Returns
     -------
-    x : numpy array
-        The array, with missing values imputed or dropped.
+    x : :obj:`numpy.ndarray`
+        The array, with the missing values imputed or with rows dropped.
     """
     # impute mean or median, if `how` is set to 'mean' or 'median'
-    if how in ['mean', 'median']:
+    if how in ["mean", "median"]:
         x = np.apply_along_axis(apply_impute_nan, 0, x, how=how)
     # drop missing if `how` is set to 'drop'
-    elif how == 'drop':
+    elif how == "drop":
         x = x[~np.isnan(x).any(1), :].copy()
     return x
 
@@ -152,24 +145,23 @@ def impute_values(x, how='mean'):
 def smc(corr_mtx, sort=False):
     """
     Calculate the squared multiple correlations.
-    This is equivalent to regressing each variable
-    on all others and calculating the r-squared values.
+
+    This is equivalent to regressing each variable on all others and
+    calculating the r-squared values.
 
     Parameters
     ----------
     corr_mtx : array-like
         The correlation matrix used to calculate SMC.
     sort : bool, optional
-        Whether to sort the values for SMC
-        before returning.
-        Defaults to False.
+        Whether to sort the values for SMC before returning.
+        Defaults to ``False``.
 
     Returns
     -------
-    smc : numpy array
+    smc : :obj:`numpy.ndarray`
         The squared multiple correlations matrix.
     """
-
     corr_inv = np.linalg.inv(corr_mtx)
     smc = 1 - 1 / np.diag(corr_inv)
 
@@ -180,7 +172,9 @@ def smc(corr_mtx, sort=False):
 
 def covariance_to_correlation(m):
     """
-    This is a port of the R `cov2cor` function.
+    Compute cross-correlations from the given covariance matrix.
+
+    This is a port of R ``cov2cor()`` function.
 
     Parameters
     ----------
@@ -189,7 +183,7 @@ def covariance_to_correlation(m):
 
     Returns
     -------
-    retval : numpy array
+    retval : :obj:`numpy.ndarray`
         The cross-correlation matrix.
 
     Raises
@@ -197,11 +191,10 @@ def covariance_to_correlation(m):
     ValueError
         If the input matrix is not square.
     """
-
     # make sure the matrix is square
     numrows, numcols = m.shape
     if not numrows == numcols:
-        raise ValueError('Input matrix must be square')
+        raise ValueError("Input matrix must be square")
 
     Is = np.sqrt(1 / np.diag(m))
     retval = Is * m * np.repeat(Is, numrows).reshape(numrows, numrows)
@@ -211,9 +204,11 @@ def covariance_to_correlation(m):
 
 def partial_correlations(x):
     """
-    This is a python port of the `pcor` function implemented in
-    the `ppcor` R package, which computes partial correlations
-    of each pair of variables in the given array, excluding all
+    Compute partial correlations between variable pairs.
+
+    This is a python port of the ``pcor()`` function implemented in
+    the ``ppcor`` R package, which computes partial correlations
+    for each pair of variables in the given array, excluding all
     other variables.
 
     Parameters
@@ -223,7 +218,7 @@ def partial_correlations(x):
 
     Returns
     -------
-    pcor : numpy array
+    pcor : :obj:`numpy.ndarray`
         An array containing the partial correlations of of each
         pair of variables in the given array, excluding all other
         variables.
@@ -246,10 +241,12 @@ def partial_correlations(x):
             icvx = np.linalg.inv(x_cov)
         except AssertionError:
             icvx = np.linalg.pinv(x_cov)
-            warnings.warn('The inverse of the variance-covariance matrix '
-                          'was calculated using the Moore-Penrose generalized '
-                          'matrix inversion, due to its determinant being at '
-                          'or very close to zero.')
+            warnings.warn(
+                "The inverse of the variance-covariance matrix "
+                "was calculated using the Moore-Penrose generalized "
+                "matrix inversion, due to its determinant being at "
+                "or very close to zero."
+            )
         except np.linalg.LinAlgError:
             icvx = empty_array
 
@@ -260,9 +257,7 @@ def partial_correlations(x):
 
 def unique_elements(seq):
     """
-    Get the first unique instance of every
-    element of the list, while maintaining
-    the original order of those instances.
+    Get first unique instance of every list element, while maintaining order.
 
     Parameters
     ----------
@@ -280,23 +275,21 @@ def unique_elements(seq):
 
 def fill_lower_diag(x):
     """
-    Fill the lower diagonal of a square matrix,
-    given a 1d input array.
+    Fill the lower diagonal of a square matrix, given a 1-D input array.
 
     Parameters
     ----------
     x : array-like
-        The flattened input matrix that will be used to fill
-        the lower diagonal of the square matrix.
+        The flattened input matrix that will be used to fill the lower
+        diagonal of the square matrix.
 
     Returns
     -------
-    out : numpy array
-        The output square matrix, with the lower
-        diagonal filled by x.
+    out : :obj:`numpy.ndarray`
+        The output square matrix, with the lower diagonal filled by x.
 
-    Reference
-    ---------
+    References
+    ----------
     [1] https://stackoverflow.com/questions/51439271/
         convert-1d-array-to-lower-triangular-matrix
     """
@@ -310,30 +303,29 @@ def fill_lower_diag(x):
 
 def merge_variance_covariance(variances, covariances=None):
     """
-    Merge the variance and covariances into a single
-    variance-covariance matrix.
+    Merge variances and covariances into a single variance-covariance matrix.
 
     Parameters
     ----------
     variances : array-like
-        The variances that will be used to fill the diagonal
-        of the square matrix.
+        The variances that will be used to fill the diagonal of the
+        square matrix.
     covariances : array-like or None, optional
-        The flattened input matrix that will be used to fill
-        the lower and upper diagonal of the square matrix. If
-        None, then only the variances will be used.
-        Defaults to None.
+        The flattened input matrix that will be used to fill the lower and
+        upper diagonal of the square matrix. If None, then only the variances
+        will be used.
+        Defaults to ``None``.
 
     Returns
     -------
-    variance_covariance : numpy array
+    variance_covariance : :obj:`numpy.ndarray`
         The variance-covariance matrix.
     """
-    variances = (variances if len(variances.shape) == 1
-                 else np.squeeze(variances, axis=1))
+    variances = (
+        variances if len(variances.shape) == 1 else np.squeeze(variances, axis=1)
+    )
     if covariances is None:
-        variance_covariance = np.zeros((variances.shape[0],
-                                        variances.shape[0]))
+        variance_covariance = np.zeros((variances.shape[0], variances.shape[0]))
     else:
         variance_covariance = fill_lower_diag(covariances)
         variance_covariance += variance_covariance.T
@@ -343,7 +335,7 @@ def merge_variance_covariance(variances, covariances=None):
 
 def get_first_idxs_from_values(x, eq=1, use_columns=True):
     """
-    Get the fixed index
+    Get the indexes  for a given value.
 
     Parameters
     ----------
@@ -353,10 +345,9 @@ def get_first_idxs_from_values(x, eq=1, use_columns=True):
         The given value to find.
         Defaults to 1.
     use_columns : bool, optional
-        Whether to get the first indexes using
-        The columns. If False, then use the rows
-        instead.
-        Defaults to True
+        Whether to get the first indexes using the columns.
+        If ``False``, then use the rows instead.
+        Defaults to ``True``.
 
     Returns
     -------
@@ -379,31 +370,31 @@ def get_first_idxs_from_values(x, eq=1, use_columns=True):
 
 def get_free_parameter_idxs(x, eq=1):
     """
-    Get the free parameter indexes from
-    the flattened matrix.
+    Get the free parameter indices from the flattened matrix.
 
     Parameters
     ----------
     x : array-like
         The input matrix.
     eq : str or int, optional
-        The value that free parameters
-        should be equal to. NaN fields
+        The value that free parameters should be equal to. ``np.nan`` fields
         will be populated with this value.
-        Defaults to 1
+        Defaults to 1.
 
     Returns
     -------
-    idx : numpy array
+    idx : :obj:`numpy.ndarray`
         The free parameter indexes.
     """
     x[np.isnan(x)] = eq
-    x = x.flatten(order='F')
+    x = x.flatten(order="F")
     return np.where(x == eq)[0]
 
 
 def duplication_matrix(n=1):
     """
+    Calculate the duplication matrix.
+
     A function to create the duplication matrix (Dn), which is
     the unique n2 × n(n+1)/2 matrix which, for any n × n symmetric
     matrix A, transforms vech(A) into vec(A), as in Dn vech(A) = vec(A).
@@ -416,27 +407,28 @@ def duplication_matrix(n=1):
 
     Returns
     -------
-    duplication_matrix : numpy array
+    duplication_matrix : :obj:`numpy.ndarray`
         The duplication matrix.
 
     Raises`
     ------
     ValueError
-        If `n` is not a positive integer greater than 1.
+        If ``n`` is not a positive integer greater than 1.
 
     References
     ----------
     https://en.wikipedia.org/wiki/Duplication_and_elimination_matrices
     """
     if n < 1:
-        raise ValueError('The argument `n` must be a '
-                         'positive integer greater than 1.')
+        raise ValueError(
+            "The argument `n` must be a " "positive integer greater than 1."
+        )
 
     dup = np.zeros((int(n * n), int(n * (n + 1) / 2)))
     count = 0
     for j in range(n):
         dup[j * n + j, count + j] = 1
-        if (j < n - 1):
+        if j < n - 1:
             for i in range(j + 1, n):
                 dup[j * n + i, count + i] = 1
                 dup[i * n + j, count + i] = 1
@@ -446,25 +438,23 @@ def duplication_matrix(n=1):
 
 def duplication_matrix_pre_post(x):
     """
-    Given an input symmetric matrix,
-    transform perform the pre-post duplication.
+    Transform given input symmetric matrix using pre-post duplication.
 
     Parameters
     ----------
     x : array-like
-        The input matrix
+        The input matrix.
 
     Returns
     -------
-    out : numpy array
+    out : :obj:`numpy.ndarray`
         The transformed matrix.
 
     Raises
     ------
     AssertionError
-        If `x` is not symmetric.
+        If ``x`` is not symmetric.
     """
-
     assert x.shape[0] == x.shape[1]
 
     n2 = x.shape[1]
@@ -483,9 +473,10 @@ def duplication_matrix_pre_post(x):
 
 def commutation_matrix(p, q):
     """
-    Calculate the commutation matrix, which transforms
-    the vectorized form of the matrix into the vectorized
-    form of its transpose.
+    Calculate the commutation matrix.
+
+    This matrix transforms the vectorized form of the matrix into the
+    vectorized form of its transpose.
 
     Parameters
     ----------
@@ -496,7 +487,7 @@ def commutation_matrix(p, q):
 
     Returns
     -------
-    commutation_matrix : numpy array
+    commutation_matrix : :obj:`numpy.ndarray`
         The commutation matrix
 
     References
@@ -504,14 +495,13 @@ def commutation_matrix(p, q):
     https://en.wikipedia.org/wiki/Commutation_matrix
     """
     identity = np.eye(p * q)
-    indices = np.arange(p * q).reshape((p, q), order='F')
+    indices = np.arange(p * q).reshape((p, q), order="F")
     return identity.take(indices.ravel(), axis=0)
 
 
 def get_symmetric_lower_idxs(n=1, diag=True):
     """
-    Get the indexes for the lower triangle of
-    a symmetric matrix.
+    Get the indices for the lower triangle of a symmetric matrix.
 
     Parameters
     ----------
@@ -523,8 +513,8 @@ def get_symmetric_lower_idxs(n=1, diag=True):
 
     Returns
     -------
-    indexes : numpy array
-        The indexes for the lower triangle.
+    indices : :obj:`numpy.ndarray`
+        The indices for the lower triangle.
     """
     rows = np.repeat(np.arange(n), n).reshape(n, n)
     cols = rows.T
@@ -535,8 +525,7 @@ def get_symmetric_lower_idxs(n=1, diag=True):
 
 def get_symmetric_upper_idxs(n=1, diag=True):
     """
-    Get the indexes for the upper triangle of
-    a symmetric matrix.
+    Get the indices for the upper triangle of a symmetric matrix.
 
     Parameters
     ----------
@@ -548,8 +537,8 @@ def get_symmetric_upper_idxs(n=1, diag=True):
 
     Returns
     -------
-    indexes : numpy array
-        The indexes for the upper triangle.
+    indices : :obj:`numpy.ndarray`
+        The indices for the upper triangle.
     """
     rows = np.repeat(np.arange(n), n).reshape(n, n)
     cols = rows.T

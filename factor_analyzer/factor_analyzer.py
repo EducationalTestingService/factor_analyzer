@@ -1,10 +1,10 @@
 """
 Factor analysis using MINRES or ML, with optional rotation using Varimax or Promax.
 
-:author: Jeremy Biggs (jbiggs@ets.org)
+:author: Jeremy Biggs (jeremy.m.biggs@gmail.com)
 :author: Nitin Madnani (nmadnani@ets.org)
 :organization: Educational Testing Service
-:date: 2021-10-18
+:date: 2022-09-05
 """
 
 import warnings
@@ -24,21 +24,20 @@ from sklearn.utils.validation import check_is_fitted
 from .rotator import OBLIQUE_ROTATIONS, POSSIBLE_ROTATIONS, Rotator
 from .utils import corr, covariance_to_correlation, impute_values, partial_correlations, smc
 
-POSSIBLE_SVDS = ['randomized', 'lapack']
+POSSIBLE_SVDS = ["randomized", "lapack"]
 
-POSSIBLE_IMPUTATIONS = ['mean', 'median', 'drop']
+POSSIBLE_IMPUTATIONS = ["mean", "median", "drop"]
 
-POSSIBLE_METHODS = ['ml', 'mle', 'uls', 'minres', 'principal']
+POSSIBLE_METHODS = ["ml", "mle", "uls", "minres", "principal"]
 
 
 def calculate_kmo(x):
     """
-    Calculate the Kaiser-Meyer-Olkin criterion
-    for items and overall. This statistic represents
-    the degree to which each observed variable is
-    predicted, without error, by the other variables
-    in the dataset. In general, a KMO < 0.6 is considered
-    inadequate.
+    Calculate the Kaiser-Meyer-Olkin criterion for items and overall.
+
+    This statistic represents the degree to which each observed variable is
+    predicted, without error, by the other variables in the dataset.
+    In general, a KMO < 0.6 is considered inadequate.
 
     Parameters
     ----------
@@ -47,12 +46,11 @@ def calculate_kmo(x):
 
     Returns
     -------
-    kmo_per_variable : numpy array
+    kmo_per_variable : :obj:`numpy.ndarray`
         The KMO score per item.
     kmo_total : float
-        The KMO score overall.
+        The overall KMO score.
     """
-
     # calculate the partial correlations
     partial_corr = partial_correlations(x)
 
@@ -81,8 +79,7 @@ def calculate_kmo(x):
 
 def calculate_bartlett_sphericity(x):
     """
-    Test the hypothesis that the correlation matrix
-    is equal to the identity matrix.identity
+    Compute the Bartlett sphericity test.
 
     H0: The matrix of population correlations is equal to I.
     H1: The matrix of population correlations is not equal to I.
@@ -97,7 +94,7 @@ def calculate_bartlett_sphericity(x):
     Parameters
     ----------
     x : array-like
-        The array from which to calculate sphericity.
+        The array for which to calculate sphericity.
 
     Returns
     -------
@@ -182,7 +179,9 @@ def calculate_cng_indices(
 
 class FactorAnalyzer(BaseEstimator, TransformerMixin):
     """
-    A FactorAnalyzer class, which -
+    The main exploratory factor analysis class.
+
+    This class:
         (1) Fits a factor analysis model using minres, maximum likelihood,
             or principal factor extraction and returns the loading matrix
         (2) Optionally performs a rotation, with method including:
@@ -201,12 +200,11 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         The number of factors to select.
         Defaults to 3.
     rotation : str, optional
-        The type of rotation to perform after
-        fitting the factor analysis model.
-        If set to None, no rotation will be performed,
-        nor will any associated Kaiser normalization.
+        The type of rotation to perform after fitting the factor analysis
+        model. If set to ``None``, no rotation will be performed, nor will
+        any associated Kaiser normalization.
 
-        Methods include:
+        Possible values include:
 
             (a) varimax (orthogonal rotation)
             (b) promax (oblique rotation)
@@ -219,64 +217,53 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         Defaults to 'promax'.
 
     method : {'minres', 'ml', 'principal'}, optional
-        The fitting method to use, either MINRES or
-        Maximum Likelihood.
+        The fitting method to use, either MINRES or Maximum Likelihood.
         Defaults to 'minres'.
     use_smc : bool, optional
-        Whether to use squared multiple correlation
-        as starting guesses for factor analysis.
-        Defaults to True.
+        Whether to use squared multiple correlation as starting guesses for
+        factor analysis.
+        Defaults to ``True``.
     bounds : tuple, optional
-        The lower and upper bounds on the variables
-        for "L-BFGS-B" optimization.
+        The lower and upper bounds on the variables for "L-BFGS-B" optimization.
         Defaults to (0.005, 1).
     impute : {'drop', 'mean', 'median'}, optional
-        If missing values are present in the data, either use
-        list-wise deletion ('drop') or impute the column median
-        ('median') or column mean ('mean').
+        How to handle missing values, if any, in the data: (a) use list-wise
+        deletion ('drop'), or (b) impute the column median ('median'), or
+        impute the column mean ('mean').
         Defaults to 'median'
-    use_corr_matrix : bool, optional
-        Set to true if the `data` is the correlation
-        matrix.
-        Defaults to False.
+    is_corr_matrix : bool, optional
+        Set to ``True if the ``data`` is the correlation matrix.
+        Defaults to `False`.
     svd_method : {‘lapack’, ‘randomized’}
-        The SVD method to use when ``method='principal'``.
-        If 'lapack', use standard SVD from ``scipy.linalg``.
-        If 'randomized', use faster ``randomized_svd``
-        function from scikit-learn. The latter should only
-        be used if the number of columns is greater than or
-        equal to the number of rows in in the dataset.
+        The SVD method to use when ``method`` is 'principal'. If 'lapack',
+        use standard SVD from ``scipy.linalg``. If 'randomized', use faster
+        ``randomized_svd`` function from scikit-learn. The latter should only
+        be used if the number of columns is greater than or equal to the
+        number of rows in in the dataset.
         Defaults to 'randomized'
     rotation_kwargs, optional
-        Additional key word arguments
-        are passed to the rotation method.
+        Dictionary containing keyword arguments for the rotation method.
 
     Attributes
     ----------
-    loadings : numpy array
+    loadings_ : :obj:`numpy.ndarray`
         The factor loadings matrix.
-        Default to None, if `fit()` has not
-        been called.
-    corr : numpy array
+        ``None``, if ``fit()``` has not been called.
+    corr_ : :obj:`numpy.ndarray`
         The original correlation matrix.
-        Default to None, if `fit()` has not
-        been called.
-    rotation_matrix : numpy array
-        The rotation matrix, if a rotation
-        has been performed.
-    structure :numpy array or None
-        The structure loading matrix.
-        This only exists if the rotation
-        is promax.
-    psi : numpy array or None
-        The factor correlations
-        matrix. This only exists
-        if the rotation is oblique.
+        ``None``, if ``fit()`` has not been called.
+    rotation_matrix_ : :obj:`numpy.ndarray`
+        The rotation matrix, if a rotation has been performed. ``None`` otherwise.
+    structure_ : :obj:`numpy.ndarray` or None
+        The structure loading matrix. This only exists if ``rotation``
+        is 'promax' and is ``None`` otherwise.
+    phi_ : :obj:`numpy.ndarray` or None
+        The factor correlations matrix. This only exists if ``rotation``
+        is 'oblique' and is ``None`` otherwise.
 
     Notes
     -----
-    This code was partly derived from the excellent R package
-    `psych`.
+    This code was partly derived from the excellent R package `psych`.
 
     References
     ----------
@@ -308,17 +295,19 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
            0.66208428, 0.61911036, 0.73194557, 0.64929612, 0.71149718])
     """
 
-    def __init__(self,
-                 n_factors=3,
-                 rotation='promax',
-                 method='minres',
-                 use_smc=True,
-                 is_corr_matrix=False,
-                 bounds=(0.005, 1),
-                 impute='median',
-                 svd_method='randomized',
-                 rotation_kwargs=None):
-
+    def __init__(
+        self,
+        n_factors=3,
+        rotation="promax",
+        method="minres",
+        use_smc=True,
+        is_corr_matrix=False,
+        bounds=(0.005, 1),
+        impute="median",
+        svd_method="randomized",
+        rotation_kwargs=None,
+    ):
+        """Initialize the factor analyzer."""
         self.n_factors = n_factors
         self.rotation = rotation
         self.method = method
@@ -344,35 +333,58 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
     def _arg_checker(self):
         """
         Check the input parameters to make sure they're properly formattted.
-        We need to do this to ensure that the FactorAnalyzer class can be properly
-        cloned when used with grid search CV, for example.
+
+        We need to do this to ensure that the FactorAnalyzer class can be
+        properly cloned when used with grid search CV, for example.
         """
-        self.rotation = self.rotation.lower() if isinstance(self.rotation, str) else self.rotation
+        self.rotation = (
+            self.rotation.lower() if isinstance(self.rotation, str) else self.rotation
+        )
         if self.rotation not in POSSIBLE_ROTATIONS + [None]:
-            raise ValueError(f"The rotation must be one of the following: {POSSIBLE_ROTATIONS + [None]}")
+            raise ValueError(
+                f"The rotation must be one of the following: {POSSIBLE_ROTATIONS + [None]}"
+            )
 
-        self.method = self.method.lower() if isinstance(self.method, str) else self.method
+        self.method = (
+            self.method.lower() if isinstance(self.method, str) else self.method
+        )
         if self.method not in POSSIBLE_METHODS:
-            raise ValueError(f"The method must be one of the following: {POSSIBLE_METHODS}")
+            raise ValueError(
+                f"The method must be one of the following: {POSSIBLE_METHODS}"
+            )
 
-        self.impute = self.impute.lower() if isinstance(self.impute, str) else self.impute
+        self.impute = (
+            self.impute.lower() if isinstance(self.impute, str) else self.impute
+        )
         if self.impute not in POSSIBLE_IMPUTATIONS:
-            raise ValueError(f"The imputation must be one of the following: {POSSIBLE_IMPUTATIONS}")
+            raise ValueError(
+                f"The imputation must be one of the following: {POSSIBLE_IMPUTATIONS}"
+            )
 
-        self.svd_method = self.svd_method.lower() if isinstance(self.svd_method, str) else self.svd_method
+        self.svd_method = (
+            self.svd_method.lower()
+            if isinstance(self.svd_method, str)
+            else self.svd_method
+        )
         if self.svd_method not in POSSIBLE_SVDS:
-            raise ValueError(f"The SVD method must be one of the following: {POSSIBLE_SVDS}")
+            raise ValueError(
+                f"The SVD method must be one of the following: {POSSIBLE_SVDS}"
+            )
 
-        if self.method == 'principal' and self.is_corr_matrix:
-            raise ValueError('The principal method is only implemented using '
-                             'the full data set, not the correlation matrix.')
+        if self.method == "principal" and self.is_corr_matrix:
+            raise ValueError(
+                "The principal method is only implemented using "
+                "the full data set, not the correlation matrix."
+            )
 
-        self.rotation_kwargs = {} if self.rotation_kwargs is None else self.rotation_kwargs
+        self.rotation_kwargs = (
+            {} if self.rotation_kwargs is None else self.rotation_kwargs
+        )
 
     @staticmethod
-    def _fit_uls_objective(psi, corr_mtx, n_factors):
+    def _fit_uls_objective(psi, corr_mtx, n_factors):  # noqa: D401
         """
-        The objective function passed to `minimize()` for ULS.
+        The objective function passed for unweighted least-squares (ULS).
 
         Parameters
         ----------
@@ -386,8 +398,8 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         Returns
         -------
         error : float
-            The scalar error calculated from the residuals
-            of the loading matrix.
+            The scalar error calculated from the residuals of the loading
+            matrix.
         """
         np.fill_diagonal(corr_mtx, 1 - psi)
 
@@ -418,15 +430,14 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # lower triangle of the residual matrix; this could be
         # implemented here using `np.tril()` when this change is
         # merged into the stable version of `psych`.
-        residual = (corr_mtx - model)**2
-        error = sp.sum(residual)
+        residual = (corr_mtx - model) ** 2
+        error = np.sum(residual)
         return error
 
     @staticmethod
     def _normalize_uls(solution, corr_mtx, n_factors):
         """
-        Weighted least squares normalization for loadings
-        estimated using MINRES.
+        Weighted least squares normalization for loadings using MINRES.
 
         Parameters
         ----------
@@ -439,7 +450,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : numpy array
+        loadings : :obj:`numpy.ndarray`
             The factor loading matrix
         """
         np.fill_diagonal(corr_mtx, 1 - solution)
@@ -457,9 +468,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         return loadings
 
     @staticmethod
-    def _fit_ml_objective(psi, corr_mtx, n_factors):
+    def _fit_ml_objective(psi, corr_mtx, n_factors):  # noqa: D401
         """
-        The objective function passed to `minimize()` for ML.
+        The objective function for maximum likelihood.
 
         Parameters
         ----------
@@ -478,9 +489,9 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Note
         ----
-        The ML objective is based on the `factanal()` function
-        from R's `stats` package. It may generate results different
-        from the `fa()` function in `psych`.
+        The ML objective is based on the `factanal()` function from ``stats``
+        package in R. It may generate different results from the ``fa()``
+        function in ``psych``.
 
         References
         ----------
@@ -494,14 +505,13 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         values = values[::-1][n_factors:]
 
         # calculate the error
-        error = -(np.sum(np.log(values) - values) -
-                  n_factors + corr_mtx.shape[0])
+        error = -(np.sum(np.log(values) - values) - n_factors + corr_mtx.shape[0])
         return error
 
     @staticmethod
     def _normalize_ml(solution, corr_mtx, n_factors):
         """
-        Normalization for loadings estimated using ML.
+        Normalize loadings estimated using maximum likelihood.
 
         Parameters
         ----------
@@ -514,7 +524,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : numpy array
+        loadings : :obj:`numpy.ndarray`
             The factor loading matrix
         """
         sc = np.diag(1 / np.sqrt(solution))
@@ -536,8 +546,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     def _fit_principal(self, X):
         """
-        Fit the factor analysis model using a principal
-        factor analysis solution.
+        Fit factor analysis model using principal factor analysis.
 
         Parameters
         ----------
@@ -546,7 +555,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : numpy array
+        loadings : :obj:`numpy.ndarray`
             The factor loadings matrix.
         """
         # standardize the data
@@ -557,16 +566,18 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # warn the user that the number of factors will be constrained
         nrows, ncols = X.shape
         if nrows < ncols and self.n_factors >= nrows:
-            warnings.warn('The number of factors will be '
-                          'constrained to min(n_samples, n_features)'
-                          '={}.'.format(min(nrows, ncols)))
+            warnings.warn(
+                "The number of factors will be "
+                "constrained to min(n_samples, n_features)"
+                "={}.".format(min(nrows, ncols))
+            )
 
         # perform the randomized singular value decomposition
-        if self.svd_method == 'randomized':
-            U, S, V = randomized_svd(X, self.n_factors, random_state=0)
+        if self.svd_method == "randomized":
+            _, _, V = randomized_svd(X, self.n_factors, random_state=1234567890)
         # otherwise, perform the full SVD
         else:
-            U, S, V = np.linalg.svd(X, full_matrices=False)
+            _, _, V = np.linalg.svd(X, full_matrices=False)
 
         corr_mtx = np.dot(X, V.T)
         loadings = np.array([[pearsonr(x, c)[0] for c in corr_mtx.T] for x in X.T])
@@ -574,8 +585,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     def _fit_factor_analysis(self, corr_mtx):
         """
-        Fit the factor analysis model using either
-        minres or ml solutions.
+        Fit factor analysis model using either MINRES or maximum likelihood.
 
         Parameters
         ----------
@@ -584,16 +594,14 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        loadings : numpy array
-            The factor loadings matrix.
+        loadings : :obj:`numpy.ndarray`
 
         Raises
         ------
         ValueError
-            If any of the correlations are null, most likely due
-            to having zero standard deviation.
+            If any of the correlations are null, most likely due to having
+            zero standard deviation.
         """
-
         # if `use_smc` is True, get get squared multiple correlations
         # and use these as initial guesses for optimizer
         if self.use_smc:
@@ -612,35 +620,37 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # minimize the appropriate objective function
         # and the L-BFGS-B algorithm
-        if self.method == 'ml' or self.method == 'mle':
+        if self.method == "ml" or self.method == "mle":
             objective = self._fit_ml_objective
-        elif self.method == 'uls' or self.method == 'minres':
+        else:
             objective = self._fit_uls_objective
 
         # use scipy to perform the actual minimization
-        res = minimize(objective,
-                       start,
-                       method='L-BFGS-B',
-                       bounds=bounds,
-                       options={'maxiter': 1000},
-                       args=(corr_mtx, self.n_factors))
+        res = minimize(
+            objective,
+            start,
+            method="L-BFGS-B",
+            bounds=bounds,
+            options={"maxiter": 1000},
+            args=(corr_mtx, self.n_factors),
+        )
 
         if not res.success:
-            warnings.warn('Failed to converge: {}'.format(res.message))
+            warnings.warn(f"Failed to converge: {res.message}")
 
         # transform the final loading matrix (using wls for MINRES,
         # and ml normalization for ML), and convert to DataFrame
-        if self.method == 'ml' or self.method == 'mle':
-            loadings = self._normalize_ml(res.x, corr_mtx, self. n_factors)
-        elif self.method == 'uls' or self.method == 'minres':
+        if self.method == "ml" or self.method == "mle":
+            loadings = self._normalize_ml(res.x, corr_mtx, self.n_factors)
+        else:
             loadings = self._normalize_uls(res.x, corr_mtx, self.n_factors)
         return loadings
 
     def fit(self, X, y=None):
         """
-        Fit the factor analysis model using either
-        minres, ml, or principal solutions. By default, use SMC
-        as starting guesses.
+        Fit factor analysis model using either MINRES, ML, or principal factor analysis.
+
+        By default, use SMC as starting guesses.
 
         Parameters
         ----------
@@ -670,7 +680,6 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                [ 0.76041819, -0.23768727, -0.1206858 ],
                [ 0.81533404, -0.12494695,  0.17639683]])
         """
-
         # check the input arguments
         self._arg_checker()
 
@@ -683,10 +692,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # now check the array, and make sure it
         # meets all of our expected criteria
-        X = check_array(X,
-                        force_all_finite='allow-nan',
-                        estimator=self,
-                        copy=True)
+        X = check_array(X, force_all_finite="allow-nan", estimator=self, copy=True)
 
         # check to see if there are any null values, and if
         # so impute using the desired imputation approach
@@ -705,7 +711,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         self.corr_ = corr_mtx.copy()
 
         # fit factor analysis model
-        if self.method == 'principal':
+        if self.method == "principal":
             loadings = self._fit_principal(X)
         else:
             loadings = self._fit_factor_analysis(corr_mtx)
@@ -719,19 +725,23 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # whether to rotate the loadings matrix
         if self.rotation is not None:
             if loadings.shape[1] <= 1:
-                warnings.warn('No rotation will be performed when '
-                              'the number of factors equals 1.')
+                warnings.warn(
+                    "No rotation will be performed when "
+                    "the number of factors equals 1."
+                )
             else:
-                if 'method' in self.rotation_kwargs:
-                    warnings.warn('You cannot pass a rotation method to '
-                                  '`rotation_kwargs`. This will be ignored.')
-                    self.rotation_kwargs.pop('method')
+                if "method" in self.rotation_kwargs:
+                    warnings.warn(
+                        "You cannot pass a rotation method to "
+                        "`rotation_kwargs`. This will be ignored."
+                    )
+                    self.rotation_kwargs.pop("method")
                 rotator = Rotator(method=self.rotation, **self.rotation_kwargs)
                 loadings = rotator.fit_transform(loadings)
                 rotation_mtx = rotator.rotation_
                 phi = rotator.phi_
                 # update the rotation matrix for everything, except promax
-                if self.rotation != 'promax':
+                if self.rotation != "promax":
                     rotation_mtx = np.linalg.inv(rotation_mtx).T
 
         if self.n_factors > 1:
@@ -745,18 +755,22 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                 # update phi, if it exists -- that is, if the rotation is oblique
                 # create the structure matrix for any oblique rotation
                 phi = np.dot(np.dot(np.diag(signs), phi), np.diag(signs))
-                structure = np.dot(loadings, phi) if self.rotation in OBLIQUE_ROTATIONS else None
+                structure = (
+                    np.dot(loadings, phi)
+                    if self.rotation in OBLIQUE_ROTATIONS
+                    else None
+                )
 
         # resort the factors according to their variance,
         # unless the method is principal
-        if self.method != 'principal':
+        if self.method != "principal":
             variance = self._get_factor_variance(loadings)[0]
             new_order = list(reversed(np.argsort(variance)))
             loadings = loadings[:, new_order].copy()
 
-        # if the structure matrix exists, reorder
-        if structure is not None:
-            structure = structure[:, new_order].copy()
+            # if the structure matrix exists, reorder
+            if structure is not None:
+                structure = structure[:, new_order].copy()
 
         self.phi_ = phi
         self.structure_ = structure
@@ -767,16 +781,16 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         """
-        Get the factor scores for new data set.
+        Get factor scores for a new data set.
 
         Parameters
         ----------
-        X : array-like, shape (n_samples, n_features)
+        X : array-like, shape (``n_samples``, ``n_features``)
             The data to score using the fitted factor model.
 
         Returns
         -------
-        X_new : numpy array, shape (n_samples, n_components)
+        X_new : :obj:`numpy.ndarray`, shape (``n_samples``, ``n_components``)
             The latent variables of X.
 
         Examples
@@ -798,7 +812,6 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                [ 1.86904519, -0.3532394 , -0.68170573],
                [ 0.86133386,  0.18280695, -0.79170903]])
         """
-
         # check if the data is a data frame,
         # so we can convert it to an array
         if isinstance(X, pd.DataFrame):
@@ -808,18 +821,17 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # now check the array, and make sure it
         # meets all of our expected criteria
-        X = check_array(X,
-                        force_all_finite=True,
-                        estimator=self,
-                        copy=True)
+        X = check_array(X, force_all_finite=True, estimator=self, copy=True)
 
         # meets all of our expected criteria
-        check_is_fitted(self, 'loadings_')
+        check_is_fitted(self, "loadings_")
 
         # see if we saved the original mean and std
         if self.mean_ is None or self.std_ is None:
-            warnings.warn('Could not find original mean and standard deviation; using'
-                          'the mean and standard deviation from the current data set.')
+            warnings.warn(
+                "Could not find original mean and standard deviation; using"
+                "the mean and standard deviation from the current data set."
+            )
             mean = np.mean(X, axis=0)
             std = np.std(X, axis=0)
         else:
@@ -839,8 +851,10 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         try:
             self.weights_ = np.linalg.solve(self.corr_, structure)
         except Exception as error:
-            warnings.warn('Unable to calculate the factor score weights; '
-                          'factor loadings used instead: {}'.format(error))
+            warnings.warn(
+                "Unable to calculate the factor score weights; "
+                "factor loadings used instead: {}".format(error)
+            )
             self.weights_ = self.loadings_
 
         scores = np.dot(X_scale, self.weights_)
@@ -848,15 +862,14 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     def get_eigenvalues(self):
         """
-        Calculate the eigenvalues, given the
-        factor correlation matrix.
+        Calculate the eigenvalues, given the factor correlation matrix.
 
         Returns
         -------
-        original_eigen_values : numpy array
-            The original eigen values
-        common_factor_eigen_values : numpy array
-            The common factor eigen values
+        original_eigen_values : :obj:`numpy.ndarray`
+            The original eigenvalues
+        common_factor_eigen_values : :obj:`numpy.ndarray`
+            The common factor eigenvalues
 
         Examples
         --------
@@ -875,7 +888,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                 0.01029184, -0.0074    , -0.03694834, -0.05959057, -0.07428059]))
         """
         # meets all of our expected criteria
-        check_is_fitted(self, ['loadings_', 'corr_'])
+        check_is_fitted(self, ["loadings_", "corr_"])
         corr_mtx = self.corr_.copy()
 
         e_values, _ = np.linalg.eigh(corr_mtx)
@@ -891,14 +904,12 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
     def get_communalities(self):
         """
-        Calculate the communalities, given the
-        factor loading matrix.
+        Calculate the communalities, given the factor loading matrix.
 
         Returns
         -------
-        communalities : numpy array
-            The communalities from the factor loading
-            matrix.
+        communalities : :obj:`numpy.ndarray`
+            The communalities from the factor loading matrix.
 
         Examples
         --------
@@ -915,21 +926,19 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                0.66208428, 0.61911036, 0.73194557, 0.64929612, 0.71149718])
         """
         # meets all of our expected criteria
-        check_is_fitted(self, 'loadings_')
+        check_is_fitted(self, "loadings_")
         loadings = self.loadings_.copy()
-        communalities = (loadings ** 2).sum(axis=1)
+        communalities = (loadings**2).sum(axis=1)
         return communalities
 
     def get_uniquenesses(self):
         """
-        Calculate the uniquenesses, given the
-        factor loading matrix.
+        Calculate the uniquenesses, given the factor loading matrix.
 
         Returns
         -------
-        uniquenesses : numpy array
-            The uniquenesses from the factor loading
-            matrix.
+        uniquenesses : :obj:`numpy.ndarray`
+            The uniquenesses from the factor loading matrix.
 
         Examples
         --------
@@ -946,38 +955,38 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
                0.33791572, 0.38088964, 0.26805443, 0.35070388, 0.28850282])
         """
         # meets all of our expected criteria
-        check_is_fitted(self, 'loadings_')
+        check_is_fitted(self, "loadings_")
         communalities = self.get_communalities()
         communalities = communalities.copy()
-        uniqueness = (1 - communalities)
+        uniqueness = 1 - communalities
         return uniqueness
 
     @staticmethod
     def _get_factor_variance(loadings):
         """
-        A helper method to get the factor variances,
-        because sometimes we need them even before the
-        model is fitted.
+        Get the factor variances.
+
+        This is a private helper method to get the factor variances,
+        because sometimes we need them even before the model is fitted.
 
         Parameters
         ----------
         loadings : array-like
-            The factor loading matrix,
-            in whatever state.
+            The factor loading matrix, in whatever state.
 
         Returns
         -------
-        variance : numpy array
+        variance : :obj:`numpy.ndarray`
             The factor variances.
-        proportional_variance : numpy array
+        proportional_variance : :obj:`numpy.ndarray`
             The proportional factor variances.
-        cumulative_variances : numpy array
+        cumulative_variances : :obj:`numpy.ndarray`
             The cumulative factor variances.
         """
         n_rows = loadings.shape[0]
 
         # calculate variance
-        loadings = loadings ** 2
+        loadings = loadings**2
         variance = np.sum(loadings, axis=0)
 
         # calculate proportional variance
@@ -986,23 +995,22 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # calculate cumulative variance
         cumulative_variance = np.cumsum(proportional_variance, axis=0)
 
-        return (variance,
-                proportional_variance,
-                cumulative_variance)
+        return (variance, proportional_variance, cumulative_variance)
 
     def get_factor_variance(self):
         """
-        Calculate the factor variance information,
-        including variance, proportional variance
-        and cumulative variance for each factor
+        Calculate factor variance information.
+
+        The factor variance information including the variance,
+        proportional variance, and cumulative variance for each factor.
 
         Returns
         -------
-        variance : numpy array
+        variance : :obj:`numpy.ndarray`
             The factor variances.
-        proportional_variance : numpy array
+        proportional_variance : :obj:`numpy.ndarray`
             The proportional factor variances.
-        cumulative_variances : numpy array
+        cumulative_variances : :obj:`numpy.ndarray`
             The cumulative factor variances.
 
         Examples
@@ -1024,6 +1032,54 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
          array([0.35101885, 0.47938987, 0.55312938]))
         """
         # meets all of our expected criteria
-        check_is_fitted(self, 'loadings_')
+        check_is_fitted(self, "loadings_")
         loadings = self.loadings_.copy()
         return self._get_factor_variance(loadings)
+
+    def sufficiency(self, num_observations: int) -> Tuple[float, int, float]:
+        """
+        Perform the sufficiency test.
+
+        The test calculates statistics under the null hypothesis that
+        the selected number of factors is sufficient.
+
+        Parameters
+        ----------
+        num_observations: int
+            The number of observations in the input data that this factor
+            analyzer was fit using.
+
+        Returns
+        -------
+        statistic: float
+            The test statistic
+        degrees: int
+            The degrees of freedom
+        pvalue: float
+            The p-value of the test
+
+        References
+        ----------
+        [1] Lawley, D. N. and Maxwell, A. E. (1971). Factor Analysis as a
+             Statistical Method. Second edition. Butterworths. P. 36.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from factor_analyzer import FactorAnalyzer
+        >>> df_features = pd.read_csv('tests/data/test01.csv')
+        >>> fa = FactorAnalyzer(n_factors=3, rotation=None, method="ml")
+        >>> fa.fit(df_features)
+        >>> fa.sufficiency(df_features.shape[0])
+        (1475.8755629859675, 663, 8.804286459822274e-64)
+        """
+        nvar = self.corr_.shape[0]
+        degrees = ((nvar - self.n_factors) ** 2 - nvar - self.n_factors) // 2
+        obj = self._fit_ml_objective(
+            self.get_uniquenesses(), self.corr_, self.n_factors
+        )
+        statistic = (
+            num_observations - 1 - (2 * nvar + 5) / 6 - (2 * self.n_factors) / 3
+        ) * obj
+        pvalue = chi2.sf(statistic, df=degrees)
+        return statistic, degrees, pvalue
