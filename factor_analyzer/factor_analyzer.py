@@ -627,7 +627,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # now check the array, and make sure it
         # meets all of our expected criteria
-        X = check_array(X, force_all_finite="allow-nan", estimator=self, copy=True)
+        X = check_array(X, ensure_all_finite="allow-nan", estimator=self, copy=True)
 
         # check to see if there are any null values, and if
         # so impute using the desired imputation approach
@@ -756,7 +756,7 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
 
         # now check the array, and make sure it
         # meets all of our expected criteria
-        X = check_array(X, force_all_finite=True, estimator=self, copy=True)
+        X = check_array(X, ensure_all_finite=True, estimator=self, copy=True)
 
         # meets all of our expected criteria
         check_is_fitted(self, "loadings_")

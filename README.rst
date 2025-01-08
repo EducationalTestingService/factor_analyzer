@@ -201,7 +201,7 @@ Requirements
 -  ``numpy``
 -  ``pandas``
 -  ``scipy``
--  ``scikit-learn``
+-  ``scikit-learn >= 1.6.0``
 
 Contributing
 ------------
