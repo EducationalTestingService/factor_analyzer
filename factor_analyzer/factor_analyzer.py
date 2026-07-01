@@ -625,6 +625,15 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         else:
             X = X.copy()
 
+        n_features = X.shape[1]
+        if self.n_factors > n_features:
+            warnings. warn(
+                "n_factors ({0}) cannot exceed the number of features ({1});"
+                "the number of factors will be constrained to {1}.".format(
+                    self.n_factors, n_features
+                )
+            )
+
         # now check the array, and make sure it
         # meets all of our expected criteria
         X = check_array(X, ensure_all_finite="allow-nan", estimator=self, copy=True)

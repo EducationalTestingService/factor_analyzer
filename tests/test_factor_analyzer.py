@@ -11,6 +11,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_frame_equal
 from sklearn.model_selection import GridSearchCV
@@ -249,3 +250,10 @@ class TestFactorAnalysisTwo(unittest.TestCase):
             "tests/expected/test01/sufficiency_ml_none_15_test01.csv"
         )
         assert_frame_equal(df_computed, df_expected)
+
+
+def test_n_factors_exceeds_n_features_warns():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 6))
+    with pytest.warns(UserWarning):
+        FactorAnalyzer(n_factors=10, rotation=None).fit(X)
