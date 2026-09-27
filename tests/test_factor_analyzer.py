@@ -228,6 +228,26 @@ class TestFactorAnalysisTwo(unittest.TestCase):
 
         assert_array_almost_equal(proportional_variance_expected, proportional_variance)
 
+    def test_oblique_communalities_include_factor_correlations(self):  # noqa: D102
+        path = "tests/data/test07.csv"
+        data = pd.read_csv(path)
+
+        unrotated = FactorAnalyzer(
+            n_factors=3, method="minres", rotation=None
+        ).fit(data)
+        promax = FactorAnalyzer(
+            n_factors=3, method="minres", rotation="promax"
+        ).fit(data)
+
+        # An oblique rotation must not change the model-implied communalities.
+        assert_array_almost_equal(
+            promax.get_communalities(), unrotated.get_communalities()
+        )
+        assert_array_almost_equal(
+            promax.get_communalities(),
+            np.sum(promax.loadings_ * promax.structure_, axis=1),
+        )
+
     def test_sufficiency(self):
         path = "tests/data/test01.csv"
         data = pd.read_csv(path)

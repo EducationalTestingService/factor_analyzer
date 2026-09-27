@@ -863,7 +863,10 @@ class FactorAnalyzer(BaseEstimator, TransformerMixin):
         # meets all of our expected criteria
         check_is_fitted(self, "loadings_")
         loadings = self.loadings_.copy()
-        communalities = (loadings**2).sum(axis=1)
+        if self.structure_ is not None:
+            communalities = (loadings * self.structure_).sum(axis=1)
+        else:
+            communalities = (loadings**2).sum(axis=1)
         return communalities
 
     def get_uniquenesses(self):
